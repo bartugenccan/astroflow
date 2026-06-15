@@ -33,6 +33,14 @@ enum SynergyLevel {
   OMEGA
 }
 
+enum FeatureType {
+  TRANSIT_CHART
+  COMPATIBILITY
+  DEEP_INSIGHT
+  PREMIUM_RITUAL
+  ADVANCED_CYMATICS
+}
+
 // ──── Core Models ────────────────────────────────────────────────────────────
 
 model User {
@@ -42,13 +50,15 @@ model User {
   displayName   String
   avatarUrl     String?
   timezone      String    @default("Europe/Istanbul")
+  starPoints    Int       @default(0)
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  birthProfile  BirthProfile?
-  streaks       UserStreak[]
-  ritualLogs    RitualLog[]
+  birthProfile    BirthProfile?
+  streaks         UserStreak[]
+  ritualLogs      RitualLog[]
+  unlockedFeatures UnlockedFeature[]
 
   @@map("users")
 }
@@ -58,7 +68,7 @@ model BirthProfile {
   userId       String   @unique @db.Uuid
 
   birthDate    DateTime @db.Date
-  birthTime    String   // "HH:mm" format
+  birthTime    String
   latitude     Float
   longitude    Float
 
@@ -69,7 +79,7 @@ model BirthProfile {
   dominantElement String?
   dominantPlanet  String?
 
-  chartData    Json?    // Full astrological chart snapshot
+  chartData    Json?
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -118,10 +128,10 @@ model FrequencyScore {
   userId       String      @unique @db.Uuid
 
   value        Int         @default(0)
-  trend        String      @default("stable") // "up", "down", "stable"
+  trend        String      @default("stable")
   synergyLevel SynergyLevel @default(ALPHA)
 
-  breakdown    Json?       // { rituals: number, consistency: number, astro: number, social: number }
+  breakdown    Json?
 
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -147,4 +157,16 @@ model DailyAction {
 
   @@index([userId, completed, expiresAt])
   @@map("daily_actions")
+}
+
+model UnlockedFeature {
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String      @db.Uuid
+  featureType FeatureType
+  unlockedAt  DateTime    @default(now())
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, featureType])
+  @@map("unlocked_features")
 }
