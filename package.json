@@ -1,0 +1,16 @@
+{
+  "name": "astroflow",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "npm run start --workspace=apps/mobile",
+    "api": "npm run start:dev --workspace=apps/api",
+    "mobile:ios": "npm run ios --workspace=apps/mobile",
+    "mobile:android": "npm run android --workspace=apps/api",
+    "lint": "npm run lint --workspaces"
+  }
+}
