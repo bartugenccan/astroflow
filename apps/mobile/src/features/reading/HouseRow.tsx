@@ -7,6 +7,7 @@ import { Glyph } from "../../components/Glyph";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import { astrologyApi } from "../../services/astrologyApi";
 import { houseKey } from "../../services/interpretationCache";
+import { houseTags, primaryHouseTag } from "./houseThemes";
 import {
   CreateBirthProfileDto,
   HousePlacement,
@@ -32,6 +33,7 @@ export function HouseRow({ dto, house, locale }: Props) {
   const rulerName = t(`planets.${house.ruler}` as "planets.Sun");
   const signName = t(`signs.${house.sign}` as "signs.Aries");
   const isEmpty = house.planetsInHouse.length === 0;
+  const primaryTag = primaryHouseTag(locale, house.house);
 
   const toggle = () => {
     setOpen((o) => !o);
@@ -57,10 +59,10 @@ export function HouseRow({ dto, house, locale }: Props) {
             </AppText>
           </View>
           <View style={styles.right}>
-            {house.house === 7 ? (
+            {primaryTag ? (
               <View style={styles.tag}>
                 <AppText variant="label" color={colors.gold[300]}>
-                  {t("reading.partnersTag")}
+                  {primaryTag}
                 </AppText>
               </View>
             ) : null}
@@ -105,31 +107,46 @@ function HouseReading({
     () => astrologyApi.getHouseInterpretation(dto, house, locale),
   );
 
-  if (loading) {
-    return (
-      <View style={styles.body}>
-        <ShimmerLines lines={4} />
-      </View>
-    );
-  }
-  if (error) {
-    return (
-      <BouncyButton onPress={reload} style={styles.body} haptic={false}>
-        <AppText variant="body" color={colors.gold[300]}>
-          {t("reading.retry")}
-        </AppText>
-      </BouncyButton>
-    );
-  }
+  const tags = houseTags(locale, house);
+
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 6 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: "timing", duration: 260 }}
-      style={styles.body}
-    >
-      <AppText variant="serifBody">{data?.text}</AppText>
-    </MotiView>
+    <View style={styles.body}>
+      {/* Full theme set — wraps to as many rows as needed. */}
+      {tags.length > 0 ? (
+        <View style={styles.themesBlock}>
+          <AppText variant="label" color={colors.text.tertiary}>
+            {t("reading.themesLabel")}
+          </AppText>
+          <View style={styles.themesRow}>
+            {tags.map((tag) => (
+              <View key={tag} style={styles.themeChip}>
+                <AppText variant="label" color={colors.gold[300]}>
+                  {tag}
+                </AppText>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {loading ? (
+        <ShimmerLines lines={4} />
+      ) : error ? (
+        <BouncyButton onPress={reload} haptic={false}>
+          <AppText variant="body" color={colors.gold[300]}>
+            {t("reading.retry")}
+          </AppText>
+        </BouncyButton>
+      ) : (
+        <MotiView
+          from={{ opacity: 0, translateY: 6 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 260 }}
+        >
+          <AppText variant="serifBody">{data?.text}</AppText>
+        </MotiView>
+      )}
+    </View>
   );
 }
 
@@ -149,8 +166,10 @@ const styles = StyleSheet.create({
   },
   meta: {
     flex: 1,
+    minWidth: 0,
   },
   right: {
+    flexShrink: 0,
     alignItems: "flex-end",
     gap: spacing.xs,
   },
@@ -169,6 +188,22 @@ const styles = StyleSheet.create({
   body: {
     paddingTop: spacing.sm,
     paddingBottom: spacing.md,
+    gap: spacing.md,
+  },
+  themesBlock: {
+    gap: spacing.sm,
+  },
+  themesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+  },
+  themeChip: {
+    borderWidth: 1,
+    borderColor: colors.border.hairlineStrong,
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
   },
   hidden: {
     height: 0,

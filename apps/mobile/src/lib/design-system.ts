@@ -184,6 +184,7 @@ export const motion = {
     gentle: { damping: 18, stiffness: 120, mass: 1 }, // enter transitions
     snappy: { damping: 14, stiffness: 220, mass: 0.8 }, // press feedback
     slow: { damping: 24, stiffness: 80, mass: 1.2 }, // chart / large elements
+    mystic: { damping: 15, stiffness: 150, mass: 1.1 }, // soft overshoot — sheets materialize
   },
   duration: { fast: 160, base: 280, slow: 500, reveal: 1400 },
   stagger: 70, // ms per list item

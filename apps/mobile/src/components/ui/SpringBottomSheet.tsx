@@ -20,10 +20,14 @@ import {
 } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
+import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "./AppText";
-import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { colors, spacing, radii, motion, blurIntensity, shadows } from "../../lib/design-system";
+
+const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 const SHEET_HEIGHT = SCREEN_HEIGHT * 0.6;
@@ -51,6 +55,7 @@ export function SpringBottomSheet({
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(SHEET_HEIGHT);
   const backdropOpacity = useSharedValue(0);
+  const materialize = useSharedValue(0); // 0 → hidden, 1 → settled (scale/opacity pop)
 
   const handleClose = useCallback(() => {
     "worklet";
@@ -59,18 +64,23 @@ export function SpringBottomSheet({
       duration: 240,
       easing: Easing.out(Easing.cubic),
     });
+    materialize.value = withTiming(0, { duration: 200 });
     runOnJS(onClose)();
-  }, [onClose, translateY, backdropOpacity]);
+  }, [onClose, translateY, backdropOpacity, materialize]);
 
   useEffect(() => {
     if (visible) {
-      translateY.value = withSpring(0, motion.spring.snappy);
+      // A soft haptic + materialize (rise, gentle overshoot, scale/opacity pop)
+      // so the sheet feels summoned rather than slid.
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      translateY.value = withSpring(0, motion.spring.mystic);
+      materialize.value = withSpring(1, motion.spring.mystic);
       backdropOpacity.value = withTiming(1, {
-        duration: 240,
+        duration: 320,
         easing: Easing.out(Easing.cubic),
       });
     }
-  }, [visible, translateY, backdropOpacity]);
+  }, [visible, translateY, backdropOpacity, materialize]);
 
   // Pan only on the grabber/header so the body ScrollView isn't intercepted.
   const pan = Gesture.Pan()
@@ -89,7 +99,11 @@ export function SpringBottomSheet({
     });
 
   const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
+    opacity: 0.7 + materialize.value * 0.3,
+    transform: [
+      { translateY: translateY.value },
+      { scale: 0.96 + materialize.value * 0.04 },
+    ],
   }));
   const backdropStyle = useAnimatedStyle(() => ({
     opacity: backdropOpacity.value,
@@ -99,7 +113,13 @@ export function SpringBottomSheet({
 
   return (
     <View style={styles.root}>
-      <Animated.View style={[styles.backdrop, backdropStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
+        <AnimatedBlurView
+          intensity={blurIntensity.medium}
+          tint="dark"
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.backdropTint} />
         <TouchableWithoutFeedback onPress={onClose}>
           <View style={StyleSheet.absoluteFill} />
         </TouchableWithoutFeedback>
@@ -162,9 +182,9 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 1000,
   },
-  backdrop: {
+  backdropTint: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(6, 8, 16, 0.7)",
+    backgroundColor: "rgba(6, 8, 16, 0.55)",
   },
   sheet: {
     position: "absolute",
@@ -194,9 +214,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.gold[500],
-    opacity: 0.6,
+    backgroundColor: colors.gold[300],
+    opacity: 0.85,
     marginBottom: spacing.sm,
+    ...shadows.goldGlow,
   },
   header: {
     flexDirection: "row",

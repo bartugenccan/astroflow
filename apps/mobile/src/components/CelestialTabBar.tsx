@@ -12,6 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { colors, radii, spacing, motion } from "../lib/design-system";
+import { useUiStore } from "../store/useUiStore";
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: "sparkles",
@@ -23,9 +24,25 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 /** Floating pill tab bar with a gold glow that follows the active tab. */
 export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const sheetOpen = useUiStore((s) => s.sheetOpen);
+  const hidden = useSharedValue(0);
+
+  React.useEffect(() => {
+    // Slide down + fade out while a bottom sheet is open so it never covers the
+    // sheet's content; spring back when the sheet closes.
+    hidden.value = withSpring(sheetOpen ? 1 : 0, motion.spring.gentle);
+  }, [sheetOpen, hidden]);
+
+  const wrapStyle = useAnimatedStyle(() => ({
+    opacity: 1 - hidden.value,
+    transform: [{ translateY: hidden.value * 140 }],
+  }));
 
   return (
-    <View style={[styles.wrap, { paddingBottom: insets.bottom + spacing.md }]}>
+    <Animated.View
+      pointerEvents={sheetOpen ? "none" : "auto"}
+      style={[styles.wrap, { paddingBottom: insets.bottom + spacing.md }, wrapStyle]}
+    >
       <View style={styles.pill}>
         <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
         <View style={styles.overlay} />
@@ -52,7 +69,7 @@ export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
           );
         })}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

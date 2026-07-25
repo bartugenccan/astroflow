@@ -20,8 +20,9 @@ import {
 } from "../../services/types";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
+import { useUiStore } from "../../store/useUiStore";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, gradients } from "../../lib/design-system";
+import { colors, spacing, gradients, motion } from "../../lib/design-system";
 
 const { width: W } = Dimensions.get("window");
 
@@ -32,6 +33,7 @@ export function ChartScreen() {
 
   const [chart, setChart] = useState<NatalChartData | null>(null);
   const [selected, setSelected] = useState<PlanetPlacement | null>(null);
+  const setSheetOpen = useUiStore((s) => s.setSheetOpen);
 
   const [placements, setPlacements] = useState<PlacementInterpretation[] | null>(null);
   const [placementsLoading, setPlacementsLoading] = useState(false);
@@ -73,6 +75,13 @@ export function ChartScreen() {
       active = false;
     };
   }, [dto, locale, reloadNonce]);
+
+  // Tell the floating tab bar to slide away while the sheet is open (covers
+  // open, close-button, backdrop tap, and drag-dismiss). Reset on unmount.
+  useEffect(() => {
+    setSheetOpen(!!selected);
+    return () => setSheetOpen(false);
+  }, [selected, setSheetOpen]);
 
   const selectedReading = selected
     ? placements?.find((p) => p.planet === selected.name)
@@ -165,24 +174,50 @@ export function ChartScreen() {
       >
         {selected ? (
           <View style={styles.sheetBody}>
-            <View style={styles.sheetGlyph}>
-              <Glyph name={selected.name} size={44} color={colors.gold[200]} />
-            </View>
-            <AppText variant="numeric" color={colors.text.secondary}>
-              {t("chart.house", { n: selected.house })} · {selected.degree}°
-              {String(selected.minute).padStart(2, "0")}′
-              {selected.retrograde ? ` · ${t("chart.retrograde")}` : ""}
-            </AppText>
-            <PlacementReading
-              reading={selectedReading}
-              loading={placementsLoading}
-              error={placementsError}
-              onRetry={() => setReloadNonce((n) => n + 1)}
-            />
+            <SheetReveal delay={0}>
+              <View style={styles.sheetGlyph}>
+                <Glyph name={selected.name} size={44} color={colors.gold[200]} />
+              </View>
+            </SheetReveal>
+            <SheetReveal delay={motion.stagger}>
+              <AppText variant="numeric" color={colors.text.secondary}>
+                {t("chart.house", { n: selected.house })} · {selected.degree}°
+                {String(selected.minute).padStart(2, "0")}′
+                {selected.retrograde ? ` · ${t("chart.retrograde")}` : ""}
+              </AppText>
+            </SheetReveal>
+            <SheetReveal delay={motion.stagger * 2}>
+              <PlacementReading
+                reading={selectedReading}
+                loading={placementsLoading}
+                error={placementsError}
+                onRetry={() => setReloadNonce((n) => n + 1)}
+              />
+            </SheetReveal>
           </View>
         ) : null}
       </SpringBottomSheet>
     </ScreenWrapper>
+  );
+}
+
+/** One staggered block inside the planet sheet — rises + fades as the sheet
+ *  materializes, so the content feels summoned rather than dumped in. */
+function SheetReveal({
+  delay,
+  children,
+}: {
+  delay: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <MotiView
+      from={{ opacity: 0, translateY: 8 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ type: "timing", duration: 320, delay: 120 + delay }}
+    >
+      {children}
+    </MotiView>
   );
 }
 

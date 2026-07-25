@@ -68,6 +68,7 @@ export const tr: TranslationShape = {
     rulerLabel: "Yönetici",
     emptyHouse: "Boş",
     partnersTag: "İlişkiler",
+    themesLabel: "Temalar",
     northNode: "Kuzey Düğüm",
     southNode: "Güney Düğüm",
     dayChart: "Gündüz haritası",

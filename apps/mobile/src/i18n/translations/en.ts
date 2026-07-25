@@ -65,6 +65,7 @@ export const en = {
     rulerLabel: "Ruler",
     emptyHouse: "Empty",
     partnersTag: "Partners",
+    themesLabel: "Themes",
     northNode: "North Node",
     southNode: "South Node",
     dayChart: "Day chart",
