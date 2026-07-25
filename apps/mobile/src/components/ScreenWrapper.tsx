@@ -1,16 +1,27 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { CosmicBackground } from './CosmicBackground';
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import { SafeAreaView, Edge } from "react-native-safe-area-context";
+import { CelestialBackground } from "./CelestialBackground";
+import { colors } from "../lib/design-system";
 
 interface ScreenWrapperProps {
   children: React.ReactNode;
+  variant?: "default" | "dense" | "still";
+  edges?: Edge[];
 }
 
-export function ScreenWrapper({ children }: ScreenWrapperProps) {
+/** Universal page frame: night-sky background + safe area. */
+export function ScreenWrapper({
+  children,
+  variant = "default",
+  edges = ["top"],
+}: ScreenWrapperProps) {
   return (
     <View style={styles.root}>
-      <CosmicBackground />
-      <View style={styles.content}>{children}</View>
+      <CelestialBackground variant={variant} />
+      <SafeAreaView style={styles.safe} edges={edges}>
+        {children}
+      </SafeAreaView>
     </View>
   );
 }
@@ -18,9 +29,9 @@ export function ScreenWrapper({ children }: ScreenWrapperProps) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#05070F',
+    backgroundColor: colors.ink[950],
   },
-  content: {
+  safe: {
     flex: 1,
   },
 });
