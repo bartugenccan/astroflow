@@ -199,3 +199,245 @@ export interface ChartContext {
   saturnHouse: number;
   text: string;
 }
+
+// ─── Deep transits (mirror apps/api astrology-adapter + interpretation types) ──
+export interface TransitAspectRef {
+  natalPlanet: string;
+  natalSign: string;
+  aspect: string;
+  nature: AspectType;
+  orb: number;
+}
+
+export interface TransitMovement {
+  planet: string;
+  sign: string;
+  degree: number;
+  minute: number;
+  retrograde: boolean;
+  natalHouse: number;
+  daysInHouse: number;
+  aspects: TransitAspectRef[];
+}
+
+export interface TransitReport {
+  date: string;
+  movements: TransitMovement[];
+  skyAspects: {
+    planet1: string;
+    planet2: string;
+    aspect: string;
+    nature: AspectType;
+    orb: number;
+  }[];
+}
+
+export interface TransitDetail {
+  planet: string;
+  sign: string;
+  natalHouse: number;
+  daysInHouse: number;
+  retrograde: boolean;
+  aspects: TransitAspectRef[];
+  text: string;
+}
+
+export interface TransitOverview {
+  date: string;
+  text: string;
+}
+
+// ─── Best days + forecast (mirror apps/api) ──────────────────────────────────
+export type LifeArea = "love" | "career" | "money" | "energy";
+
+export interface BestDayScore {
+  date: string;
+  love: number;
+  career: number;
+  money: number;
+  energy: number;
+  overall: number;
+}
+
+export interface BestDayReason {
+  date: string;
+  score: number;
+  reason: string;
+}
+
+export interface BestDaysResponse {
+  start: string;
+  days: number;
+  scores: BestDayScore[];
+  top: Record<LifeArea, BestDayReason[]>;
+}
+
+export type ForecastPeriod = "weekly" | "monthly";
+
+export interface ForecastTheme {
+  area: LifeArea;
+  text: string;
+}
+
+export interface Forecast {
+  period: ForecastPeriod;
+  start: string;
+  overview: string;
+  themes: ForecastTheme[];
+  keyDates: { date: string; label: string }[];
+}
+
+// ─── Compatibility / synastry (mirror apps/api) ──────────────────────────────
+export interface SynastryTopAspect {
+  planetA: string;
+  planetB: string;
+  aspect: string;
+  nature: AspectType;
+  orb: number;
+  categories: ("love" | "communication" | "stability" | "friction")[];
+  weight: number;
+}
+
+export type SynastryDimensionKey =
+  | "attraction"
+  | "intimacy"
+  | "communication"
+  | "values"
+  | "commitment"
+  | "conflict"
+  | "enmeshment";
+
+export interface SynastryDimensionScore {
+  key: SynastryDimensionKey;
+  value: number; // 0-100
+  lowerIsBetter: boolean;
+}
+
+export interface CompatibilityScore {
+  overall: number;
+  dimensions: SynastryDimensionScore[]; // the same 7 for every couple
+  aspectCount: number;
+  topAspects: SynastryTopAspect[];
+  locked: boolean;
+}
+
+export interface CompatibilityReading {
+  text: string;
+  headline: string;
+}
+
+/** A second person entered for compatibility (mirror SavedPerson on the API). */
+export interface SavedPerson {
+  id: string;
+  label: string;
+  relationship?: string | null;
+  birthDate: string;
+  birthTime: string;
+  latitude: number;
+  longitude: number;
+  unknownTime: boolean;
+  placeName?: string | null;
+  sunSign: string;
+  moonSign: string;
+  risingSign: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SavePersonInput {
+  label: string;
+  relationship?: string;
+  birthDate: string;
+  birthTime: string;
+  latitude: number;
+  longitude: number;
+  unknownTime?: boolean;
+  placeName?: string;
+}
+
+// ─── Companion (chat + guidance) ─────────────────────────────────────────────
+export type GuidanceTopic =
+  | "love"
+  | "work"
+  | "money"
+  | "decision"
+  | "person"
+  | "mood"
+  | "general";
+
+export interface GuidanceAnswer {
+  topic: string;
+  takeaway: string;
+  why: string;
+  actions: string[];
+}
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  takeaway?: string;
+  why?: string;
+  createdAt: string;
+}
+
+export interface ChatReply {
+  reply: string;
+  takeaway?: string;
+  why?: string;
+}
+
+// ─── Intentions (daily practice) ─────────────────────────────────────────────
+export interface Intention {
+  id: string;
+  goalText: string;
+  category: string;
+  lifeArea: LifeArea;
+  affirmation: string;
+  dailyTarget: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  progress: { count: number; target: number };
+  streak: { currentStreak: number; longestStreak: number };
+}
+
+export interface IntentionSuggestion {
+  goal: string;
+  why: string;
+  lifeArea: LifeArea;
+}
+
+export interface CreateIntentionInput {
+  goalText: string;
+  category: string;
+  lifeArea?: LifeArea;
+  dailyTarget: number;
+}
+
+export interface CheckInInput {
+  conviction: number;
+  userText?: string;
+  inputMode?: "text" | "voice";
+  transcript?: string;
+}
+
+export interface CheckInResult {
+  response: string;
+  conviction: number;
+  followUp: string;
+  strongerPhrasing?: string;
+  progress: { count: number; target: number };
+  dayCompleted: boolean;
+  streak: { currentStreak: number; longestStreak: number };
+  milestoneName: string | null;
+}
+
+export interface IntentionCheckInHistory {
+  id: string;
+  date: string;
+  conviction: number;
+  userText?: string | null;
+  aiResponse: string;
+  createdAt: string;
+}

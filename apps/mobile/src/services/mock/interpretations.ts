@@ -7,6 +7,9 @@ import {
   NatalChartData,
   NodeAnalysis,
   PlacementInterpretation,
+  TransitDetail,
+  TransitMovement,
+  TransitOverview,
 } from "../types";
 import { Locale } from "../../i18n";
 
@@ -115,6 +118,38 @@ export function mockNodes(chart: NatalChartData, locale: Locale): NodeAnalysis {
       locale === "tr"
         ? `Güney Ay Düğümün ${south.sign} burcunda ${south.house}. evde — geçmişten gelen tanıdık kalıplar burada. Kuzey Ay Düğümün ${north.sign} burcunda ${north.house}. evde, büyüme yönünü gösterir.`
         : `Your South Node is in ${south.sign} in the ${south.house}th house — familiar patterns from the past. Your North Node in ${north.sign} in the ${north.house}th house points to your direction of growth.`,
+  };
+}
+
+export function mockTransitDetail(
+  movement: TransitMovement,
+  locale: Locale,
+): TransitDetail {
+  return {
+    planet: movement.planet,
+    sign: movement.sign,
+    natalHouse: movement.natalHouse,
+    daysInHouse: movement.daysInHouse,
+    retrograde: movement.retrograde,
+    aspects: movement.aspects,
+    text:
+      locale === "tr"
+        ? `Transit ${movement.planet} şu an ${movement.sign} burcunda ve doğum haritanın ${movement.natalHouse}. evinden geçiyor${
+            movement.retrograde ? " (retro)" : ""
+          }. Bu evin yaşam alanları bir süre öne çıkıyor; fırsatları değerlendir, gerilimlerde sabırlı ol.`
+        : `Transiting ${movement.planet} is in ${movement.sign}, moving through your natal ${movement.natalHouse}th house${
+            movement.retrograde ? " (retrograde)" : ""
+          }. It highlights that area of life for a while — lean into the openings and stay patient where it brings friction.`,
+  };
+}
+
+export function mockTransitOverview(date: string, locale: Locale): TransitOverview {
+  return {
+    date,
+    text:
+      locale === "tr"
+        ? `Bugün gökyüzü sakin ve dengeli. Küçük, kararlı adımlar için uygun bir gün; enerjini tek bir önceliğe yönlendir.`
+        : `The sky today is calm and balanced. A good day for small, deliberate steps — focus your energy on one priority.`,
   };
 }
 

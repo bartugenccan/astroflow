@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, ScrollView, ActivityIndicator } from "react-native";
+import { StyleSheet, View, ScrollView } from "react-native";
 import { MotiView } from "moti";
 import { Canvas, Circle, RadialGradient, vec } from "@shopify/react-native-skia";
 import { Dimensions } from "react-native";
@@ -8,12 +8,14 @@ import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { AstroMap } from "../../components/AstroMap";
 import { Glyph } from "../../components/Glyph";
 import { PlacementRow } from "./PlacementRow";
 import { PlacementReading } from "./PlacementReading";
 import { astrologyApi } from "../../services/astrologyApi";
 import {
+  CreateBirthProfileDto,
   NatalChartData,
   PlacementInterpretation,
   PlanetPlacement,
@@ -26,9 +28,19 @@ import { colors, spacing, gradients, motion } from "../../lib/design-system";
 
 const { width: W } = Dimensions.get("window");
 
-export function ChartScreen() {
+interface ChartScreenProps {
+  /** Override the chart subject; defaults to the logged-in user. */
+  dto?: CreateBirthProfileDto;
+  /** Override the header title (e.g. a saved person's name). */
+  title?: string;
+  /** Override the birth-details line. */
+  birthLine?: string;
+}
+
+export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: ChartScreenProps = {}) {
   const { t, locale } = useTranslation();
-  const dto = useBirthDto();
+  const ownDto = useBirthDto();
+  const dto = dtoProp ?? ownDto;
   const profile = useAppStore((s) => s.birthProfile);
 
   const [chart, setChart] = useState<NatalChartData | null>(null);
@@ -87,11 +99,13 @@ export function ChartScreen() {
     ? placements?.find((p) => p.planet === selected.name)
     : undefined;
 
-  const birthLine = profile
-    ? `${formatDate(profile.birthDate, locale)} · ${profile.birthTime}${
-        profile.placeName ? ` · ${profile.placeName}` : ""
-      }`
-    : "";
+  const birthLine =
+    birthLineProp ??
+    (profile
+      ? `${formatDate(profile.birthDate, locale)} · ${profile.birthTime}${
+          profile.placeName ? ` · ${profile.placeName}` : ""
+        }`
+      : "");
 
   return (
     <ScreenWrapper>
@@ -100,7 +114,7 @@ export function ChartScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <SectionHeader eyebrow="NATAL CHART" title={t("chart.title")} />
+          <SectionHeader eyebrow="NATAL CHART" title={title ?? t("chart.title")} />
           {birthLine ? (
             <AppText variant="bodySmall" style={styles.birthLine}>
               {birthLine}
@@ -110,7 +124,7 @@ export function ChartScreen() {
 
         {!chart ? (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.gold[300]} />
+            <CelestialLoader label={t("common.loading")} />
           </View>
         ) : (
           <>

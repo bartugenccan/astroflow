@@ -53,6 +53,9 @@ export default function RootLayout() {
           </Stack.Protected>
           <Stack.Protected guard={hasOnboarded}>
             <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="compatibility" />
+            <Stack.Screen name="companion" />
+            <Stack.Screen name="intentions" />
           </Stack.Protected>
         </Stack>
       </SafeAreaProvider>

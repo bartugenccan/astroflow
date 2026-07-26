@@ -232,6 +232,10 @@ export function ReadingScreen() {
                   <AppText variant="bodySmall" color={colors.text.primary}>
                     {t(`signs.${nodes.data.northSign}` as "signs.Aries")}
                   </AppText>
+                  <AppText variant="label" color={colors.text.tertiary}>
+                    {t("reading.house", { n: nodes.data.northHouse })}
+                    {chart.data ? ` · ${chart.data.nodes.north.degree}°` : ""}
+                  </AppText>
                 </View>
                 <View style={styles.nodeItem}>
                   <Glyph name="SouthNode" size={22} color={colors.moon} />
@@ -240,6 +244,10 @@ export function ReadingScreen() {
                   </AppText>
                   <AppText variant="bodySmall" color={colors.text.primary}>
                     {t(`signs.${nodes.data.southSign}` as "signs.Aries")}
+                  </AppText>
+                  <AppText variant="label" color={colors.text.tertiary}>
+                    {t("reading.house", { n: nodes.data.southHouse })}
+                    {chart.data ? ` · ${chart.data.nodes.south.degree}°` : ""}
                   </AppText>
                 </View>
               </View>

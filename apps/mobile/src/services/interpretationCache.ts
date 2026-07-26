@@ -86,3 +86,91 @@ export async function prefetchHouses(
     Array.from({ length: Math.min(concurrency, houses.length) }, worker),
   );
 }
+
+export const transitKey = (
+  dto: CreateBirthProfileDto,
+  planet: string,
+  date: string,
+  locale: Locale,
+) => `transit|${dtoKey(dto)}|${date}|${planet}|${locale}`;
+
+export const transitOverviewKey = (
+  dto: CreateBirthProfileDto,
+  date: string,
+  locale: Locale,
+) => `transitov|${dtoKey(dto)}|${date}|${locale}`;
+
+/** Warm each planet's transit reading in the background, a few at a time. */
+export async function prefetchTransits(
+  dto: CreateBirthProfileDto,
+  planets: string[],
+  date: string,
+  locale: Locale,
+  concurrency = 3,
+): Promise<void> {
+  let cursor = 0;
+  const worker = async (): Promise<void> => {
+    while (cursor < planets.length) {
+      const planet = planets[cursor++];
+      try {
+        await cachedCall(transitKey(dto, planet, date, locale), () =>
+          astrologyApi.getTransitDetail(dto, planet, locale),
+        );
+      } catch {
+        // Best-effort warm; a failed planet falls back to on-tap fetch.
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, planets.length) }, worker),
+  );
+}
+
+export const bestDaysKey = (dto: CreateBirthProfileDto, days: number, locale: Locale) =>
+  `bestdays|${dtoKey(dto)}|${days}|${locale}`;
+
+export const forecastKey = (
+  dto: CreateBirthProfileDto,
+  period: "weekly" | "monthly",
+  locale: Locale,
+) => `forecast|${dtoKey(dto)}|${period}|${locale}`;
+
+export const compatibilityKey = (
+  self: CreateBirthProfileDto,
+  other: CreateBirthProfileDto,
+) => `compat|${dtoKey(self)}|${dtoKey(other)}`;
+
+export const compatibilityReadingKey = (
+  self: CreateBirthProfileDto,
+  other: CreateBirthProfileDto,
+  locale: Locale,
+) => `compatread|${dtoKey(self)}|${dtoKey(other)}|${locale}`;
+
+/** Guidance chip answer — cached per chart+topic+day (mirrors the backend key). */
+export const guidanceKey = (
+  dto: CreateBirthProfileDto,
+  topic: string,
+  date: string,
+  locale: Locale,
+) => `guidance|${dtoKey(dto)}|${topic}|${date}|${locale}`;
+
+/** Warm this week's best-days + the weekly forecast after Today settles. */
+export async function prefetchForecast(
+  dto: CreateBirthProfileDto,
+  locale: Locale,
+): Promise<void> {
+  try {
+    await cachedCall(bestDaysKey(dto, 7, locale), () =>
+      astrologyApi.getBestDays(dto, 7, locale),
+    );
+  } catch {
+    // best-effort
+  }
+  try {
+    await cachedCall(forecastKey(dto, "weekly", locale), () =>
+      astrologyApi.getForecast(dto, "weekly", locale),
+    );
+  } catch {
+    // best-effort
+  }
+}

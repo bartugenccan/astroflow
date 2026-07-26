@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from "react";
-import {
-  StyleSheet,
-  View,
-  TextInput,
-  Pressable,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
+import { StyleSheet, View, TextInput, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MotiView } from "moti";
 import { OnboardingFrame } from "./OnboardingFrame";
 import { AppText } from "../../components/ui/AppText";
+import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { searchCities } from "../../services/mock/cities";
 import { searchCitiesRemote } from "../../services/geocoding";
 import { City } from "../../services/types";
@@ -111,9 +105,7 @@ export function BirthPlaceScreen() {
               style={styles.searchInput}
               autoCorrect={false}
             />
-            {searching ? (
-              <ActivityIndicator size="small" color={colors.gold[300]} />
-            ) : null}
+            {searching ? <CelestialLoader size="sm" /> : null}
           </View>
 
           {offline ? (

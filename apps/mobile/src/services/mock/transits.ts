@@ -1,4 +1,12 @@
-import { CreateBirthProfileDto, NatalChartData, TransitData, Transit } from "../types";
+import {
+  CreateBirthProfileDto,
+  NatalChartData,
+  TransitData,
+  Transit,
+  TransitReport,
+  TransitMovement,
+  AspectType,
+} from "../types";
 
 const SIGNS = [
   "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
@@ -53,4 +61,76 @@ export function generateTransits(
       creativity: 40 + Math.floor(rand() * 55),
     },
   };
+}
+
+const ALL_PLANETS = [
+  "Sun", "Moon", "Mercury", "Venus", "Mars",
+  "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
+];
+// Rough per-planet dwell time in a house (days) for the offline mock.
+const MOCK_DAYS: Record<string, number> = {
+  Sun: 6, Moon: 1, Mercury: 18, Venus: 28, Mars: 44,
+  Jupiter: 360, Saturn: 880, Uranus: 2500, Neptune: 5000, Pluto: 5500,
+};
+const NATURE: Record<string, AspectType> = {
+  Trine: "harmonic", Sextile: "harmonic",
+  Square: "challenging", Opposition: "challenging", Conjunction: "neutral",
+};
+
+/**
+ * Deterministic planet-centric transit report for the offline (mock) path.
+ * Not astronomically exact — the HTTP client provides real data.
+ */
+export function generateTransitReport(
+  dto: CreateBirthProfileDto,
+  chart: NatalChartData,
+): TransitReport {
+  let seed = 0;
+  const key = `${dto.birthDate}${dto.birthTime}report`;
+  for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) >>> 0;
+  const rand = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
+  const movements: TransitMovement[] = ALL_PLANETS.map((planet) => {
+    const natalHouse = 1 + Math.floor(rand() * 12);
+    const retrograde = rand() < 0.2;
+    const aspectCount = Math.floor(rand() * 3);
+    const aspects = Array.from({ length: aspectCount }, () => {
+      const np = chart.planets[Math.floor(rand() * chart.planets.length)];
+      const aspect = ASPECTS[Math.floor(rand() * ASPECTS.length)];
+      return {
+        natalPlanet: np.name,
+        natalSign: np.sign,
+        aspect,
+        nature: NATURE[aspect] ?? ("neutral" as AspectType),
+        orb: Math.round(rand() * 5 * 10) / 10,
+      };
+    });
+    return {
+      planet,
+      sign: SIGNS[Math.floor(rand() * 12)],
+      degree: Math.floor(rand() * 30),
+      minute: Math.floor(rand() * 60),
+      retrograde,
+      natalHouse,
+      daysInHouse: Math.round(MOCK_DAYS[planet] * (0.3 + rand() * 0.7) * 10) / 10,
+      aspects,
+    };
+  });
+
+  const skyAspects = movements.slice(0, 4).map((m, i) => {
+    const other = movements[(i + 3) % movements.length];
+    const aspect = ASPECTS[Math.floor(rand() * ASPECTS.length)];
+    return {
+      planet1: m.planet,
+      planet2: other.planet,
+      aspect,
+      nature: NATURE[aspect] ?? ("neutral" as AspectType),
+      orb: Math.round(rand() * 5 * 10) / 10,
+    };
+  });
+
+  return { date: new Date().toISOString().slice(0, 10), movements, skyAspects };
 }

@@ -1,13 +1,16 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 import * as Haptics from "expo-haptics";
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
   useAnimatedStyle,
+  useAnimatedRef,
+  scrollTo,
   interpolate,
   Extrapolation,
   runOnJS,
+  runOnUI,
 } from "react-native-reanimated";
 import { AppText } from "./AppText";
 import { colors, fonts } from "../../lib/design-system";
@@ -39,6 +42,35 @@ export function WheelPicker({
 }: WheelPickerProps) {
   const scrollY = useSharedValue(selectedIndex * ITEM_HEIGHT);
   const lastIndex = useRef(selectedIndex);
+  const aref = useAnimatedRef<Animated.ScrollView>();
+  const didInit = useRef(false);
+  // Mount-only initial offset. MUST NOT be tied to the live `selectedIndex`:
+  // if `contentOffset` changes on re-render, iOS re-applies it mid-scroll (every
+  // `report()` → `setDay()` re-render), nudging a carefully-dialed wheel one row
+  // short — the iOS "birth date always −1" bug. Position after mount is driven
+  // imperatively by the scrollTo effect below, never by this prop.
+  const initialOffset = useRef(selectedIndex * ITEM_HEIGHT).current;
+
+  // Position imperatively, but ONLY on mount and on EXTERNAL changes — never in
+  // response to this wheel's own scroll. `contentOffset` alone isn't honored on
+  // Android's first mount (wheel pinned to index 0), so we scrollTo to seed the
+  // right row. Crucially, `report()` sets `lastIndex.current` to the value it
+  // just committed BEFORE calling onChange, so when the parent echoes that value
+  // back as `selectedIndex`, `external` is false and we skip scrollTo. Without
+  // this guard the effect fired on every scroll tick and yanked the wheel back a
+  // step, committing one short (the "birth date is always −1" bug).
+  useEffect(() => {
+    const external = selectedIndex !== lastIndex.current;
+    if (didInit.current && !external) return;
+    didInit.current = true;
+    const y = selectedIndex * ITEM_HEIGHT;
+    scrollY.value = y;
+    lastIndex.current = selectedIndex;
+    runOnUI(() => {
+      "worklet";
+      scrollTo(aref, 0, y, false);
+    })();
+  }, [selectedIndex, aref, scrollY]);
 
   const report = useCallback(
     (index: number) => {
@@ -60,17 +92,28 @@ export function WheelPicker({
     },
   });
 
+  // Re-read the FINAL settled position. `onScroll` is throttled, so its last
+  // event can land mid-snap and commit the row one short; these fire once the
+  // wheel comes to rest, guaranteeing the centered value is what's reported.
+  const reportFinal = useCallback(
+    (offsetY: number) => report(Math.round(offsetY / ITEM_HEIGHT)),
+    [report],
+  );
+
   return (
     <View style={[styles.container, { width, height: VISIBLE * ITEM_HEIGHT }, style]}>
       <Animated.ScrollView
+        ref={aref}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
         bounces={false}
         onScroll={onScroll}
+        onMomentumScrollEnd={(e) => reportFinal(e.nativeEvent.contentOffset.y)}
+        onScrollEndDrag={(e) => reportFinal(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingVertical: PAD }}
-        contentOffset={{ x: 0, y: selectedIndex * ITEM_HEIGHT }}
+        contentOffset={{ x: 0, y: initialOffset }}
       >
         {items.map((item, i) => (
           <WheelRow key={item.value} label={item.label} index={i} scrollY={scrollY} />

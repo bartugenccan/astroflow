@@ -15,10 +15,13 @@ import { colors, radii, spacing, motion } from "../lib/design-system";
 import { useUiStore } from "../store/useUiStore";
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  index: "sparkles",
+  index: "moon",
   chart: "planet",
-  reading: "book",
-  profile: "person",
+  transits: "telescope",
+  reading: "journal",
+  forecast: "calendar",
+  compatibility: "heart",
+  profile: "person-circle",
 };
 
 /** Floating pill tab bar with a gold glow that follows the active tab. */
@@ -131,8 +134,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border.hairline,
     overflow: "hidden",
     alignItems: "center",
-    paddingHorizontal: spacing.sm,
-    minWidth: 220,
+    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+    minWidth: 300,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
