@@ -41,6 +41,24 @@ enum FeatureType {
   ADVANCED_CYMATICS
 }
 
+enum InterpretationKind {
+  PLACEMENT
+  BIG_THREE
+  ASPECT
+  OVERVIEW
+  DAILY_INSIGHT
+  HOUSE
+  NODES
+  CHART_CONTEXT
+  TRANSIT
+  TRANSIT_OVERVIEW
+  COMPATIBILITY
+  FORECAST_WEEKLY
+  FORECAST_MONTHLY
+  GUIDANCE
+  INTENTION_AFFIRMATION
+}
+
 // ──── Core Models ────────────────────────────────────────────────────────────
 
 model User {
@@ -169,4 +187,174 @@ model UnlockedFeature {
 
   @@unique([userId, featureType])
   @@map("unlocked_features")
+}
+
+// ──── Anonymous (device-ID) chart + AI interpretation cache ──────────────────
+
+model DeviceChart {
+  id          String   @id @default(uuid()) @db.Uuid
+  deviceId    String   @unique
+
+  birthDate   String
+  birthTime   String
+  latitude    Float
+  longitude   Float
+  utcOffsetMin Int?
+  unknownTime Boolean  @default(false)
+
+  sunSign     String
+  moonSign    String
+  risingSign  String
+  chartData   Json
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("device_charts")
+}
+
+model Interpretation {
+  id         String             @id @default(uuid()) @db.Uuid
+  cacheKey   String             @unique
+  kind       InterpretationKind
+  locale     String
+  content    Json
+  model      String?
+
+  createdAt  DateTime           @default(now())
+
+  @@index([kind, locale])
+  @@map("interpretations")
+}
+
+// Device-scoped entitlement mirror of UnlockedFeature. The anonymous flow has no
+// User, so per-report unlocks (e.g. COMPATIBILITY) are keyed by deviceId instead.
+model DeviceUnlockedFeature {
+  id          String      @id @default(uuid()) @db.Uuid
+  deviceId    String
+  featureType FeatureType
+  unlockedAt  DateTime    @default(now())
+
+  @@unique([deviceId, featureType])
+  @@index([deviceId])
+  @@map("device_unlocked_features")
+}
+
+// ──── Companion: memory + conversation ───────────────────────────────────────
+
+// Device-scoped memory of what the user tells us, so every surface feels
+// continuous ("last week work was heavy…"). Read as a compact digest into prompts.
+model MemoryEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String
+  kind      String   // 'chat' | 'checkin' | 'topic' | 'goal' | 'fact'
+  text      String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([deviceId, createdAt])
+  @@map("memory_entries")
+}
+
+// Conversational companion turns (device-scoped, anonymous).
+model ChatMessage {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String
+  role      String   // 'user' | 'assistant'
+  content   String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([deviceId, createdAt])
+  @@map("chat_messages")
+}
+
+// ──── Intentions: chart-guided daily practice ────────────────────────────────
+
+model Intention {
+  id          String   @id @default(uuid()) @db.Uuid
+  deviceId    String
+
+  goalText    String
+  category    String
+  lifeArea    String   // 'love' | 'career' | 'money' | 'energy'
+  affirmation String
+  dailyTarget Int      @default(1)
+  status      String   @default("active") // 'active' | 'archived'
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  checkIns    IntentionCheckIn[]
+  streak      IntentionStreak?
+
+  @@index([deviceId])
+  @@map("intentions")
+}
+
+model IntentionCheckIn {
+  id          String   @id @default(uuid()) @db.Uuid
+  deviceId    String
+  intentionId String   @db.Uuid
+
+  date        String   // YYYY-MM-DD
+  conviction  Int
+  userText    String?
+  inputMode   String   @default("text") // 'text' | 'voice'  (voice-ready)
+  transcript  String?
+  aiResponse  String
+  aiConviction Int?
+
+  createdAt   DateTime @default(now())
+
+  intention   Intention @relation(fields: [intentionId], references: [id], onDelete: Cascade)
+
+  @@index([intentionId, date])
+  @@map("intention_check_ins")
+}
+
+model IntentionStreak {
+  id             String   @id @default(uuid()) @db.Uuid
+  deviceId       String
+  intentionId    String   @unique @db.Uuid
+
+  currentStreak  Int      @default(0)
+  longestStreak  Int      @default(0)
+  lastActiveDate String? // YYYY-MM-DD
+  totalCheckIns  Int      @default(0)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  intention      Intention @relation(fields: [intentionId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId])
+  @@map("intention_streaks")
+}
+
+// A second person a device has entered for compatibility checks. Big-three is
+// denormalized so the list renders without recomputing the chart.
+model SavedPerson {
+  id           String   @id @default(uuid()) @db.Uuid
+  deviceId     String
+
+  label        String
+  relationship String?
+
+  birthDate    String
+  birthTime    String
+  latitude     Float
+  longitude    Float
+  unknownTime  Boolean  @default(false)
+  placeName    String?
+
+  sunSign      String
+  moonSign     String
+  risingSign   String
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([deviceId, createdAt])
+  @@map("saved_people")
 }

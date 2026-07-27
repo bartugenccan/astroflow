@@ -17,18 +17,13 @@ The app must feel organic, playful, and responsive. Standard Material Design or 
   - Use soft borders (`borderRadius: 16` to `24`).
   - Buttons must have solid, hard-offset shadows (e.g., bottom shadow of 4px-6px) to simulate physical depth, not soft blurry drop-shadows.
   - When pressed, the button must visually "push down" by reducing the shadow offset and translating the Y-axis.
-- **Motion & Physics:**
-  - Linear animations and simple fades are banned for primary interactions.
-  - Use `react-native-reanimated` (v3) exclusively.
-  - All transitions, bottom sheets, and scaling effects MUST use `withSpring` (spring physics) to feel bouncy and organic. Reference Catalin Miron's Duolingo clone mechanics.
-- **Tactile Feedback:** Every positive interaction (streak completed, chart unlocked) must trigger a haptic response via `expo-haptics` or `react-native-haptic-feedback`.
 
 ## 3. Technology Stack & Constraints
 
 ### Frontend (React Native)
 
 - **Core:** Expo or React Native CLI (ensure TestFlight readiness).
-- **Animations:** `react-native-reanimated`, `react-native-gesture-handler`.
+
 - **Complex Vectors:** Use `lottie-react-native` or interactive SVGs for the Astrological Chart and the Cymatics Water Crystal.
 - **State:** Zustand for lightweight, fast state management.
 

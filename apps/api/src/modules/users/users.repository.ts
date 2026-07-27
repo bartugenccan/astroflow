@@ -47,7 +47,9 @@ export class UsersRepository {
     return this.prisma.birthProfile.create({
       data: {
         userId,
-        birthDate: new Date(dto.birthDate),
+        // Anchor to UTC midnight so a "YYYY-MM-DD" string can't shift a day
+        // under the @db.Date column in a non-UTC timezone.
+        birthDate: new Date(`${dto.birthDate}T00:00:00Z`),
         birthTime: dto.birthTime,
         latitude: dto.latitude,
         longitude: dto.longitude,

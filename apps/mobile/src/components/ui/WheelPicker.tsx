@@ -84,21 +84,28 @@ export function WheelPicker({
     [items.length, onChange],
   );
 
+  // Settle-detection lives INSIDE the reanimated handler on purpose. On iOS the
+  // plain JS-thread `onMomentumScrollEnd`/`onScrollEndDrag` props are unreliable
+  // once a reanimated `onScroll` owns the ScrollView's event delivery, so the
+  // authoritative "landed here" commit must come from the handler's own
+  // `onEndDrag`/`onMomentumEnd` lifecycle (UI thread, true final offset).
+  // Without this the last committed value was a throttled mid-fling `onScroll`
+  // reading, one row behind where the native snap settles — the "−1" bug.
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
       scrollY.value = e.contentOffset.y;
-      const idx = Math.round(e.contentOffset.y / ITEM_HEIGHT);
-      runOnJS(report)(idx);
+      runOnJS(report)(Math.round(e.contentOffset.y / ITEM_HEIGHT));
+    },
+    // Fires at finger-lift (pre-snap). Rounding maps to the interval iOS snaps
+    // to (nearest), so it's already the correct target for gentle placements.
+    onEndDrag: (e) => {
+      runOnJS(report)(Math.round(e.contentOffset.y / ITEM_HEIGHT));
+    },
+    // Fires after a fling's snap animation completes, with the true rest offset.
+    onMomentumEnd: (e) => {
+      runOnJS(report)(Math.round(e.contentOffset.y / ITEM_HEIGHT));
     },
   });
-
-  // Re-read the FINAL settled position. `onScroll` is throttled, so its last
-  // event can land mid-snap and commit the row one short; these fire once the
-  // wheel comes to rest, guaranteeing the centered value is what's reported.
-  const reportFinal = useCallback(
-    (offsetY: number) => report(Math.round(offsetY / ITEM_HEIGHT)),
-    [report],
-  );
 
   return (
     <View style={[styles.container, { width, height: VISIBLE * ITEM_HEIGHT }, style]}>
@@ -109,8 +116,6 @@ export function WheelPicker({
         decelerationRate="fast"
         bounces={false}
         onScroll={onScroll}
-        onMomentumScrollEnd={(e) => reportFinal(e.nativeEvent.contentOffset.y)}
-        onScrollEndDrag={(e) => reportFinal(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingVertical: PAD }}
         contentOffset={{ x: 0, y: initialOffset }}

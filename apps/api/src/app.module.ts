@@ -5,17 +5,27 @@ import { QueueModule } from './common/queue/queue.module';
 import { UsersModule } from './modules/users/users.module';
 import { AstrologyModule } from './modules/astrology/astrology.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
+import { AIModule } from './modules/ai/ai.module';
+import { CompanionModule } from './modules/companion/companion.module';
+import { IntentionsModule } from './modules/intentions/intentions.module';
 import { WorkersModule } from './workers/workers.module';
+
+// The streak worker + its BullMQ queue require Redis. Off by default so the API
+// boots on Postgres alone; set ENABLE_WORKERS=true to run the streak scheduler.
+const workerModules =
+  process.env.ENABLE_WORKERS === 'true' ? [QueueModule, WorkersModule] : [];
 
 @Module({
   imports: [
     AppConfigModule,
     PrismaModule,
-    QueueModule,
     UsersModule,
     AstrologyModule,
     GamificationModule,
-    WorkersModule,
+    AIModule,
+    CompanionModule,
+    IntentionsModule,
+    ...workerModules,
   ],
 })
 export class AppModule {}
