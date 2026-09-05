@@ -1,0 +1,78 @@
+{
+  "$comment": "ship-kit beyan dosyasi. doctor ve preflight bu beyani KODA KARSI dogrular. Bos URL alanlari yayin oncesi doldurulmak zorundadir.",
+  "app": {
+    "name": "AstroFlow",
+    "bundleId": "com.astroflow.app",
+    "supportUrl": "",
+    "privacyUrl": "",
+    "termsUrl": ""
+  },
+  "compliance": {
+    "accountDeletion": {
+      "inApp": true,
+      "route": "DELETE /users/account (users.controller.ts:58)"
+    },
+    "ai": {
+      "used": true,
+      "providers": ["DeepSeek"],
+      "dataShared": [
+        "Dogum haritasindan turetilen yerlesimler (gunes, ay, yukselen, gezegen/burc/ev, acilar)",
+        "Gunun transit ozeti",
+        "Kullanicinin companion sohbetinde yazdigi serbest metin",
+        "Kullanicinin yazdigi olumlama metni (rezonans skoru icin)",
+        "Kullanici hakkinda saklanan hafiza notlari (MemoryEntry)"
+      ],
+      "notShared": [
+        "Ham dogum tarihi/saati/yeri - harita sunucuda hesaplanir, saglayiciya gonderilmez"
+      ],
+      "declaredInAppPrivacy": false
+    },
+    "thirdPartySdks": [
+      {
+        "name": "DeepSeek API",
+        "purpose": "Yorum ve companion metni uretimi",
+        "dataSent": "Turetilmis harita verisi, sohbet metni, olumlama metni, hafiza notlari",
+        "privacyManifest": "n/a (sunucu tarafi HTTP cagrisi, mobil SDK degil)"
+      },
+      {
+        "name": "@react-native-async-storage/async-storage",
+        "purpose": "Cihaz ici onbellek ve tercihler",
+        "dataSent": "yok - yerel",
+        "privacyManifest": "gerekli"
+      },
+      {
+        "name": "@shopify/react-native-skia",
+        "purpose": "Harita ve gorsel cizim",
+        "dataSent": "yok",
+        "privacyManifest": "gerekli"
+      },
+      {
+        "name": "react-native-view-shot",
+        "purpose": "Paylasilabilir kart uretimi",
+        "dataSent": "yok - kullanici paylasim baslatir",
+        "privacyManifest": "gerekli"
+      },
+      {
+        "name": "expo-localization",
+        "purpose": "Dil ve saat dilimi",
+        "dataSent": "yok",
+        "privacyManifest": "gerekli"
+      }
+    ],
+    "dataSafetySubmitted": false,
+    "$note": "Sentry, PostHog ve odeme SDK'si kurulunca bu envantere EKLENMELIDIR."
+  },
+  "testing": {
+    "criticalModules": [
+      { "label": "Efemeris / harita hesabi", "pattern": "(ephemeris|astrology-engine|synastry)" },
+      { "label": "Yorum uretimi (AI)", "pattern": "(interpretation|companion|deepseek)" },
+      { "label": "Yetkilendirme / premium kilit", "pattern": "(entitlement|unlock|paywall)" },
+      { "label": "Kimlik dogrulama", "pattern": "(users|jwt|auth)" },
+      { "label": "Streak ve niyet durum makinesi", "pattern": "(streak|intention|score)" }
+    ]
+  },
+  "release": {
+    "ios": { "enabled": true },
+    "android": { "enabled": true }
+  }
+}
