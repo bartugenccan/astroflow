@@ -43,6 +43,9 @@ export interface RawHoroscope {
   Aspects: { all: RawAspect[] };
 }
 
+/** Mean motion of the Sun in degrees per day — the step size for the return solve. */
+const SUN_DEG_PER_DAY = 0.9856473;
+
 /**
  * Thin wrapper around circular-natal-horoscope-js.
  * `Origin` auto-derives timezone + historical DST from lat/lon.
@@ -50,6 +53,14 @@ export interface RawHoroscope {
  */
 @Injectable()
 export class EphemerisService {
+  /**
+   * Zone offset (ms to add to a local wall-clock to get UTC) for a location on a
+   * given day. Memoised per location+day: the offset only moves at DST
+   * boundaries, and the N-day scans in best-days/forecast would otherwise pay
+   * for an extra Origin construction on every iteration.
+   */
+  private readonly offsetCache = new Map<string, number>();
+
   computeChart(input: EphemerisInput): RawHoroscope {
     const { year, month, day } = this.parseDate(input.birthDate);
     const { hour, minute } = this.parseTime(input.birthTime);
@@ -87,23 +98,14 @@ export class EphemerisService {
   }
 
   /**
-   * A chart cast for an explicit instant at the given location. Used for
+   * A chart cast for an explicit UTC instant at the given location. Used for
    * transits and — by differencing two instants a day apart — for estimating
    * each planet's current daily motion (speed) to derive transit durations.
    */
   computeAt(when: Date, latitude: number, longitude: number): RawHoroscope {
     try {
-      const origin = new Origin({
-        year: when.getUTCFullYear(),
-        month: when.getUTCMonth(),
-        date: when.getUTCDate(),
-        hour: when.getUTCHours(),
-        minute: when.getUTCMinutes(),
-        latitude,
-        longitude,
-      });
       return new Horoscope({
-        origin,
+        origin: this.originAtUtc(when, latitude, longitude),
         houseSystem: 'placidus',
         zodiac: 'tropical',
         aspectPoints: ['bodies'],
@@ -116,6 +118,121 @@ export class EphemerisService {
         `Unable to compute transits: ${(err as Error).message}`,
       );
     }
+  }
+
+  /**
+   * A full chart — angles and houses included — cast for an explicit UTC
+   * instant. This is what a return chart needs: `computeAt` leaves the angles
+   * out because transit work only reads planet longitudes.
+   */
+  computeChartAtUtc(
+    when: Date,
+    latitude: number,
+    longitude: number,
+  ): RawHoroscope {
+    try {
+      return new Horoscope({
+        origin: this.originAtUtc(when, latitude, longitude),
+        houseSystem: 'placidus',
+        zodiac: 'tropical',
+        aspectPoints: ['bodies', 'angles'],
+        aspectWithPoints: ['bodies', 'angles'],
+        aspectTypes: ['major'],
+        language: 'en',
+      }) as RawHoroscope;
+    } catch (err) {
+      throw new BadRequestException(
+        `Unable to compute return chart: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /** The Sun's ecliptic longitude at a UTC instant. Cheap: no aspects, no angles. */
+  sunLongitudeAtUtc(when: Date, latitude: number, longitude: number): number {
+    const h = new Horoscope({
+      origin: this.originAtUtc(when, latitude, longitude),
+      houseSystem: 'placidus',
+      zodiac: 'tropical',
+      aspectPoints: [],
+      aspectWithPoints: [],
+      aspectTypes: [],
+      language: 'en',
+    }) as RawHoroscope;
+    return (h.CelestialBodies.sun as RawPoint).ChartPosition.Ecliptic
+      .DecimalDegrees;
+  }
+
+  /**
+   * Solve for the UTC instant at which the Sun sits exactly on
+   * `targetLongitude` near `seed` — the solar return moment.
+   *
+   * Newton-style: solar motion is near-uniform, so stepping by
+   * `angularError / meanMotion` converges in about three iterations. The
+   * library quantises longitudes at roughly 1e-4 deg, which bounds the
+   * achievable residual; the 5e-4 deg cutoff is ~45 seconds of time, well
+   * inside the precision the rest of the chart is built on.
+   */
+  solveSolarReturn(
+    targetLongitude: number,
+    seed: Date,
+    latitude: number,
+    longitude: number,
+  ): Date {
+    let t = seed;
+    for (let i = 0; i < 25; i++) {
+      const delta = this.normalizeSigned(
+        targetLongitude - this.sunLongitudeAtUtc(t, latitude, longitude),
+      );
+      if (Math.abs(delta) < 5e-4) break;
+      t = new Date(t.getTime() + (delta / SUN_DEG_PER_DAY) * 86400000);
+    }
+    return t;
+  }
+
+  /**
+   * `Origin` reads its date/time fields as LOCAL time at the supplied lat/lon —
+   * it derives the zone and historical DST itself. So a UTC instant has to be
+   * converted to that local wall-clock before construction. Passing UTC fields
+   * straight through offsets the chart by the zone offset, which merely nudges
+   * planet longitudes but rotates the house cusps by 15 deg per hour.
+   */
+  private originAtUtc(when: Date, latitude: number, longitude: number) {
+    const local = new Date(
+      when.getTime() - this.zoneOffsetMs(when, latitude, longitude),
+    );
+    return this.buildOrigin(local, latitude, longitude);
+  }
+
+  private zoneOffsetMs(when: Date, latitude: number, longitude: number): number {
+    const key = `${latitude.toFixed(4)}|${longitude.toFixed(4)}|${when
+      .toISOString()
+      .slice(0, 10)}`;
+    const hit = this.offsetCache.get(key);
+    if (hit !== undefined) return hit;
+
+    // Probe: interpret the UTC wall-clock as if it were local, then read back
+    // which UTC the library thinks that is. The difference is the zone offset.
+    const probe = this.buildOrigin(when, latitude, longitude);
+    const offset = Date.parse(probe.utcTimeFormatted) - when.getTime();
+    this.offsetCache.set(key, offset);
+    return offset;
+  }
+
+  /** Construct an Origin from a Date whose UTC accessors carry local wall-clock. */
+  private buildOrigin(local: Date, latitude: number, longitude: number) {
+    return new Origin({
+      year: local.getUTCFullYear(),
+      month: local.getUTCMonth(),
+      date: local.getUTCDate(),
+      hour: local.getUTCHours(),
+      minute: local.getUTCMinutes(),
+      latitude,
+      longitude,
+    });
+  }
+
+  private normalizeSigned(deg: number): number {
+    return ((((deg + 180) % 360) + 360) % 360) - 180;
   }
 
   private parseDate(s: string): { year: number; month: number; day: number } {

@@ -106,6 +106,31 @@ export interface Forecast {
   keyDates: { date: string; label: string }[];
 }
 
+/**
+ * The Solar Return reading, presented as "Your Year Ahead".
+ *
+ * Same contract as `GuidanceAnswer`: the plain-language half is what the UI
+ * leads with, `why` carries the astrology and is only revealed on demand. The
+ * caller pairs this with the raw `YearAheadChart` for the expanded view.
+ */
+export interface YearAhead {
+  /** Birthday-to-birthday window, YYYY-MM-DD. */
+  start: string;
+  end: string;
+  /** Age the person turns in this cycle. */
+  age: number;
+  /** One line naming what the year is about. No jargon. */
+  headline: string;
+  overview: string;
+  /** What the year supports, and what it asks for care around. */
+  strengths: ForecastTheme[];
+  tender: ForecastTheme[];
+  /** Dated-to-the-month moments worth watching, in plain language. */
+  turningPoints: { month: string; label: string }[];
+  /** The astrology reasoning, revealed under "show me why". */
+  why: string;
+}
+
 /** A question-first, plain-language answer: takeaway up front, why on demand. */
 export interface GuidanceAnswer {
   topic: string;

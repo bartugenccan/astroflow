@@ -407,6 +407,61 @@ export function forecastPrompt(
   };
 }
 
+/**
+ * The Solar Return reading, written as "Your Year Ahead".
+ *
+ * Follows the guidance/companion rule rather than the chart-reading rule:
+ * astrology is the invisible engine, and even `why` stays in plain language.
+ * The raw return chart travels alongside this in the API response, so the
+ * prose never has to carry the technical detail.
+ */
+export function yearAheadPrompt(
+  locale: Locale,
+  args: {
+    start: string;
+    end: string;
+    age: number;
+    /** Houses carrying the year's weight, already resolved to themes. */
+    emphasis: string[];
+    /** Where the Sun landed, as a life theme rather than a house number. */
+    sunTheme: string;
+    /** Planets on an angle — the loudest signal in a return chart. */
+    angular: string[];
+    focusAreas: string[];
+    /** "2026-06 — a supportive stretch for work" style hints. */
+    turningPoints: string[];
+  },
+): { user: string; schemaHint: string } {
+  const list = (arr: string[], empty: string) =>
+    arr.length ? arr.join('; ') : empty;
+  const areas = AREA_LABEL[locale];
+
+  const user =
+    locale === 'tr'
+      ? `Kişinin ${args.start} ile ${args.end} arasındaki yeni yaşam yılı için bir "yıl önizlemesi". Bu yıl ${args.age} yaşına giriyor. ` +
+        `Yılın ağırlık merkezi: ${list(args.emphasis, 'dengeli dağılmış')}. Yılın ana teması: ${args.sunTheme}. ` +
+        `En görünür etkiler: ${list(args.angular, 'belirgin bir tane yok')}. Öne çıkan alanlar: ${args.focusAreas.join(', ')}. ` +
+        `Dönüm noktaları: ${list(args.turningPoints, 'yok')}. ` +
+        `Astrolojiyi GİZLİ motor olarak kullan: metinde jargon (burç/ev/açı/gezegen adı) KULLANMA — "why" alanında bile sade konuş. ` +
+        `JSON üret: headline (bu yılın neyle ilgili olduğunu söyleyen tek kısa cümle), overview (2-4 cümle), strengths (yılın desteklediği 2 alan), tender (özen isteyen 1-2 alan), turningPoints (verilen aylar için sade etiketler), why (bu okumanın neye dayandığını sade dille, 2-3 cümle). Kaderci olma, kapı kapatma.`
+      : `A "year ahead" preview for the person's new life year running ${args.start} to ${args.end}. They turn ${args.age} in this cycle. ` +
+        `Where the year concentrates: ${list(args.emphasis, 'evenly spread')}. The year's central theme: ${args.sunTheme}. ` +
+        `Most visible influences: ${list(args.angular, 'none standing out')}. Leading areas: ${args.focusAreas.join(', ')}. ` +
+        `Turning points: ${list(args.turningPoints, 'none')}. ` +
+        `Use astrology as the INVISIBLE engine: do NOT use jargon (no sign, house, aspect or planet names) anywhere — including in "why", which should explain the reasoning in everyday words. ` +
+        `Produce JSON: headline (one short sentence naming what this year is about), overview (2-4 sentences), strengths (2 areas the year supports), tender (1-2 areas asking for care), turningPoints (plain labels for the months given), why (what this reading rests on, in plain language, 2-3 sentences). Never fatalistic, never close a door.`;
+
+  return {
+    user,
+    schemaHint:
+      `{ "headline": string, "overview": string, ` +
+      `"strengths": [{ "area": "love"|"career"|"money"|"energy", "text": string }], ` +
+      `"tender": [{ "area": "love"|"career"|"money"|"energy", "text": string }], ` +
+      `"turningPoints": [{ "month": "YYYY-MM", "label": string }], "why": string } ` +
+      `— areas are: ${Object.values(areas).join(', ')}`,
+  };
+}
+
 const GUIDANCE_TOPIC_LABEL: Record<Locale, Record<string, string>> = {
   en: {
     love: 'love & relationships', work: 'work & career', money: 'money',

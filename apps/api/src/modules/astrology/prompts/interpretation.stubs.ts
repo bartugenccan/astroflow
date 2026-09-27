@@ -5,6 +5,7 @@ import {
   Forecast,
   ForecastPeriod,
   GuidanceAnswer,
+  YearAhead,
 } from '../interpretation.types';
 
 /**
@@ -300,5 +301,114 @@ export function forecastStub(
         : `This ${p} carries a broadly balanced energy. Move in small, deliberate steps; the openings reward patience.`,
     themes,
     keyDates: [],
+  };
+}
+
+/**
+ * Per-area turning-point labels for the year-ahead fallback. Two variants each,
+ * because a year often leans on the same life area twice and repeating one
+ * sentence verbatim reads as a bug rather than a fallback.
+ */
+const TURNING_LABEL: Record<Locale, Record<string, string[]>> = {
+  en: {
+    love: [
+      'a conversation you have been putting off gets easier',
+      'someone close meets you halfway',
+    ],
+    career: [
+      'a door opens in your work — worth walking through',
+      'effort you put in earlier starts to show',
+    ],
+    money: [
+      'a good stretch to rethink what you spend',
+      'worth revisiting a commitment you made quickly',
+    ],
+    energy: [
+      'a quieter run — use it to reset rather than push',
+      'your appetite for change picks up again',
+    ],
+  },
+  tr: {
+    love: [
+      'ertelediğin bir konuşma kolaylaşıyor',
+      'yakınındaki biri sana yarı yolda geliyor',
+    ],
+    career: [
+      'işte bir kapı aralanıyor — girmeye değer',
+      'daha önce verdiğin emek görünmeye başlıyor',
+    ],
+    money: [
+      'harcamalarını yeniden düşünmek için iyi bir dönem',
+      'aceleyle verdiğin bir sözü tekrar ele almaya değer',
+    ],
+    energy: [
+      'daha sakin bir dönem — zorlamak yerine toparlan',
+      'değişim isteğin yeniden yükseliyor',
+    ],
+  },
+};
+
+/**
+ * Year-ahead fallback. Kept jargon-free like the reading it stands in for —
+ * the whole point of the feature is that a beginner can read it, and the stub
+ * is what ships whenever there is no API key.
+ */
+export function yearAheadStub(
+  locale: Locale,
+  args: {
+    start: string;
+    end: string;
+    age: number;
+    focusAreas: string[];
+    turningPoints: { month: string; area: string }[];
+  },
+): YearAhead {
+  const AREA_TEXT: Record<Locale, Record<string, string>> = {
+    en: {
+      love: 'Connections ask for more of your honesty than your effort this year.',
+      career: 'Steady, visible work counts for more than a single big push.',
+      money: 'Choices about what you value shape this year more than income does.',
+      energy: 'Your pace matters — build the year around rest, not around sprints.',
+    },
+    tr: {
+      love: 'Bu yıl ilişkiler çabadan çok dürüstlük istiyor.',
+      career: 'İstikrarlı ve görünür emek, tek büyük hamleden daha çok işe yarıyor.',
+      money: 'Bu yılı gelirden çok, neye değer verdiğin şekillendiriyor.',
+      energy: 'Temponu koru — yılı sprintlerin değil, dinlenmenin üstüne kur.',
+    },
+  };
+  const text = (area: string) => AREA_TEXT[locale][area] ?? AREA_TEXT[locale].energy;
+  const [first = 'energy', second = 'career', ...rest] = args.focusAreas;
+  const soft = rest[rest.length - 1] ?? 'money';
+
+  return {
+    start: args.start,
+    end: args.end,
+    age: args.age,
+    headline:
+      locale === 'tr'
+        ? 'Sağlam bir şey kurmakla ilgili bir yıl.'
+        : 'A year about building something that lasts.',
+    overview:
+      locale === 'tr'
+        ? `${args.age} yaşına girdiğin bu yıl acele etmeni değil, yön seçmeni istiyor. Küçük ve tutarlı adımlar, büyük ama dağınık hamlelerden daha uzağa götürüyor.`
+        : `The year you turn ${args.age} asks you to choose a direction rather than hurry. Small, consistent steps carry you further than big scattered ones.`,
+    strengths: [
+      { area: first as never, text: text(first) },
+      { area: second as never, text: text(second) },
+    ],
+    tender: [{ area: soft as never, text: text(soft) }],
+    // Vary by the life area the month actually leans on — four identical
+    // labels would read as a bug rather than a fallback.
+    turningPoints: args.turningPoints.map((t, i) => {
+      const variants = TURNING_LABEL[locale][t.area] ?? TURNING_LABEL[locale].energy;
+      // Walk the variants by how many times this area has already come up.
+      const seen = args.turningPoints.slice(0, i).filter((p) => p.area === t.area).length;
+      return { month: t.month, label: variants[seen % variants.length] };
+    }),
+    why:
+      locale === 'tr'
+        ? 'Bu okuma, doğum gününde gökyüzünün aldığı yeni düzene dayanıyor. Yılın ağırlığının nereye düştüğüne ve hangi aylarda belirginleştiğine bakıyoruz.'
+        : 'This reading rests on the fresh arrangement the sky takes on around your birthday — where the weight of the year falls, and which months it becomes most noticeable in.',
   };
 }

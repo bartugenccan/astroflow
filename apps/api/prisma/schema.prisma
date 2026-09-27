@@ -57,6 +57,9 @@ enum InterpretationKind {
   FORECAST_MONTHLY
   GUIDANCE
   INTENTION_AFFIRMATION
+  YEAR_AHEAD
+  TAROT_CARD
+  TAROT_SYNTHESIS
 }
 
 // ──── Core Models ────────────────────────────────────────────────────────────

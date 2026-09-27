@@ -7,6 +7,7 @@ import { AstrologyAdapterService } from './astrology-adapter.service';
 import { EphemerisService } from './ephemeris.service';
 import { InterpretationService } from './interpretation.service';
 import { SynastryService } from './synastry.service';
+import { SolarReturnService } from './solar-return.service';
 import { AIModule } from '../ai/ai.module';
 import { DeviceEntitlementService } from '../../common/device/device-entitlement.service';
 
@@ -21,6 +22,7 @@ import { DeviceEntitlementService } from '../../common/device/device-entitlement
     EphemerisService,
     InterpretationService,
     SynastryService,
+    SolarReturnService,
     DeviceEntitlementService,
   ],
   exports: [
@@ -31,6 +33,7 @@ import { DeviceEntitlementService } from '../../common/device/device-entitlement
     EphemerisService,
     InterpretationService,
     SynastryService,
+    SolarReturnService,
     DeviceEntitlementService,
   ],
 })

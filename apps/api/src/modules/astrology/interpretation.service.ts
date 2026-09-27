@@ -27,6 +27,7 @@ import {
   PlacementInterpretation,
   TransitDetail,
   TransitOverview,
+  YearAhead,
 } from './interpretation.types';
 import { CompatibilityScore } from './synastry.service';
 import {
@@ -43,6 +44,7 @@ import {
   transitOverviewPrompt,
   compatibilityPrompt,
   forecastPrompt,
+  yearAheadPrompt,
   guidancePrompt,
   affirmationPrompt,
 } from './prompts/interpretation.prompts';
@@ -59,12 +61,13 @@ import {
   transitOverviewStub,
   compatibilityStub,
   forecastStub,
+  yearAheadStub,
   guidanceStub,
   affirmationStub,
 } from './prompts/interpretation.stubs';
 
 /** Bump when prompts/persona change so caches invalidate. */
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v9';
 
 type InterpretationKind =
   | 'PLACEMENT'
@@ -81,7 +84,8 @@ type InterpretationKind =
   | 'FORECAST_WEEKLY'
   | 'FORECAST_MONTHLY'
   | 'GUIDANCE'
-  | 'INTENTION_AFFIRMATION';
+  | 'INTENTION_AFFIRMATION'
+  | 'YEAR_AHEAD';
 
 @Injectable()
 export class InterpretationService {
@@ -562,6 +566,89 @@ export class InterpretationService {
         } catch (err) {
           this.logger.warn(`forecast AI failed: ${(err as Error).message}`);
           return forecastStub(locale, period, args.start);
+        }
+      },
+    );
+  }
+
+  /**
+   * The Solar Return reading, in plain language. Cached per chart + cycle: the
+   * window only rolls over on a birthday, so one entry serves the whole year.
+   */
+  async getYearAhead(
+    args: {
+      start: string;
+      end: string;
+      age: number;
+      emphasis: string[];
+      sunTheme: string;
+      angular: string[];
+      focusAreas: string[];
+      turningPoints: { month: string; area: string }[];
+    },
+    chartSig: string,
+    locale: Locale,
+  ): Promise<YearAhead> {
+    const stubArgs = {
+      start: args.start,
+      end: args.end,
+      age: args.age,
+      focusAreas: args.focusAreas,
+      turningPoints: args.turningPoints,
+    };
+    return this.cached<YearAhead>(
+      'YEAR_AHEAD',
+      locale,
+      `yearahead|${chartSig}|${args.start}`,
+      async () => {
+        if (!this.ai.available) return yearAheadStub(locale, stubArgs);
+        try {
+          const { user, schemaHint } = yearAheadPrompt(locale, {
+            ...args,
+            turningPoints: args.turningPoints.map((t) => `${t.month} (${t.area})`),
+          });
+          const parsed = await this.ai.generateJson<{
+            headline?: string;
+            overview?: string;
+            strengths?: { area?: string; text?: string }[];
+            tender?: { area?: string; text?: string }[];
+            turningPoints?: { month?: string; label?: string }[];
+            why?: string;
+          }>({
+            system: systemPrompt(locale),
+            user,
+            schemaHint,
+            temperature: 0.8,
+            // A full year across six fields — the same generous cap the
+            // monthly forecast uses, for the same reason.
+            maxTokens: 3200,
+          });
+          const stub = yearAheadStub(locale, stubArgs);
+          // The model is asked for months we supplied; anything else is dropped
+          // rather than surfaced, so a hallucinated date never reaches the UI.
+          const allowed = new Set(args.turningPoints.map((t) => t.month));
+          const turningPoints = Array.isArray(parsed.turningPoints)
+            ? parsed.turningPoints
+                .filter((k) => k && k.month && k.label && allowed.has(String(k.month)))
+                .map((k) => ({
+                  month: String(k.month),
+                  label: String(k.label).slice(0, 120),
+                }))
+            : stub.turningPoints;
+          return {
+            start: args.start,
+            end: args.end,
+            age: args.age,
+            headline: (parsed.headline ?? stub.headline).slice(0, 160),
+            overview: (parsed.overview ?? stub.overview).slice(0, 2000),
+            strengths: this.coerceThemes(parsed.strengths) ?? stub.strengths,
+            tender: this.coerceThemes(parsed.tender) ?? stub.tender,
+            turningPoints: turningPoints.length ? turningPoints : stub.turningPoints,
+            why: (parsed.why ?? stub.why).slice(0, 1200),
+          };
+        } catch (err) {
+          this.logger.warn(`year-ahead AI failed: ${(err as Error).message}`);
+          return yearAheadStub(locale, stubArgs);
         }
       },
     );

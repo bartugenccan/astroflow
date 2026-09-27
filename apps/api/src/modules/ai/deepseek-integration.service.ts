@@ -52,6 +52,9 @@ export class DeepSeekIntegrationService {
             messages,
             temperature,
             max_tokens: maxTokens,
+            // Short prompts with tight budgets — hidden reasoning would eat the
+            // whole budget and leave `content` empty (see DeepSeekProvider).
+            thinking: { type: 'disabled' },
           }),
           signal: controller.signal,
         });

@@ -19,6 +19,7 @@ import {
 } from './astrology-adapter.service';
 import { InterpretationService } from './interpretation.service';
 import { SynastryService } from './synastry.service';
+import { SolarReturnService } from './solar-return.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { DeviceId } from '../../common/device/device-id.decorator';
 import { DeviceEntitlementService } from '../../common/device/device-entitlement.service';
@@ -30,6 +31,25 @@ import { bestDayReason } from './best-days.reasons';
 import { LifeArea } from './astrology.constants';
 import { Locale } from './interpretation.types';
 
+/**
+ * Plain-language stand-ins for the houses, used to ground the year-ahead prompt
+ * without handing the model a house number it would be tempted to repeat back.
+ */
+const HOUSE_THEME_HINT: Record<number, string> = {
+  1: 'how you show up and what you want to become',
+  2: 'money, security and what you value',
+  3: 'conversations, learning and the day-to-day',
+  4: 'home, family and where you feel rooted',
+  5: 'creativity, romance and play',
+  6: 'work, health and daily routines',
+  7: 'partnership and the people closest to you',
+  8: 'shared resources, depth and change',
+  9: 'travel, study and the search for meaning',
+  10: 'career, reputation and public life',
+  11: 'friendship, community and hopes',
+  12: 'rest, solitude and closing chapters',
+};
+
 @ApiTags('Astrology')
 @ApiHeader({ name: 'x-device-id', description: 'Anonymous device identifier', required: false })
 @Controller('astrology')
@@ -38,6 +58,7 @@ export class AstrologyController {
     private readonly adapter: AstrologyAdapterService,
     private readonly interpretation: InterpretationService,
     private readonly synastry: SynastryService,
+    private readonly solarReturn: SolarReturnService,
     private readonly entitlement: DeviceEntitlementService,
     private readonly prisma: PrismaService,
   ) {}
@@ -216,6 +237,49 @@ export class AstrologyController {
     @Query('locale') locale?: string,
   ) {
     return this.buildForecast(dto, 'monthly', start, this.locale(locale));
+  }
+
+  @Post('year-ahead')
+  @ApiOperation({
+    summary:
+      'Solar Return read as "Your Year Ahead" — plain-language reading plus the raw return chart',
+  })
+  @ApiQuery({
+    name: 'on',
+    example: '2026-09-05',
+    required: false,
+    description: 'Date to resolve the cycle for; defaults to today.',
+  })
+  @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
+  async getYearAhead(
+    @Body() dto: BirthInputDto,
+    @Query('on') on?: string,
+    @Query('locale') locale?: string,
+  ) {
+    const loc = this.locale(locale);
+    const input = this.birthInput(dto);
+    const window = this.solarReturn.getYearAhead(input, on);
+    const { chart, focusAreas, turningPoints } = window;
+
+    const reading = await this.interpretation.getYearAhead(
+      {
+        start: chart.windowStart,
+        end: chart.windowEnd,
+        age: chart.ageTurning,
+        emphasis: chart.houseEmphasis.map(
+          (h) => `${HOUSE_THEME_HINT[h.house]} (${h.planets.length})`,
+        ),
+        sunTheme: HOUSE_THEME_HINT[chart.sunHouse] ?? 'a steady year',
+        angular: chart.angularPlanets,
+        focusAreas,
+        turningPoints: turningPoints.map((t) => ({ month: t.month, area: t.area })),
+      },
+      this.hash(this.birthKey(input)),
+      loc,
+    );
+
+    // The reading leads; `chart` is what the UI reveals under "show me why".
+    return { ...reading, focusAreas, chart };
   }
 
   // ─── Compatibility / synastry ───────────────────────────────────────────────

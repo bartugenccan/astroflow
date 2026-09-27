@@ -7,14 +7,23 @@ import {
 } from './ai-text-provider';
 
 interface DeepSeekResponse {
-  choices: { message: { content: string } }[];
+  choices: {
+    message: { content: string; reasoning_content?: string };
+    finish_reason?: string;
+  }[];
 }
 
 /**
  * DeepSeek implementation of AiTextProvider. Real fetch to /chat/completions,
- * Bearer auth, 15s timeout, 3-attempt backoff. `available` is false when no key
- * is set, letting callers fall back to templated content in dev.
+ * Bearer auth, length-scaled timeout, 3-attempt backoff. `available` is false
+ * when no key is set, letting callers fall back to templated content in dev.
  */
+/**
+ * Ceiling on one generateText call including retries. Sits comfortably inside
+ * the ~60s platform default the mobile client relies on.
+ */
+const TOTAL_BUDGET_MS = 50_000;
+
 @Injectable()
 export class DeepSeekProvider implements AiTextProvider {
   private readonly logger = new Logger(DeepSeekProvider.name);
@@ -25,21 +34,58 @@ export class DeepSeekProvider implements AiTextProvider {
   constructor(config: ConfigService) {
     this.baseUrl = config.get<string>('DEEPSEEK_API_URL', 'https://api.deepseek.com/v1');
     this.apiKey = config.get<string>('DEEPSEEK_API_KEY', '');
-    // Override via DEEPSEEK_MODEL; default to the cheaper/faster tier.
-    this.model = config.get<string>('DEEPSEEK_MODEL', 'deepseek-v4-flash');
+    // Override via DEEPSEEK_MODEL; default to the cheaper/faster tier (the id
+    // the /models endpoint lists — "deepseek-v4-flash" is only an alias).
+    this.model = config.get<string>('DEEPSEEK_MODEL', 'deepseek-flash');
+    this.thinking = config.get<string>('DEEPSEEK_THINKING', 'disabled') === 'enabled';
   }
+
+  /**
+   * Hidden reasoning is off by default. Every prompt here is a short, fully
+   * specified writing task; with reasoning on, the model spent the whole
+   * `max_tokens` budget thinking and returned empty `content`, so every call
+   * burned three retries and the app sat on its loading state. Set
+   * DEEPSEEK_THINKING=enabled only alongside much larger token budgets.
+   */
+  private readonly thinking: boolean;
 
   get available(): boolean {
     return !!this.apiKey;
   }
 
+  /**
+   * How long to wait for a completion. A flat timeout punishes exactly the
+   * calls that need the most time: the long-form ones (monthly forecast, the
+   * year-ahead reading) ask for thousands of tokens and cannot finish inside
+   * the budget a 400-token daily insight needs. Scale with the requested
+   * length, keeping the old 15s floor for short calls, and cap so a hung
+   * connection still fails in reasonable time.
+   */
+  private timeoutFor(maxTokens: number): number {
+    return Math.min(45_000, Math.max(15_000, maxTokens * 20));
+  }
+
   async generateText(params: GenerateTextParams): Promise<string> {
     const { system, user, temperature = 0.7, maxTokens = 400 } = params;
     let lastError: Error | null = null;
+    // Mobile clients have no explicit fetch timeout, so they inherit the
+    // platform's (~60s). Three long attempts back to back would outlast that
+    // and the caller would see a network error instead of the stub fallback —
+    // so bound the whole retry loop, not just each attempt.
+    const deadline = Date.now() + TOTAL_BUDGET_MS;
 
     for (let attempt = 1; attempt <= 3; attempt++) {
+      if (attempt > 1 && Date.now() >= deadline) {
+        this.logger.warn('DeepSeek budget exhausted; giving up early');
+        break;
+      }
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      // Never wait past the overall budget, however much this attempt is owed.
+      const remaining = deadline - Date.now();
+      const timeout = setTimeout(
+        () => controller.abort(),
+        Math.max(5_000, Math.min(this.timeoutFor(maxTokens), remaining)),
+      );
       try {
         const res = await fetch(`${this.baseUrl}/chat/completions`, {
           method: 'POST',
@@ -55,6 +101,7 @@ export class DeepSeekProvider implements AiTextProvider {
             ],
             temperature,
             max_tokens: maxTokens,
+            thinking: { type: this.thinking ? 'enabled' : 'disabled' },
           }),
           signal: controller.signal,
         });
@@ -62,7 +109,19 @@ export class DeepSeekProvider implements AiTextProvider {
           throw new Error(`DeepSeek ${res.status}: ${await res.text()}`);
         }
         const data = (await res.json()) as DeepSeekResponse;
-        return data.choices[0].message.content.trim();
+        const choice = data.choices?.[0];
+        const content = choice?.message?.content?.trim() ?? '';
+        // Reasoning models spend the token budget on hidden reasoning first and
+        // can come back with an empty `content` (finish_reason "length") even
+        // on a 200. Returning "" here would surface downstream as an opaque
+        // "Unexpected end of JSON input"; treat it as a retryable miss so the
+        // remaining attempts — and ultimately the stub — take over cleanly.
+        if (!content) {
+          throw new Error(
+            `DeepSeek returned empty content (finish_reason: ${choice?.finish_reason ?? 'unknown'})`,
+          );
+        }
+        return content;
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         this.logger.warn(`DeepSeek attempt ${attempt}/3 failed: ${lastError.message}`);
