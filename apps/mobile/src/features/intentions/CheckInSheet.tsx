@@ -8,6 +8,8 @@ import { GoldButton } from "../../components/ui/GoldButton";
 import { AppText } from "../../components/ui/AppText";
 import { DotRating } from "../../components/ui/DotRating";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StarBurst } from "./StarBurst";
+import { useMotion } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
 import { CheckInResult } from "../../services/types";
 import { useTranslation } from "../../i18n";
@@ -23,6 +25,7 @@ interface CheckInSheetProps {
 
 export function CheckInSheet({ visible, onClose, intentionId, affirmation, onResult }: CheckInSheetProps) {
   const { t, locale } = useTranslation();
+  const m = useMotion();
   const [conviction, setConviction] = useState(0);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -69,13 +72,14 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
             <MotiView
               from={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", damping: 12 }}
+              transition={m.spring("mystic")}
               style={styles.celebrate}
             >
               <Ionicons name="sparkles" size={22} color={colors.gold[200]} />
-              <AppText variant="heading" color={colors.gold[200]}>
+              <AppText variant="heading" color={colors.gold[200]} style={styles.shrink}>
                 {t("intentions.dayComplete")}
               </AppText>
+              <StarBurst playKey={1} radius={80} />
             </MotiView>
           ) : null}
 
@@ -114,7 +118,7 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
           </View>
 
           <View style={styles.noteBlock}>
-            <AppText variant="label" color={colors.text.gold}>
+            <AppText variant="labelLong" color={colors.text.gold}>
               {t("intentions.noteLabel")}
             </AppText>
             <TextInput
@@ -173,6 +177,9 @@ const styles = StyleSheet.create({
   },
   replyWrap: {
     gap: spacing.lg,
+  },
+  shrink: {
+    flexShrink: 1,
   },
   celebrate: {
     flexDirection: "row",

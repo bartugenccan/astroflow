@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { StyleSheet, View, Pressable } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MotiView } from "moti";
@@ -85,16 +86,16 @@ export function BirthTimeScreen() {
         </MotiView>
       )}
 
-      <Pressable onPress={toggleUnknown} style={styles.unknownRow}>
+      <PressableScale onPress={toggleUnknown} scaleTo={0.97} style={styles.unknownRow}>
         <Ionicons
           name={unknown ? "checkbox" : "square-outline"}
           size={20}
           color={unknown ? colors.gold[300] : colors.text.tertiary}
         />
-        <AppText variant="body" color={colors.text.secondary}>
+        <AppText variant="body" color={colors.text.secondary} style={styles.unknownText}>
           {t("onboarding.unknownTime")}
         </AppText>
-      </Pressable>
+      </PressableScale>
     </OnboardingFrame>
   );
 }
@@ -124,5 +125,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.sm,
     marginTop: spacing.xxl,
+  },
+  unknownText: {
+    flexShrink: 1,
   },
 });

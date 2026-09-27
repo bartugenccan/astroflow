@@ -1,15 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, ScrollView, Pressable, InteractionManager } from "react-native";
+import { StyleSheet, View, ScrollView, InteractionManager } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { MotiView } from "moti";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
-import { BigThree } from "../../components/BigThree";
-import { MoonPhase, moonIllumination, moonPhaseName } from "../../components/MoonPhase";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { TermInfo } from "../../components/TermInfo";
+import {
+  MoonPhase,
+  moonIllumination,
+  moonPhaseKey,
+} from "../../components/MoonPhase";
+import { YearCard } from "./YearCard";
+import { EnterView } from "../../lib/motion";
 import { TransitRow } from "./TransitRow";
 import { ShareButton } from "../../components/ui/ShareButton";
 import { ShareCardModal } from "../share/ShareCardModal";
@@ -22,10 +28,14 @@ import { DailyInsight, TransitData } from "../../services/types";
 import { prefetchForecast } from "../../services/interpretationCache";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
+import { energyLabel } from "../../lib/astroLanguage";
 import { useTranslation } from "../../i18n";
 import { colors, spacing, radii } from "../../lib/design-system";
 
-function greetingKey(): "today.greetingMorning" | "today.greetingAfternoon" | "today.greetingEvening" {
+function greetingKey():
+  | "today.greetingMorning"
+  | "today.greetingAfternoon"
+  | "today.greetingEvening" {
   const h = new Date().getHours();
   if (h < 12) return "today.greetingMorning";
   if (h < 18) return "today.greetingAfternoon";
@@ -43,26 +53,42 @@ export function TodayScreen() {
   const [insight, setInsight] = useState<DailyInsight | null>(null);
   const [transits, setTransits] = useState<TransitData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [shareData, setShareData] = useState<ShareCardData | null>(null);
-  const [guidanceTopic, setGuidanceTopic] = useState<GuidanceTopic | null>(null);
+  const [guidanceTopic, setGuidanceTopic] = useState<GuidanceTopic | null>(
+    null,
+  );
 
   useEffect(() => {
     if (!dto) return;
     let active = true;
     setLoading(true);
-    Promise.all([
-      astrologyApi.getDailyInsight(dto, locale),
-      astrologyApi.getTransits(dto),
-    ]).then(([ins, tr]) => {
-      if (!active) return;
-      setInsight(ins);
-      setTransits(tr);
-      setLoading(false);
-    });
+    setFailed(false);
+    // Loaded independently: the transits are pure math and shouldn't wait on
+    // (or fail with) the AI-written insight. A failure must end the loading
+    // state — before, a rejected promise left the hero spinning forever.
+    astrologyApi
+      .getDailyInsight(dto, locale)
+      .then((ins) => {
+        if (active) setInsight(ins);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    astrologyApi
+      .getTransits(dto)
+      .then((tr) => {
+        if (active) setTransits(tr);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
-  }, [dto, locale]);
+  }, [dto, locale, attempt]);
 
   // Warm the forecast cache + hydrate device entitlements after first paint.
   useEffect(() => {
@@ -78,11 +104,14 @@ export function TodayScreen() {
   }, [dto, locale, setUnlockedFeatures]);
 
   const now = new Date();
-  const dateLabel = now.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
+  const dateLabel = now.toLocaleDateString(
+    locale === "tr" ? "tr-TR" : "en-US",
+    {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    },
+  );
   const phase = moonIllumination(now);
 
   return (
@@ -91,8 +120,9 @@ export function TodayScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Order answers "what about today?" first, then the longer horizons,
+            then the tools: guidance → your year → the sky → ask → practices. */}
+        <EnterView style={styles.header}>
           <View style={styles.headerText}>
             <AppText variant="title">
               {t(greetingKey(), { name: displayName })}
@@ -103,38 +133,63 @@ export function TodayScreen() {
           </View>
           <View style={styles.moonWrap}>
             <MoonPhase size={30} date={now} />
-            <AppText variant="bodySmall" style={styles.moonLabel}>
-              {moonPhaseName(phase)}
+            <AppText
+              variant="bodySmall"
+              center
+              numberOfLines={2}
+              style={styles.moonLabel}
+            >
+              {t(`moonPhase.${moonPhaseKey(phase)}`)}
             </AppText>
           </View>
-        </View>
-
-        {/* Companion — question-first entry (Bets 1+2) */}
-        <CompanionPrompt onSelectTopic={setGuidanceTopic} />
+        </EnterView>
 
         {/* Hero insight */}
-        {loading || !insight ? (
+        {failed && !insight ? (
+          <HairlineCard elevated style={[styles.hero, styles.heroLoading]}>
+            <AppText variant="body" center>
+              {t("today.insightError")}
+            </AppText>
+            <PressableScale
+              onPress={() => setAttempt((n) => n + 1)}
+              hitSlop={10}
+            >
+              <AppText variant="heading" color={colors.gold[300]}>
+                {t("common.retry")}
+              </AppText>
+            </PressableScale>
+          </HairlineCard>
+        ) : loading || !insight ? (
           <SkeletonCard label={t("common.loading")} />
         ) : (
-          <MotiView
-            from={{ opacity: 0, translateY: 16 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "spring", damping: 18, stiffness: 120 }}
-          >
+          <EnterView index={1} scale>
             <HairlineCard elevated style={styles.hero}>
               <View style={styles.heroTop}>
-                <AppText variant="label" color={colors.text.gold}>
+                <AppText
+                  variant="label"
+                  color={colors.text.gold}
+                  numberOfLines={1}
+                  style={styles.heroEyebrow}
+                >
                   {t("today.guidanceEyebrow")}
                 </AppText>
                 <View style={styles.heroActions}>
                   <View style={styles.chip}>
-                    <AppText variant="label" color={colors.gold[300]}>
-                      {insight.energyState}
+                    <AppText
+                      variant="label"
+                      color={colors.gold[300]}
+                      numberOfLines={1}
+                    >
+                      {energyLabel(t, insight.energyState)}
                     </AppText>
                   </View>
                   <ShareButton
                     onPress={() =>
-                      setShareData({ variant: "daily", insight, date: new Date() })
+                      setShareData({
+                        variant: "daily",
+                        insight,
+                        date: new Date(),
+                      })
                     }
                   />
                 </View>
@@ -142,109 +197,156 @@ export function TodayScreen() {
               <AppText variant="title" style={styles.heroTitle}>
                 {insight.title}
               </AppText>
-              <MotiView
-                from={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ type: "timing", duration: 700, delay: 250 }}
-              >
+              <EnterView delay={250} from="none">
                 <AppText variant="serifBody">{insight.summary}</AppText>
-              </MotiView>
+              </EnterView>
             </HairlineCard>
-          </MotiView>
+          </EnterView>
         )}
 
-        {/* Big Three */}
+        {/* Your year — the permanent way into the birthday chart. */}
         {profile ? (
-          <MotiView
-            from={{ opacity: 0, translateY: 12 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 400, delay: 150 }}
-            style={styles.bigThree}
-          >
-            <View style={styles.bigThreeHeader}>
-              <ShareButton
-                onPress={() =>
-                  setShareData({
-                    variant: "bigThree",
-                    sunSign: profile.sunSign,
-                    moonSign: profile.moonSign,
-                    risingSign: profile.risingSign,
-                    name: displayName,
-                  })
-                }
-              />
-            </View>
-            <BigThree
-              sunSign={profile.sunSign}
-              moonSign={profile.moonSign}
-              risingSign={profile.risingSign}
-            />
-          </MotiView>
+          <EnterView index={2}>
+            <YearCard birthDate={profile.birthDate} />
+          </EnterView>
         ) : null}
 
-        {/* The sky right now */}
-        <View style={styles.sky}>
-          <SectionHeader eyebrow={t("today.skyNowTitle")} />
+        {/* The sky right now — a taste; the full list lives under Ahead. */}
+        <EnterView index={3} style={styles.sky}>
+          <View style={styles.skyHead}>
+            <View style={styles.skyTitle}>
+              <SectionHeader eyebrow={t("today.skyNowTitle")} />
+              <TermInfo term="transit" size={14} />
+            </View>
+            <PressableScale
+              onPress={() => router.navigate("/(tabs)/ahead" as Href)}
+              hitSlop={10}
+              scaleTo={0.94}
+              style={styles.seeAll}
+            >
+              <AppText variant="bodySmall" color={colors.gold[300]}>
+                {t("today.seeAll")}
+              </AppText>
+              <Ionicons
+                name="chevron-forward"
+                size={14}
+                color={colors.gold[300]}
+              />
+            </PressableScale>
+          </View>
+          <AppText variant="bodySmall">{t("today.skyNowHint")}</AppText>
           <HairlineCard style={styles.skyCard}>
             {transits && transits.transits.length > 0 ? (
-              transits.transits.slice(0, 3).map((tr, i) => (
-                <MotiView
+              transits.transits.slice(0, 2).map((tr, i, arr) => (
+                <EnterView
                   key={`${tr.transitPlanet}-${tr.natalPlanet}-${i}`}
-                  from={{ opacity: 0, translateX: 12 }}
-                  animate={{ opacity: 1, translateX: 0 }}
-                  transition={{ type: "timing", duration: 320, delay: i * 90 }}
+                  index={i}
+                  delay={300}
                 >
                   <TransitRow transit={tr} />
-                  {i < 2 ? <View style={styles.separator} /> : null}
-                </MotiView>
+                  {i < arr.length - 1 ? (
+                    <View style={styles.separator} />
+                  ) : null}
+                </EnterView>
               ))
             ) : (
-              <AppText variant="body">{t("today.noTransits")}</AppText>
+              <AppText variant="body" style={styles.quietSky}>
+                {t("today.noTransits")}
+              </AppText>
             )}
           </HairlineCard>
-        </View>
+        </EnterView>
 
-        {/* Entry points: intentions + forecast + compatibility */}
-        <View style={styles.entries}>
-          <Pressable onPress={() => router.push("/intentions" as Href)}>
+        {/* Ask — topic chips answer in a sheet, "Talk to Aster" opens the chat. */}
+        <EnterView index={4}>
+          <CompanionPrompt onSelectTopic={setGuidanceTopic} />
+        </EnterView>
+
+        {/* Practices and people */}
+        <EnterView index={5} style={styles.entries}>
+          <PressableScale
+            scaleTo={0.98}
+            onPress={() => router.push("/intentions" as Href)}
+          >
             <HairlineCard style={styles.entryCard}>
               <View style={styles.entryIcon}>
-                <Ionicons name="flame-outline" size={20} color={colors.gold[300]} />
+                <Ionicons
+                  name="flame-outline"
+                  size={20}
+                  color={colors.gold[300]}
+                />
               </View>
               <View style={styles.entryText}>
                 <AppText variant="heading">{t("intentions.title")}</AppText>
                 <AppText variant="bodySmall">{t("intentions.eyebrow")}</AppText>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.text.tertiary}
+              />
             </HairlineCard>
-          </Pressable>
+          </PressableScale>
 
-          <Pressable onPress={() => router.navigate("/(tabs)/forecast")}>
+          <PressableScale
+            scaleTo={0.98}
+            onPress={() =>
+              router.navigate({
+                pathname: "/(tabs)/ahead",
+                params: { section: "season" },
+              })
+            }
+          >
             <HairlineCard style={styles.entryCard}>
               <View style={styles.entryIcon}>
-                <Ionicons name="calendar-outline" size={20} color={colors.gold[300]} />
+                <Ionicons
+                  name="calendar-outline"
+                  size={20}
+                  color={colors.gold[300]}
+                />
               </View>
               <View style={styles.entryText}>
                 <AppText variant="heading">{t("today.forecastCta")}</AppText>
-                <AppText variant="bodySmall">{t("forecast.bestDaysTitle")}</AppText>
+                <AppText variant="bodySmall">
+                  {t("forecast.bestDaysTitle")}
+                </AppText>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.text.tertiary}
+              />
             </HairlineCard>
-          </Pressable>
+          </PressableScale>
 
-          <Pressable onPress={() => router.push("/compatibility" as Href)}>
+          <PressableScale
+            scaleTo={0.98}
+            onPress={() => router.push("/compatibility" as Href)}
+          >
             <HairlineCard style={styles.entryCard}>
               <View style={styles.entryIcon}>
-                <Ionicons name="heart-outline" size={20} color={colors.gold[300]} />
+                <Ionicons
+                  name="heart-outline"
+                  size={20}
+                  color={colors.gold[300]}
+                />
               </View>
               <View style={styles.entryText}>
-                <AppText variant="heading">{t("today.compatibilityCardTitle")}</AppText>
-                <AppText variant="bodySmall">{t("today.compatibilityCardSub")}</AppText>
+                <AppText variant="heading">
+                  {t("today.compatibilityCardTitle")}
+                </AppText>
+                <AppText variant="bodySmall">
+                  {t("today.compatibilityCardSub")}
+                </AppText>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={colors.text.tertiary}
+              />
             </HairlineCard>
-          </Pressable>
-        </View>
+          </PressableScale>
+        </EnterView>
       </ScrollView>
 
       <ShareCardModal
@@ -292,9 +394,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
     marginLeft: spacing.md,
+    maxWidth: 84,
+    flexShrink: 0,
   },
   moonLabel: {
     fontSize: 10,
+    lineHeight: 13,
   },
   hero: {
     gap: spacing.md,
@@ -309,15 +414,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  heroEyebrow: {
+    flex: 1,
+    minWidth: 0,
+    marginRight: spacing.sm,
+  },
   heroActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-  },
-  bigThreeHeader: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: spacing.sm,
+    flexShrink: 0,
   },
   chip: {
     borderWidth: 1,
@@ -329,11 +435,28 @@ const styles = StyleSheet.create({
   heroTitle: {
     marginTop: spacing.xs,
   },
-  bigThree: {
-    marginTop: -spacing.sm,
-  },
   sky: {
-    gap: spacing.md,
+    gap: spacing.sm,
+  },
+  skyHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  skyTitle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexShrink: 1,
+  },
+  seeAll: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginLeft: spacing.sm,
+  },
+  quietSky: {
+    paddingVertical: spacing.md,
   },
   skyCard: {
     paddingVertical: spacing.sm,
@@ -361,6 +484,7 @@ const styles = StyleSheet.create({
   },
   entryText: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
 });

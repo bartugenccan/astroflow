@@ -1,6 +1,8 @@
 import React from "react";
-import { View, StyleSheet, Pressable } from "react-native";
-import * as Haptics from "expo-haptics";
+import { View, StyleSheet } from "react-native";
+import { MotiView } from "moti";
+import { PressableScale } from "./PressableScale";
+import { useMotion } from "../../lib/motion";
 import { colors, spacing, radii } from "../../lib/design-system";
 
 interface DotRatingProps {
@@ -12,24 +14,33 @@ interface DotRatingProps {
 
 /** A 1..N tappable dot scale (used for the check-in conviction rating). */
 export function DotRating({ value, onChange, count = 5, size = 34 }: DotRatingProps) {
+  const m = useMotion();
   return (
-    <View style={styles.row}>
+    <View style={styles.row} accessibilityRole="adjustable" accessibilityValue={{ min: 0, max: count, now: value }}>
       {Array.from({ length: count }, (_, i) => i + 1).map((n) => {
         const filled = value >= n;
         return (
-          <Pressable
+          <PressableScale
             key={n}
             hitSlop={6}
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => {});
-              onChange(n);
-            }}
+            scaleTo={0.82}
+            onPress={() => onChange(n)}
+            accessibilityRole="button"
+            accessibilityLabel={`${n}/${count}`}
+            accessibilityState={{ selected: filled }}
             style={[
               styles.dot,
               { width: size, height: size, borderRadius: size / 2 },
               filled ? styles.dotFilled : styles.dotEmpty,
             ]}
-          />
+          >
+            {/* Filled dots "pop" in sequence up to the chosen value. */}
+            <MotiView
+              animate={{ scale: filled ? 1 : 0.4, opacity: filled ? 1 : 0 }}
+              transition={m.spring("snappy", filled ? (n - 1) * 30 : 0)}
+              style={[styles.fill, { borderRadius: size / 2 }]}
+            />
+          </PressableScale>
         );
       })}
     </View>
@@ -44,9 +55,13 @@ const styles = StyleSheet.create({
   },
   dot: {
     borderWidth: 1,
+    overflow: "hidden",
+  },
+  fill: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: colors.gold[400],
   },
   dotFilled: {
-    backgroundColor: colors.gold[400],
     borderColor: colors.gold[300],
   },
   dotEmpty: {

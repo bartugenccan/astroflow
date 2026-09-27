@@ -14,6 +14,7 @@ import {
   useSharedValue,
   useDerivedValue,
   withRepeat,
+  useReducedMotion,
   withTiming,
   Easing,
   cancelAnimation,
@@ -101,16 +102,18 @@ export function CelestialBackground({ variant = "default" }: Props) {
   const stars = useMemo(() => makeStars(count, seededRng(0x9e3779b1 ^ count)), [count]);
 
   const clock = useSharedValue(0);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    if (variant === "still") return;
+    // Reduce Motion: the stars hold still instead of twinkling forever.
+    if (variant === "still" || reduced) return;
     clock.value = withRepeat(
       withTiming(Math.PI * 2, { duration: 6000, easing: Easing.linear }),
       -1,
       false,
     );
     return () => cancelAnimation(clock);
-  }, [clock, variant]);
+  }, [clock, variant, reduced]);
 
   return (
     <Canvas style={StyleSheet.absoluteFill}>

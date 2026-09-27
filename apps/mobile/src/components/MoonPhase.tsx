@@ -16,15 +16,26 @@ export function moonIllumination(date: Date): number {
   return (phase + 1) % 1;
 }
 
-export function moonPhaseName(phase: number): string {
-  if (phase < 0.03 || phase > 0.97) return "New Moon";
-  if (phase < 0.22) return "Waxing Crescent";
-  if (phase < 0.28) return "First Quarter";
-  if (phase < 0.47) return "Waxing Gibbous";
-  if (phase < 0.53) return "Full Moon";
-  if (phase < 0.72) return "Waning Gibbous";
-  if (phase < 0.78) return "Last Quarter";
-  return "Waning Crescent";
+export type MoonPhaseKey =
+  | "new"
+  | "waxingCrescent"
+  | "firstQuarter"
+  | "waxingGibbous"
+  | "full"
+  | "waningGibbous"
+  | "lastQuarter"
+  | "waningCrescent";
+
+/** Phase 0..1 → i18n key under `moonPhase.*`. */
+export function moonPhaseKey(phase: number): MoonPhaseKey {
+  if (phase < 0.03 || phase > 0.97) return "new";
+  if (phase < 0.22) return "waxingCrescent";
+  if (phase < 0.28) return "firstQuarter";
+  if (phase < 0.47) return "waxingGibbous";
+  if (phase < 0.53) return "full";
+  if (phase < 0.72) return "waningGibbous";
+  if (phase < 0.78) return "lastQuarter";
+  return "waningCrescent";
 }
 
 /** Silver moon disc with a shadow terminator drawn from the current phase. */

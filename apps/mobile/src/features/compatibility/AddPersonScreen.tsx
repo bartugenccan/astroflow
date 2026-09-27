@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, View, TextInput, Pressable, ScrollView } from "react-native";
+import { StyleSheet, View, TextInput, ScrollView } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { MotiView } from "moti";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { GoldButton } from "../../components/ui/GoldButton";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { BackButton } from "../../components/ui/BackButton";
+import { EnterView } from "../../lib/motion";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { WheelPicker, WheelItem } from "../../components/ui/WheelPicker";
 import { searchCities } from "../../services/mock/cities";
@@ -116,11 +118,11 @@ export function AddPersonScreen() {
   return (
     <ScreenWrapper>
       <View style={styles.topBar}>
-        <Pressable hitSlop={12} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={26} color={colors.text.secondary} />
-        </Pressable>
-        <AppText variant="heading">{t("compatibility.addTitle")}</AppText>
-        <View style={{ width: 26 }} />
+        <BackButton />
+        <AppText variant="heading" numberOfLines={1} style={styles.topTitle}>
+          {t("compatibility.addTitle")}
+        </AppText>
+        <View style={styles.topSpacer} />
       </View>
 
       <ScrollView
@@ -129,7 +131,7 @@ export function AddPersonScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Name */}
-        <View style={styles.field}>
+        <EnterView index={0} style={styles.field}>
           <AppText variant="label" color={colors.text.gold}>
             {t("compatibility.nameLabel")}
           </AppText>
@@ -141,10 +143,10 @@ export function AddPersonScreen() {
             style={styles.input}
             autoCorrect={false}
           />
-        </View>
+        </EnterView>
 
         {/* Date */}
-        <View style={styles.field}>
+        <EnterView index={1} style={styles.field}>
           <AppText variant="label" color={colors.text.gold}>
             {t("compatibility.birthDateQ")}
           </AppText>
@@ -153,10 +155,10 @@ export function AddPersonScreen() {
             <WheelPicker items={months} selectedIndex={month - 1} onChange={(i) => setMonth(months[i].value)} width={90} />
             <WheelPicker items={years} selectedIndex={year - YEAR_MIN} onChange={(i) => setYear(years[i].value)} width={92} />
           </View>
-        </View>
+        </EnterView>
 
         {/* Time */}
-        <View style={styles.field}>
+        <EnterView index={2} style={styles.field}>
           <AppText variant="label" color={colors.text.gold}>
             {t("compatibility.birthTimeQ")}
           </AppText>
@@ -167,20 +169,26 @@ export function AddPersonScreen() {
               <WheelPicker items={minutes} selectedIndex={minute} onChange={(i) => setMinute(minutes[i].value)} width={80} />
             </View>
           ) : null}
-          <Pressable onPress={() => setUnknown((u) => !u)} style={styles.unknownRow}>
+          <PressableScale
+            onPress={() => setUnknown((u) => !u)}
+            style={styles.unknownRow}
+            scaleTo={0.97}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: unknown }}
+          >
             <Ionicons
               name={unknown ? "checkbox" : "square-outline"}
               size={20}
               color={unknown ? colors.gold[300] : colors.text.tertiary}
             />
-            <AppText variant="body" color={colors.text.secondary}>
+            <AppText variant="body" color={colors.text.secondary} style={styles.shrink}>
               {t("compatibility.unknownTime")}
             </AppText>
-          </Pressable>
-        </View>
+          </PressableScale>
+        </EnterView>
 
         {/* Place */}
-        <View style={styles.field}>
+        <EnterView index={3} style={styles.field}>
           <AppText variant="label" color={colors.text.gold}>
             {t("compatibility.birthPlaceQ")}
           </AppText>
@@ -199,29 +207,28 @@ export function AddPersonScreen() {
           {!citySelected ? (
             <View style={styles.results}>
               {results.slice(0, 6).map((c, i) => (
-                <MotiView
-                  key={c.id}
-                  from={{ opacity: 0, translateY: 6 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  transition={{ type: "timing", duration: 200, delay: Math.min(i, 6) * 30 }}
-                >
-                  <Pressable
+                <EnterView key={c.id} index={i} distance={6}>
+                  <PressableScale
                     onPress={() => {
                       setCity(c);
                       setQuery(cityLabel(c));
                     }}
                     style={styles.cityRow}
+                    scaleTo={0.98}
+                    accessibilityRole="button"
                   >
-                    <AppText variant="heading">{c.name}</AppText>
-                    <AppText variant="bodySmall" numberOfLines={1}>
+                    <AppText variant="heading" numberOfLines={2}>
+                      {c.name}
+                    </AppText>
+                    <AppText variant="bodySmall" numberOfLines={2}>
                       {c.admin1 && c.admin1 !== c.name ? `${c.admin1} · ${c.country}` : c.country}
                     </AppText>
-                  </Pressable>
-                </MotiView>
+                  </PressableScale>
+                </EnterView>
               ))}
             </View>
           ) : null}
-        </View>
+        </EnterView>
 
         <GoldButton
           label={t("compatibility.save")}
@@ -239,9 +246,19 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.sm,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
+  },
+  topTitle: {
+    flex: 1,
+    textAlign: "center",
+  },
+  topSpacer: {
+    width: 32,
+  },
+  shrink: {
+    flexShrink: 1,
   },
   content: {
     paddingHorizontal: spacing.xl,

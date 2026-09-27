@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, ScrollView, TextInput, Pressable } from "react-native";
+import { StyleSheet, View, ScrollView, TextInput } from "react-native";
 import { useRouter, type Href } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { MotiView } from "moti";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
@@ -10,6 +8,9 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { GoldButton } from "../../components/ui/GoldButton";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { DotRating } from "../../components/ui/DotRating";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { BackButton } from "../../components/ui/BackButton";
+import { EnterView } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
 import { IntentionSuggestion, LifeArea } from "../../services/types";
 import { useBirthDto } from "../../hooks/useBirthDto";
@@ -74,11 +75,11 @@ export function CreateIntentionScreen() {
   return (
     <ScreenWrapper>
       <View style={styles.topBar}>
-        <Pressable hitSlop={12} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={26} color={colors.text.secondary} />
-        </Pressable>
-        <AppText variant="heading">{t("intentions.createTitle")}</AppText>
-        <View style={{ width: 26 }} />
+        <BackButton />
+        <AppText variant="heading" numberOfLines={1} style={styles.topTitle}>
+          {t("intentions.createTitle")}
+        </AppText>
+        <View style={styles.topSpacer} />
       </View>
 
       <ScrollView
@@ -87,7 +88,7 @@ export function CreateIntentionScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Transit-derived suggestions */}
-        <View style={styles.section}>
+        <EnterView style={styles.section}>
           <SectionHeader eyebrow={t("intentions.suggestionsTitle")} />
           {suggestions === null ? (
             <View style={styles.loaderBox}>
@@ -96,13 +97,13 @@ export function CreateIntentionScreen() {
           ) : (
             <View style={styles.suggestions}>
               {suggestions.map((s, i) => (
-                <MotiView
-                  key={`${s.goal}-${i}`}
-                  from={{ opacity: 0, translateY: 8 }}
-                  animate={{ opacity: 1, translateY: 0 }}
-                  transition={{ type: "timing", duration: 260, delay: i * 70 }}
-                >
-                  <Pressable onPress={() => pickSuggestion(s)}>
+                <EnterView key={`${s.goal}-${i}`} index={i}>
+                  <PressableScale
+                    scaleTo={0.98}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: goal === s.goal }}
+                    onPress={() => pickSuggestion(s)}
+                  >
                     <HairlineCard
                       style={[styles.suggestion, goal === s.goal && styles.suggestionActive]}
                     >
@@ -111,16 +112,16 @@ export function CreateIntentionScreen() {
                         {s.why}
                       </AppText>
                     </HairlineCard>
-                  </Pressable>
-                </MotiView>
+                  </PressableScale>
+                </EnterView>
               ))}
             </View>
           )}
-        </View>
+        </EnterView>
 
         {/* Goal */}
-        <View style={styles.section}>
-          <AppText variant="label" color={colors.text.gold}>
+        <EnterView index={1} style={styles.section}>
+          <AppText variant="labelLong" color={colors.text.gold}>
             {t("intentions.goalLabel")}
           </AppText>
           <TextInput
@@ -132,9 +133,12 @@ export function CreateIntentionScreen() {
           />
           <View style={styles.presets}>
             {PRESETS.map((p) => (
-              <Pressable
+              <PressableScale
                 key={p.key}
                 onPress={() => pickPreset(p)}
+                scaleTo={0.92}
+                accessibilityRole="button"
+                accessibilityState={{ selected: category === p.key }}
                 style={[styles.preset, category === p.key && styles.presetActive]}
               >
                 <AppText
@@ -143,26 +147,28 @@ export function CreateIntentionScreen() {
                 >
                   {t(`intentions.categories.${p.key}` as TranslationKey)}
                 </AppText>
-              </Pressable>
+              </PressableScale>
             ))}
           </View>
-        </View>
+        </EnterView>
 
         {/* Target */}
-        <View style={styles.section}>
-          <AppText variant="label" color={colors.text.gold}>
+        <EnterView index={2} style={styles.section}>
+          <AppText variant="labelLong" color={colors.text.gold}>
             {t("intentions.targetLabel")}
           </AppText>
           <DotRating value={target} onChange={setTarget} count={5} />
-        </View>
+        </EnterView>
 
-        <GoldButton
-          label={t("intentions.createCta")}
-          onPress={create}
-          loading={saving}
-          disabled={!goal.trim()}
-          style={{ marginTop: spacing.md }}
-        />
+        <EnterView index={3}>
+          <GoldButton
+            label={t("intentions.createCta")}
+            onPress={create}
+            loading={saving}
+            disabled={!goal.trim()}
+            style={{ marginTop: spacing.md }}
+          />
+        </EnterView>
       </ScrollView>
     </ScreenWrapper>
   );
@@ -172,10 +178,12 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.sm,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
   },
+  topTitle: { flex: 1, textAlign: "center" },
+  topSpacer: { width: 32 },
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
@@ -208,8 +216,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   preset: {
+    maxWidth: "100%",
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm - 2,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.border.hairline,

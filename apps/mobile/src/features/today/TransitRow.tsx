@@ -5,11 +5,14 @@ import Animated, {
   useAnimatedStyle,
   withRepeat,
   withTiming,
+  useReducedMotion,
 } from "react-native-reanimated";
 import { useEffect } from "react";
 import { AppText } from "../../components/ui/AppText";
 import { Glyph } from "../../components/Glyph";
 import { Transit } from "../../services/types";
+import { aspectPhrase, aspectStrength } from "../../lib/astroLanguage";
+import { useTranslation, TranslationKey } from "../../i18n";
 import { colors, spacing } from "../../lib/design-system";
 
 function aspectColor(aspect: string): string {
@@ -19,12 +22,15 @@ function aspectColor(aspect: string): string {
 }
 
 export function TransitRow({ transit }: { transit: Transit }) {
+  const { t } = useTranslation();
   const tint = aspectColor(transit.aspect);
   const pulse = useSharedValue(1);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    pulse.value = withRepeat(withTiming(1.15, { duration: 1500 }), -1, true);
-  }, [pulse]);
+    if (reduced) return;
+    pulse.value = withRepeat(withTiming(1.4, { duration: 1500 }), -1, true);
+  }, [pulse, reduced]);
 
   const dotStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
@@ -39,11 +45,21 @@ export function TransitRow({ transit }: { transit: Transit }) {
         <Glyph name={transit.natalPlanet} size={18} color={colors.moon} />
       </View>
       <View style={styles.text}>
-        <AppText variant="body" color={colors.text.primary} numberOfLines={1}>
-          {transit.transitPlanet} {transit.aspect} {transit.natalPlanet}
+        {/* A sentence, not "Moon Trine Venus" — this is the first astrology
+            a new user meets, right on the home screen. */}
+        {/* Two lines: Turkish puts the verb last, so a one-line ellipsis
+            cut off the very word that says what's happening. */}
+        <AppText variant="body" color={colors.text.primary} numberOfLines={2}>
+          {aspectPhrase(
+            t,
+            transit.aspect,
+            t(`planets.${transit.transitPlanet}` as TranslationKey),
+            t(`planets.${transit.natalPlanet}` as TranslationKey),
+          )}
         </AppText>
         <AppText variant="bodySmall" numberOfLines={1}>
-          {transit.transitSign} · {transit.orb.toFixed(1)}° orb
+          {t(`signs.${transit.transitSign}` as TranslationKey)} ·{" "}
+          {aspectStrength(t, transit.orb)}
         </AppText>
       </View>
     </View>
@@ -65,10 +81,12 @@ const styles = StyleSheet.create({
   glyphs: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
-    width: 72,
+    gap: 2,
+    width: 58,
   },
   text: {
     flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
 });

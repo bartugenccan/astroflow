@@ -4,29 +4,46 @@ import {
   View,
   ScrollView,
   TextInput,
-  Pressable,
   KeyboardAvoidingView,
   Keyboard,
   Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { MotiView } from "moti";
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useSharedValue,
+  useAnimatedStyle,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+  Easing,
+  useReducedMotion,
+  cancelAnimation,
+} from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { BackButton } from "../../components/ui/BackButton";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { astrologyApi } from "../../services/astrologyApi";
 import { ChatMessage } from "../../services/types";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore, FREE_DAILY_MESSAGES } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, fonts } from "../../lib/design-system";
+import { EnterView } from "../../lib/motion";
+import { colors, spacing, radii, fonts, motion } from "../../lib/design-system";
 
-export function CompanionScreen({ seed }: { seed?: string }) {
+/** Springy rise for a freshly-sent / freshly-received bubble. */
+const bubbleEnter = FadeInDown.springify()
+  .damping(motion.spring.gentle.damping)
+  .stiffness(motion.spring.gentle.stiffness)
+  .mass(motion.spring.gentle.mass);
+
+export function CompanionScreen() {
   const { t, locale } = useTranslation();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const dto = useBirthDto();
 
@@ -42,14 +59,21 @@ export function CompanionScreen({ seed }: { seed?: string }) {
   const [paywall, setPaywall] = useState(false);
   const [kbShown, setKbShown] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const seededRef = useRef(false);
+  // History loaded on open appears in place; only new bubbles spring in.
+  const historyIds = useRef<Set<string>>(new Set());
 
   const today = new Date().toISOString().slice(0, 10);
   const usedToday = msgDate === today ? msgCount : 0;
   const atLimit = !isPremium && usedToday >= FREE_DAILY_MESSAGES;
 
   useEffect(() => {
-    astrologyApi.getChatHistory().then(setMessages).catch(() => {});
+    astrologyApi
+      .getChatHistory()
+      .then((h) => {
+        historyIds.current = new Set(h.map((m) => m.id));
+        setMessages(h);
+      })
+      .catch(() => {});
   }, []);
 
   // Track the keyboard so the input bar doesn't add the bottom safe-area inset
@@ -106,24 +130,18 @@ export function CompanionScreen({ seed }: { seed?: string }) {
     }
   };
 
-  // Fire a seeded question (from a Today chip) once.
-  useEffect(() => {
-    if (seed && !seededRef.current && dto) {
-      seededRef.current = true;
-      void send(seed);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed, dto]);
+  const canSend = !!input.trim() && !sending;
 
   return (
     <ScreenWrapper>
       {/* ScreenWrapper already applies the top safe-area inset — don't double it. */}
       <View style={styles.topBar}>
-        <Pressable hitSlop={12} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={26} color={colors.text.secondary} />
-        </Pressable>
-        <AppText variant="heading">{t("companion.name")}</AppText>
-        <View style={{ width: 26 }} />
+        {/* Companion slides up from the bottom, so it dismisses with a close. */}
+        <BackButton icon="close" />
+        <AppText variant="heading" numberOfLines={1} style={styles.topTitle}>
+          {t("companion.name")}
+        </AppText>
+        <View style={styles.topSpacer} />
       </View>
 
       <KeyboardAvoidingView
@@ -135,61 +153,77 @@ export function CompanionScreen({ seed }: { seed?: string }) {
           ref={scrollRef}
           contentContainerStyle={styles.messages}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         >
           {messages.length === 0 && !sending ? (
-            <AppText variant="serifBody" center color={colors.text.secondary} style={styles.empty}>
-              {t("companion.emptyChat")}
-            </AppText>
+            <EnterView delay={120}>
+              <AppText variant="serifBody" center color={colors.text.secondary} style={styles.empty}>
+                {t("companion.emptyChat")}
+              </AppText>
+            </EnterView>
           ) : null}
 
-          {messages.map((m) => (
-            <MotiView
-              key={m.id}
-              from={{ opacity: 0, translateY: 8 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: "timing", duration: 240 }}
-              style={m.role === "user" ? styles.userRow : styles.asterRow}
-            >
-              <View style={m.role === "user" ? styles.userBubble : styles.asterBubble}>
-                <AppText
-                  variant="body"
-                  color={m.role === "user" ? colors.text.onGold : colors.text.primary}
-                >
-                  {m.content}
-                </AppText>
-                {m.why ? (
-                  <>
-                    <Pressable onPress={() => setWhyOpen((w) => ({ ...w, [m.id]: !w[m.id] }))}>
-                      <AppText variant="label" color={colors.gold[300]} style={styles.whyToggle}>
-                        {whyOpen[m.id] ? t("companion.hideWhy") : t("companion.showWhy")}
-                      </AppText>
-                    </Pressable>
-                    {whyOpen[m.id] ? (
-                      <AppText variant="bodySmall" color={colors.text.tertiary} style={styles.why}>
-                        {m.why}
-                      </AppText>
-                    ) : null}
-                  </>
-                ) : null}
-              </View>
-            </MotiView>
-          ))}
+          {messages.map((m) => {
+            const isUser = m.role === "user";
+            const fresh = !historyIds.current.has(m.id);
+            return (
+              <Animated.View
+                key={m.id}
+                entering={fresh ? bubbleEnter : FadeIn.duration(motion.duration.base)}
+                style={isUser ? styles.userRow : styles.asterRow}
+              >
+                <View style={isUser ? styles.userBubble : styles.asterBubble}>
+                  <AppText variant="body" color={isUser ? colors.text.onGold : colors.text.primary}>
+                    {m.content}
+                  </AppText>
+                  {m.why ? (
+                    <>
+                      <PressableScale
+                        onPress={() => setWhyOpen((w) => ({ ...w, [m.id]: !w[m.id] }))}
+                        scaleTo={0.94}
+                        hitSlop={8}
+                        style={styles.whyToggle}
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: !!whyOpen[m.id] }}
+                      >
+                        <Ionicons
+                          name={whyOpen[m.id] ? "chevron-up" : "chevron-down"}
+                          size={12}
+                          color={colors.gold[300]}
+                        />
+                        <AppText variant="labelLong" color={colors.gold[300]} style={styles.shrink}>
+                          {whyOpen[m.id] ? t("companion.hideWhy") : t("companion.showWhy")}
+                        </AppText>
+                      </PressableScale>
+                      {whyOpen[m.id] ? (
+                        <Animated.View entering={FadeInDown.duration(motion.duration.base)}>
+                          <AppText variant="bodySmall" color={colors.text.tertiary} style={styles.why}>
+                            {m.why}
+                          </AppText>
+                        </Animated.View>
+                      ) : null}
+                    </>
+                  ) : null}
+                </View>
+              </Animated.View>
+            );
+          })}
 
           {sending ? (
-            <View style={styles.asterRow}>
-              <View style={styles.asterBubble}>
-                <CelestialLoader size="sm" />
+            <Animated.View entering={bubbleEnter} style={styles.asterRow}>
+              <View
+                style={[styles.asterBubble, styles.typingBubble]}
+                accessibilityLabel={t("companion.thinking")}
+              >
+                <TypingDots />
               </View>
-            </View>
+            </Animated.View>
           ) : null}
         </ScrollView>
 
         <View
-          style={[
-            styles.inputBar,
-            { paddingBottom: (kbShown ? 0 : insets.bottom) + spacing.sm },
-          ]}
+          style={[styles.inputBar, { paddingBottom: (kbShown ? 0 : insets.bottom) + spacing.sm }]}
         >
           <TextInput
             value={input}
@@ -200,13 +234,17 @@ export function CompanionScreen({ seed }: { seed?: string }) {
             multiline
             onSubmitEditing={() => send(input)}
           />
-          <Pressable
+          <PressableScale
             onPress={() => send(input)}
-            disabled={!input.trim() || sending}
-            style={[styles.sendBtn, (!input.trim() || sending) && styles.sendDisabled]}
+            disabled={!canSend}
+            scaleTo={0.88}
+            haptic="light"
+            accessibilityRole="button"
+            accessibilityLabel={t("companion.send")}
+            style={styles.sendBtn}
           >
             <Ionicons name="arrow-up" size={20} color={colors.text.onGold} />
-          </Pressable>
+          </PressableScale>
         </View>
       </KeyboardAvoidingView>
 
@@ -215,15 +253,65 @@ export function CompanionScreen({ seed }: { seed?: string }) {
   );
 }
 
+/** Three gold dots bouncing in a staggered loop — Aster "typing". */
+function TypingDots() {
+  return (
+    <View style={styles.dots}>
+      {[0, 1, 2].map((i) => (
+        <TypingDot key={i} index={i} />
+      ))}
+    </View>
+  );
+}
+
+function TypingDot({ index }: { index: number }) {
+  const reduced = useReducedMotion();
+  const y = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduced) return;
+    const ease = Easing.inOut(Easing.quad);
+    y.value = withDelay(
+      index * 140,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 280, easing: ease }),
+          withTiming(0, { duration: 280, easing: ease }),
+          withTiming(0, { duration: 260 }),
+        ),
+        -1,
+      ),
+    );
+    return () => cancelAnimation(y);
+  }, [index, reduced, y]);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: 0.45 + y.value * 0.55,
+    transform: [{ translateY: -y.value * 5 }],
+  }));
+
+  return <Animated.View style={[styles.dot, reduced ? styles.dotStatic : null, style]} />;
+}
+
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: spacing.sm,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
+  },
+  topTitle: {
+    flex: 1,
+    textAlign: "center",
+  },
+  topSpacer: {
+    width: 32,
+  },
+  shrink: {
+    flexShrink: 1,
   },
   messages: {
     paddingHorizontal: spacing.xl,
@@ -256,8 +344,31 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     gap: spacing.xs,
   },
+  typingBubble: {
+    paddingVertical: spacing.md + 2,
+  },
+  dots: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 14,
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.gold[300],
+  },
+  dotStatic: {
+    opacity: 0.7,
+  },
   whyToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: spacing.xs,
     marginTop: spacing.sm,
+    paddingVertical: 2,
   },
   why: {
     marginTop: spacing.xs,
@@ -294,8 +405,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold[400],
     alignItems: "center",
     justifyContent: "center",
-  },
-  sendDisabled: {
-    opacity: 0.4,
   },
 });

@@ -5,6 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { SpringBottomSheet } from "./ui/SpringBottomSheet";
 import { GoldButton } from "./ui/GoldButton";
 import { AppText } from "./ui/AppText";
+import { PressableScale } from "./ui/PressableScale";
+import { EnterView } from "../lib/motion";
 import { useTranslation } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
 import { astrologyApi } from "../services/astrologyApi";
@@ -77,32 +79,41 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
 
   return (
     <SpringBottomSheet visible={visible} onClose={onClose} title={t("paywall.premiumBadge")}>
-      <AppText variant="title">{title}</AppText>
-      <AppText variant="body" style={{ marginTop: spacing.sm }}>
-        {subtitle}
-      </AppText>
+      <EnterView>
+        <AppText variant="title">{title}</AppText>
+        <AppText variant="body" style={{ marginTop: spacing.sm }}>
+          {subtitle}
+        </AppText>
+      </EnterView>
 
       <View style={styles.perks}>
-        {perks.map((perk) => (
-          <View key={perk} style={styles.perkRow}>
-            <Ionicons name="sparkles" size={16} color={colors.gold[300]} />
+        {perks.map((perk, i) => (
+          <EnterView key={perk} index={i + 1} style={styles.perkRow}>
+            <View style={styles.perkIcon}>
+              <Ionicons name="sparkles" size={16} color={colors.gold[300]} />
+            </View>
             <AppText variant="body" color={colors.text.primary} style={styles.perkText}>
               {perk}
             </AppText>
-          </View>
+          </EnterView>
         ))}
       </View>
 
-      <GoldButton label={cta} onPress={unlock} loading={busy} style={{ marginTop: spacing.lg }} />
-      <AppText
-        variant="bodySmall"
-        center
-        color={colors.text.tertiary}
-        style={{ marginTop: spacing.md }}
+      <EnterView index={perks.length + 1}>
+        <GoldButton label={cta} onPress={unlock} loading={busy} style={{ marginTop: spacing.lg }} />
+      </EnterView>
+      <PressableScale
         onPress={onClose}
+        scaleTo={0.95}
+        haptic="none"
+        hitSlop={8}
+        style={styles.later}
+        accessibilityRole="button"
       >
-        {t("paywall.maybeLater")}
-      </AppText>
+        <AppText variant="bodySmall" center color={colors.text.tertiary} style={styles.laterText}>
+          {t("paywall.maybeLater")}
+        </AppText>
+      </PressableScale>
     </SpringBottomSheet>
   );
 }
@@ -114,10 +125,25 @@ const styles = StyleSheet.create({
   },
   perkRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.sm,
+  },
+  perkIcon: {
+    height: 22,
+    justifyContent: "center",
   },
   perkText: {
     flex: 1,
+    minWidth: 0,
+  },
+  later: {
+    alignSelf: "center",
+    maxWidth: "100%",
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  laterText: {
+    flexShrink: 1,
   },
 });

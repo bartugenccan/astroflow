@@ -31,6 +31,7 @@ import {
   TransitReport,
   TransitDetail,
   TransitOverview,
+  YearAhead,
 } from "./types";
 import type { AstrologyApi } from "./astrologyApi";
 import { Locale } from "../i18n";
@@ -44,6 +45,29 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = "ApiError";
+  }
+}
+
+/**
+ * The server caps one AI generation (retries included) at ~50s and then falls
+ * back to templated text, so anything past this is a dead connection — e.g. a
+ * stale LAN IP in EXPO_PUBLIC_API_URL. Without a limit, fetch on a phone can
+ * hang for minutes and screens sit on their loading state forever.
+ */
+const REQUEST_TIMEOUT_MS = 60_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new ApiError(`Request timed out: ${url}`, 0);
+    }
+    throw new ApiError(`Network error: ${(err as Error).message}`, 0);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -61,19 +85,14 @@ async function post<T>(
   }
   const qs = params.toString();
   const url = `${API_URL}/api/v1/astrology/${path}${qs ? `?${qs}` : ""}`;
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-device-id": deviceId,
-      },
-      body: JSON.stringify(dto),
-    });
-  } catch (err) {
-    throw new ApiError(`Network error: ${(err as Error).message}`, 0);
-  }
+  const res = await fetchWithTimeout(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-device-id": deviceId,
+    },
+    body: JSON.stringify(dto),
+  });
   if (!res.ok) {
     throw new ApiError(`Request failed (${res.status})`, res.status);
   }
@@ -96,19 +115,14 @@ async function request<T>(
   if (query) for (const [k, v] of Object.entries(query)) params.set(k, String(v));
   const qs = params.toString();
   const url = `${API_URL}/api/v1/${path}${qs ? `?${qs}` : ""}`;
-  let res: Response;
-  try {
-    res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        "x-device-id": deviceId,
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-  } catch (err) {
-    throw new ApiError(`Network error: ${(err as Error).message}`, 0);
-  }
+  const res = await fetchWithTimeout(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "x-device-id": deviceId,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
   if (!res.ok) {
     throw new ApiError(`Request failed (${res.status})`, res.status);
   }
@@ -176,6 +190,8 @@ export const httpAstrologyApi: AstrologyApi = {
 
   getForecast: (dto, period, locale, start) =>
     post<Forecast>(`forecast/${period}`, dto, locale, start ? { start } : undefined),
+
+  getYearAhead: (dto, locale) => post<YearAhead>("year-ahead", dto, locale),
 
   getCompatibility: (self, other) =>
     request<CompatibilityScore>("POST", "astrology/compatibility", { self, other }),

@@ -1,23 +1,22 @@
-import React, { useEffect } from "react";
-import {
-  StyleSheet,
-  View,
-  ScrollView,
-  Pressable,
-  InteractionManager,
-} from "react-native";
-import { MotiView } from "moti";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, View, ScrollView, InteractionManager } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, { LinearTransition, useReducedMotion } from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { StarDivider } from "../../components/ui/StarDivider";
 import { ShimmerLines } from "../../components/ui/Shimmer";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { ShareButton } from "../../components/ui/ShareButton";
+import { TermInfo } from "../../components/TermInfo";
 import { BigThree } from "../../components/BigThree";
 import { Glyph } from "../../components/Glyph";
 import { AspectRow } from "./AspectRow";
 import { HouseRow } from "./HouseRow";
+import { ShareCardModal } from "../share/ShareCardModal";
+import { ShareCardData } from "../share/ShareableCard";
 import { astrologyApi } from "../../services/astrologyApi";
 import { dtoKey, prefetchHouses } from "../../services/interpretationCache";
 import {
@@ -31,13 +30,25 @@ import {
 import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
+import { houseLabel } from "../../lib/astroLanguage";
+import { GlossaryTermId } from "../../lib/glossary";
+import { EnterView } from "../../lib/motion";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, motion, radii } from "../../lib/design-system";
+import { colors, spacing, radii, motion } from "../../lib/design-system";
 
 export function ReadingScreen() {
   const { t, locale } = useTranslation();
   const dto = useBirthDto();
   const profile = useAppStore((s) => s.birthProfile);
+  const displayName = useAppStore((s) => s.displayName);
+  const [shareData, setShareData] = useState<ShareCardData | null>(null);
+  const reduced = useReducedMotion();
+  // Rows below an opening accordion glide down instead of jumping.
+  const rowLayout = reduced
+    ? undefined
+    : LinearTransition.springify()
+        .damping(motion.spring.gentle.damping)
+        .stiffness(motion.spring.gentle.stiffness);
 
   const key = dto ? dtoKey(dto) : null;
 
@@ -80,24 +91,39 @@ export function ReadingScreen() {
     };
   }, [dto, locale]);
 
+  const shareBigThree = () => {
+    if (!profile) return;
+    setShareData({
+      variant: "bigThree",
+      sunSign: profile.sunSign,
+      moonSign: profile.moonSign,
+      risingSign: profile.risingSign,
+      name: displayName,
+    });
+  };
+
   return (
     <ScreenWrapper>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <SectionHeader eyebrow={t("reading.eyebrow")} title={t("reading.title")} />
+        <EnterView from="none">
+          <SectionHeader eyebrow={t("reading.eyebrow")} title={t("reading.title")} />
+        </EnterView>
 
         {/* Big Three hero */}
-        <MotiView
-          from={{ opacity: 0, translateY: 16 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "spring", ...motion.spring.gentle }}
-        >
+        <EnterView index={1}>
           <HairlineCard elevated style={styles.hero}>
-            <AppText variant="label" color={colors.text.gold}>
-              {t("reading.bigThreeTitle")}
-            </AppText>
+            <View style={styles.heroHeader}>
+              <View style={styles.headLeft}>
+                <AppText variant="label" color={colors.text.gold} style={styles.shrink}>
+                  {t("reading.bigThreeTitle")}
+                </AppText>
+                <TermInfo term="bigThree" size={14} />
+              </View>
+              {profile ? <ShareButton onPress={shareBigThree} size={32} /> : null}
+            </View>
             {profile ? (
               <BigThree
                 sunSign={profile.sunSign}
@@ -117,25 +143,27 @@ export function ReadingScreen() {
               <AppText variant="serifBody">{bigThree.data?.text}</AppText>
             </Section>
           </HairlineCard>
-        </MotiView>
+        </EnterView>
 
         {/* Chart Context — day/night + Saturn return */}
-        <View style={styles.section}>
+        <EnterView index={2} style={styles.section}>
           <SectionHeader eyebrow={t("reading.contextTitle")} />
           <HairlineCard>
             {context.data ? (
               <View style={styles.chips}>
                 <View style={styles.chip}>
-                  <AppText variant="label" color={colors.gold[300]}>
+                  <AppText variant="labelLong" color={colors.gold[300]} style={styles.shrink}>
                     {context.data.sect === "day"
                       ? t("reading.dayChart")
                       : t("reading.nightChart")}
                   </AppText>
+                  <TermInfo term="dayNightChart" size={14} />
                 </View>
                 <View style={styles.chip}>
-                  <AppText variant="label" color={colors.gold[300]}>
+                  <AppText variant="labelLong" color={colors.gold[300]} style={styles.shrink}>
                     {t("reading.saturnReturn", { age: context.data.saturnReturnAge })}
                   </AppText>
+                  <TermInfo term="saturnReturn" size={14} />
                 </View>
               </View>
             ) : null}
@@ -148,10 +176,10 @@ export function ReadingScreen() {
               <AppText variant="serifBody">{context.data?.text}</AppText>
             </Section>
           </HairlineCard>
-        </View>
+        </EnterView>
 
         {/* Overview */}
-        <View style={styles.section}>
+        <EnterView index={3} style={styles.section}>
           <SectionHeader eyebrow={t("reading.overviewTitle")} />
           <HairlineCard>
             <Section
@@ -163,11 +191,11 @@ export function ReadingScreen() {
               <AppText variant="serifBody">{overview.data?.text}</AppText>
             </Section>
           </HairlineCard>
-        </View>
+        </EnterView>
 
         {/* Houses — 12 lazily-read cards */}
         <View style={styles.section}>
-          <SectionHeader eyebrow={t("reading.housesTitle")} />
+          <TermHeader eyebrow={t("reading.housesTitle")} term="house" />
           <HairlineCard style={styles.aspectsCard}>
             <Section
               loading={chart.loading}
@@ -177,12 +205,12 @@ export function ReadingScreen() {
             >
               {chart.data
                 ? chart.data.houses.map((h, i) => (
-                    <View key={h.house}>
+                    <Animated.View key={h.house} layout={rowLayout}>
                       {dto ? <HouseRow dto={dto} house={h} locale={locale} /> : null}
                       {i < chart.data!.houses.length - 1 ? (
                         <View style={styles.sep} />
                       ) : null}
-                    </View>
+                    </Animated.View>
                   ))
                 : null}
             </Section>
@@ -191,7 +219,7 @@ export function ReadingScreen() {
 
         {/* Key aspects */}
         <View style={styles.section}>
-          <SectionHeader eyebrow={t("reading.aspectsTitle")} />
+          <TermHeader eyebrow={t("reading.aspectsTitle")} term="aspect" />
           <HairlineCard style={styles.aspectsCard}>
             <Section
               loading={aspects.loading}
@@ -201,15 +229,15 @@ export function ReadingScreen() {
             >
               {aspects.data && aspects.data.length > 0 ? (
                 aspects.data.map((a, i) => (
-                  <MotiView
+                  <Animated.View
                     key={`${a.planet1}-${a.planet2}-${a.aspect}`}
-                    from={{ opacity: 0, translateX: 10 }}
-                    animate={{ opacity: 1, translateX: 0 }}
-                    transition={{ type: "timing", duration: 300, delay: i * motion.stagger }}
+                    layout={rowLayout}
                   >
-                    <AspectRow aspect={a} />
-                    {i < aspects.data!.length - 1 ? <View style={styles.sep} /> : null}
-                  </MotiView>
+                    <EnterView index={i} distance={8}>
+                      <AspectRow aspect={a} />
+                      {i < aspects.data!.length - 1 ? <View style={styles.sep} /> : null}
+                    </EnterView>
+                  </Animated.View>
                 ))
               ) : (
                 <AppText variant="body">{t("reading.tapAspect")}</AppText>
@@ -220,33 +248,33 @@ export function ReadingScreen() {
 
         {/* Lunar Nodes */}
         <View style={styles.section}>
-          <SectionHeader eyebrow={t("reading.nodesTitle")} />
+          <TermHeader eyebrow={t("reading.nodesTitle")} term="northNode" />
           <HairlineCard>
             {nodes.data ? (
               <View style={styles.nodeRow}>
                 <View style={styles.nodeItem}>
                   <Glyph name="NorthNode" size={22} color={colors.gold[300]} />
-                  <AppText variant="label" color={colors.text.tertiary}>
+                  <AppText variant="labelLong" color={colors.text.tertiary} center>
                     {t("reading.northNode")}
                   </AppText>
-                  <AppText variant="bodySmall" color={colors.text.primary}>
+                  <AppText variant="bodySmall" color={colors.text.primary} center>
                     {t(`signs.${nodes.data.northSign}` as "signs.Aries")}
                   </AppText>
-                  <AppText variant="label" color={colors.text.tertiary}>
-                    {t("reading.house", { n: nodes.data.northHouse })}
+                  <AppText variant="labelLong" color={colors.text.tertiary} center>
+                    {houseLabel(t, locale, nodes.data.northHouse)}
                     {chart.data ? ` · ${chart.data.nodes.north.degree}°` : ""}
                   </AppText>
                 </View>
                 <View style={styles.nodeItem}>
                   <Glyph name="SouthNode" size={22} color={colors.moon} />
-                  <AppText variant="label" color={colors.text.tertiary}>
+                  <AppText variant="labelLong" color={colors.text.tertiary} center>
                     {t("reading.southNode")}
                   </AppText>
-                  <AppText variant="bodySmall" color={colors.text.primary}>
+                  <AppText variant="bodySmall" color={colors.text.primary} center>
                     {t(`signs.${nodes.data.southSign}` as "signs.Aries")}
                   </AppText>
-                  <AppText variant="label" color={colors.text.tertiary}>
-                    {t("reading.house", { n: nodes.data.southHouse })}
+                  <AppText variant="labelLong" color={colors.text.tertiary} center>
+                    {houseLabel(t, locale, nodes.data.southHouse)}
                     {chart.data ? ` · ${chart.data.nodes.south.degree}°` : ""}
                   </AppText>
                 </View>
@@ -263,7 +291,25 @@ export function ReadingScreen() {
           </HairlineCard>
         </View>
       </ScrollView>
+
+      <ShareCardModal
+        visible={shareData !== null}
+        onClose={() => setShareData(null)}
+        data={shareData}
+      />
     </ScreenWrapper>
+  );
+}
+
+/** Section eyebrow with a glossary ⓘ beside it, for jargon-named sections. */
+function TermHeader({ eyebrow, term }: { eyebrow: string; term: GlossaryTermId }) {
+  return (
+    <View style={styles.headLeft}>
+      <View style={styles.shrink}>
+        <SectionHeader eyebrow={eyebrow} />
+      </View>
+      <TermInfo term={term} size={14} />
+    </View>
   );
 }
 
@@ -283,12 +329,12 @@ function Section({
   if (loading) return <ShimmerLines lines={3} />;
   if (error)
     return (
-      <Pressable style={styles.retry} onPress={onRetry}>
+      <PressableScale style={styles.retry} onPress={onRetry} accessibilityRole="button">
         <Ionicons name="refresh" size={16} color={colors.gold[300]} />
         <AppText variant="body" color={colors.gold[300]}>
           {retryLabel}
         </AppText>
-      </Pressable>
+      </PressableScale>
     );
   return <>{children}</>;
 }
@@ -303,6 +349,23 @@ const styles = StyleSheet.create({
   hero: {
     gap: spacing.lg,
   },
+  heroHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  headLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  shrink: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
   divider: {
     paddingVertical: spacing.xs,
   },
@@ -314,10 +377,15 @@ const styles = StyleSheet.create({
   },
   chips: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    maxWidth: "100%",
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
     borderRadius: radii.pill,
@@ -326,10 +394,12 @@ const styles = StyleSheet.create({
   },
   nodeRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    gap: spacing.md,
     marginBottom: spacing.md,
   },
   nodeItem: {
+    flex: 1,
+    minWidth: 0,
     alignItems: "center",
     gap: spacing.xs,
   },

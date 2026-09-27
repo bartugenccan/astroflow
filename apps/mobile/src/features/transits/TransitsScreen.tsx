@@ -3,21 +3,23 @@ import {
   StyleSheet,
   View,
   ScrollView,
-  Pressable,
   InteractionManager,
   Dimensions,
 } from "react-native";
-import { MotiView } from "moti";
+import Animated, { useReducedMotion } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { Canvas, Circle as SkCircle, RadialGradient, vec } from "@shopify/react-native-skia";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { TermInfo } from "../../components/TermInfo";
+import { EnterView } from "../../lib/motion";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { TransitWheel } from "../../components/TransitWheel";
-import { TransitMovementRow } from "./TransitMovementRow";
+import { TransitMovementRow, rowLayoutTransition } from "./TransitMovementRow";
 import { astrologyApi } from "../../services/astrologyApi";
 import {
   dtoKey,
@@ -33,7 +35,7 @@ import {
 import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, motion, gradients } from "../../lib/design-system";
+import { colors, spacing, gradients } from "../../lib/design-system";
 
 const { width: W } = Dimensions.get("window");
 
@@ -79,21 +81,37 @@ export function TransitsScreen({ dto: dtoProp, title }: TransitsScreenProps = {}
     };
   }, [dto, report.data, locale]);
 
+  const reduced = useReducedMotion();
+  // A saved person's transits (title override) skip the first-person explainer.
+  const isOwn = !dtoProp;
+
   return (
     <ScreenWrapper>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <SectionHeader eyebrow={t("transits.eyebrow")} title={title ?? t("transits.title")} />
+        {/* Compact header — the Ahead switcher above already names the section. */}
+        <EnterView index={0} style={styles.header}>
+          <AppText variant="label" color={colors.text.gold}>
+            {t("transits.eyebrow")}
+          </AppText>
+          <View style={styles.titleRow}>
+            <AppText variant="title" style={styles.titleText}>
+              {title ?? t("transits.title")}
+            </AppText>
+            <TermInfo term="transit" size={16} />
+          </View>
+          {isOwn ? (
+            <AppText variant="bodySmall" color={colors.text.tertiary}>
+              {t("transits.intro")}
+            </AppText>
+          ) : null}
+        </EnterView>
 
         {/* Transit bi-wheel — natal inner, transiting outer */}
         {chart.data && report.data ? (
-          <MotiView
-            from={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", ...motion.spring.gentle }}
-          >
+          <EnterView index={1} scale>
             <View style={styles.wheelWrap}>
               <Canvas style={StyleSheet.absoluteFill}>
                 <SkCircle cx={W / 2} cy={W / 2} r={W * 0.42} opacity={0.5}>
@@ -109,18 +127,19 @@ export function TransitsScreen({ dto: dtoProp, title }: TransitsScreenProps = {}
             <View style={styles.legend}>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: colors.moon }]} />
-                <AppText variant="label" color={colors.text.tertiary}>
+                <AppText variant="label" color={colors.text.tertiary} style={styles.legendText}>
                   {t("transits.natalLabel")}
                 </AppText>
+                <TermInfo term="natalChart" size={13} />
               </View>
               <View style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: colors.gold[300] }]} />
-                <AppText variant="label" color={colors.text.tertiary}>
+                <AppText variant="label" color={colors.text.tertiary} style={styles.legendText}>
                   {t("transits.transitLabel")}
                 </AppText>
               </View>
             </View>
-          </MotiView>
+          </EnterView>
         ) : (
           <View style={styles.wheelLoading}>
             <CelestialLoader label={t("common.loading")} />
@@ -128,11 +147,7 @@ export function TransitsScreen({ dto: dtoProp, title }: TransitsScreenProps = {}
         )}
 
         {/* The sky now — overview */}
-        <MotiView
-          from={{ opacity: 0, translateY: 16 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "spring", ...motion.spring.gentle }}
-        >
+        <EnterView index={2}>
           <HairlineCard elevated style={styles.hero}>
             <AppText variant="label" color={colors.text.gold}>
               {t("transits.skyOverviewTitle")}
@@ -146,11 +161,16 @@ export function TransitsScreen({ dto: dtoProp, title }: TransitsScreenProps = {}
               <AppText variant="serifBody">{overview.data?.text}</AppText>
             </Loader>
           </HairlineCard>
-        </MotiView>
+        </EnterView>
 
         {/* Per-planet transit cards */}
-        <View style={styles.section}>
-          <SectionHeader eyebrow={t("transits.movementsTitle")} />
+        <EnterView index={3} style={styles.section}>
+          <View style={styles.sectionHead}>
+            <SectionHeader eyebrow={t("transits.movementsTitle")} />
+            <AppText variant="bodySmall" color={colors.text.tertiary}>
+              {t("transits.tapPlanet")}
+            </AppText>
+          </View>
           <HairlineCard style={styles.listCard}>
             <Loader
               loading={report.loading}
@@ -160,22 +180,23 @@ export function TransitsScreen({ dto: dtoProp, title }: TransitsScreenProps = {}
             >
               {report.data && dto
                 ? report.data.movements.map((m, i) => (
-                    <View key={m.planet}>
+                    <Animated.View
+                      key={m.planet}
+                      layout={reduced ? undefined : rowLayoutTransition}
+                    >
+                      {i > 0 ? <View style={styles.sep} /> : null}
                       <TransitMovementRow
                         dto={dto}
                         movement={m}
                         date={report.data!.date}
                         locale={locale}
                       />
-                      {i < report.data!.movements.length - 1 ? (
-                        <View style={styles.sep} />
-                      ) : null}
-                    </View>
+                    </Animated.View>
                   ))
                 : null}
             </Loader>
           </HairlineCard>
-        </View>
+        </EnterView>
       </ScrollView>
     </ScreenWrapper>
   );
@@ -197,12 +218,12 @@ function Loader({
   if (loading) return <ShimmerLines lines={3} />;
   if (error)
     return (
-      <Pressable style={styles.retry} onPress={onRetry}>
+      <PressableScale style={styles.retry} onPress={onRetry} haptic="none">
         <Ionicons name="refresh" size={16} color={colors.gold[300]} />
         <AppText variant="body" color={colors.gold[300]}>
           {retryLabel}
         </AppText>
-      </Pressable>
+      </PressableScale>
     );
   return <>{children}</>;
 }
@@ -210,9 +231,23 @@ function Loader({
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: 120,
     gap: spacing.xl,
+  },
+  header: {
+    gap: spacing.xs,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  titleText: {
+    flexShrink: 1,
+    minWidth: 0,
+    fontSize: 24,
+    lineHeight: 30,
   },
   hero: {
     gap: spacing.lg,
@@ -230,11 +265,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.xl,
     marginTop: -spacing.sm,
+    paddingHorizontal: spacing.sm,
   },
   legendItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  legendText: {
+    flexShrink: 1,
   },
   legendDot: {
     width: 8,
@@ -243,6 +284,9 @@ const styles = StyleSheet.create({
   },
   section: {
     gap: spacing.md,
+  },
+  sectionHead: {
+    gap: spacing.xs,
   },
   listCard: {
     paddingVertical: spacing.sm,

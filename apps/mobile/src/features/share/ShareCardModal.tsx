@@ -6,6 +6,7 @@ import { AppText } from "../../components/ui/AppText";
 import { ShareableCard, ShareCardData, CARD_W, CARD_H } from "./ShareableCard";
 import { useShareCard } from "./useShareCard";
 import { useTranslation } from "../../i18n";
+import { EnterView } from "../../lib/motion";
 import { colors, spacing, radii } from "../../lib/design-system";
 
 interface ShareCardModalProps {
@@ -41,13 +42,13 @@ export function ShareCardModal({ visible, onClose, data }: ShareCardModalProps) 
       </View>
 
       <SpringBottomSheet visible={visible} onClose={onClose} title={t("share.title")}>
-        <View style={styles.previewWrap}>
+        <EnterView scale delay={120} style={styles.previewWrap}>
           <View style={styles.previewClip}>
             <View style={styles.previewScaler}>
               <ShareableCard data={data} />
             </View>
           </View>
-        </View>
+        </EnterView>
 
         <GoldButton
           label={t("share.cta")}

@@ -48,7 +48,13 @@ export function OnboardingFrame({
             transition={{ type: "timing", duration: 400 }}
             style={styles.head}
           >
-            <AppText variant="display" style={styles.question}>
+            <AppText
+              variant="display"
+              style={styles.question}
+              numberOfLines={3}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
               {question}
             </AppText>
             {hint ? (

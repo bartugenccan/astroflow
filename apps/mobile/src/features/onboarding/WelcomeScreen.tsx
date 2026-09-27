@@ -70,7 +70,7 @@ export function WelcomeScreen() {
             transition={{ type: "timing", duration: 500, delay: 1000 }}
             style={styles.footer}
           >
-            <AppText variant="label" color={colors.text.gold} style={styles.nameLabel}>
+            <AppText variant="labelLong" color={colors.text.gold} style={styles.nameLabel}>
               {t("onboarding.nameQuestion")}
             </AppText>
             <TextInput

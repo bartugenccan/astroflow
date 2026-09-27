@@ -1,13 +1,25 @@
-import React, { useMemo, useState } from "react";
-import { StyleSheet, View, ScrollView, Pressable } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { StyleSheet, View, ScrollView } from "react-native";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withDelay,
+  withTiming,
+  Easing,
+  useReducedMotion,
+} from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { GoldButton } from "../../components/ui/GoldButton";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { BackButton } from "../../components/ui/BackButton";
+import { CountUp } from "../../components/ui/CountUp";
+import { TermInfo } from "../../components/TermInfo";
 import { ScoreRing } from "../../components/ScoreRing";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { ShareButton } from "../../components/ui/ShareButton";
@@ -15,11 +27,7 @@ import { ShareCardModal } from "../share/ShareCardModal";
 import { ShareCardData } from "../share/ShareableCard";
 import { SynastryAspectRow } from "./SynastryAspectRow";
 import { astrologyApi } from "../../services/astrologyApi";
-import {
-  CompatibilityScore,
-  CreateBirthProfileDto,
-  SavedPerson,
-} from "../../services/types";
+import { CompatibilityScore, CreateBirthProfileDto } from "../../services/types";
 import {
   compatibilityKey,
   compatibilityReadingKey,
@@ -29,8 +37,13 @@ import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, spacing, radii } from "../../lib/design-system";
+import { EnterView } from "../../lib/motion";
+import { colors, spacing, radii, motion } from "../../lib/design-system";
 
+/** Delay before the first dimension bar starts filling (lets the ring sweep first). */
+const BARS_START = 450;
+/** Gap between consecutive bars starting. */
+const BAR_STEP = 110;
 
 export function CompatibilityResultScreen() {
   const { t } = useTranslation();
@@ -73,9 +86,7 @@ export function CompatibilityResultScreen() {
   return (
     <ScreenWrapper>
       <View style={styles.topBar}>
-        <Pressable hitSlop={12} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={26} color={colors.text.secondary} />
-        </Pressable>
+        <BackButton />
         <AppText variant="heading" numberOfLines={1} style={styles.topTitle}>
           {person ? t("compatibility.withLabel", { name: person.label }) : t("compatibility.title")}
         </AppText>
@@ -97,69 +108,106 @@ export function CompatibilityResultScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Newcomer framing: what this screen actually compares. */}
+        <EnterView style={styles.intro}>
+          <View style={styles.eyebrowRow}>
+            <AppText variant="label" color={colors.text.gold} style={styles.eyebrowText}>
+              {t("compatibility.synastryEyebrow")}
+            </AppText>
+            <TermInfo term="synastry" size={15} />
+          </View>
+          <AppText variant="bodySmall" color={colors.text.secondary}>
+            {t("compatibility.synastryExplainer")}
+          </AppText>
+        </EnterView>
+
         {score.loading || !score.data ? (
           <View style={styles.loaderBox}>
             <CelestialLoader label={t("compatibility.computing")} />
           </View>
         ) : (
           <>
-            <View style={styles.ringWrap}>
-              <ScoreRing score={score.data.overall} label={t("compatibility.overall")} />
-            </View>
+            <EnterView index={1} scale style={styles.ringWrap}>
+              <ScoreRing score={score.data.overall} label={t("compatibility.overall")} delay={150} />
+            </EnterView>
 
             {/* Dimension bars — the same 7 for every couple */}
-            <HairlineCard style={styles.catCard}>
-              {score.data.dimensions.map((d) => (
-                <CategoryBar
-                  key={d.key}
-                  label={t(`compatibility.dimensions.${d.key}` as TranslationKey)}
-                  hint={t(`compatibility.hints.${d.key}` as TranslationKey)}
-                  value={d.value}
-                  lowerIsBetter={d.lowerIsBetter}
-                  lowerBetterLabel={t("compatibility.lowerBetter")}
-                />
-              ))}
-            </HairlineCard>
+            <EnterView index={2}>
+              <HairlineCard style={styles.catCard}>
+                {score.data.dimensions.map((d, i) => (
+                  <CategoryBar
+                    key={d.key}
+                    index={i}
+                    label={t(`compatibility.dimensions.${d.key}` as TranslationKey)}
+                    hint={t(`compatibility.hints.${d.key}` as TranslationKey)}
+                    value={d.value}
+                    lowerIsBetter={d.lowerIsBetter}
+                    lowerBetterLabel={t("compatibility.lowerBetter")}
+                  />
+                ))}
+              </HairlineCard>
+            </EnterView>
 
             {/* Top aspects */}
             <View style={styles.section}>
-              <SectionHeader eyebrow={t("compatibility.topAspectsTitle")} />
+              <EnterView index={3}>
+                <View style={styles.eyebrowRow}>
+                  <AppText variant="label" color={colors.text.gold} style={styles.eyebrowText}>
+                    {t("compatibility.topAspectsTitle")}
+                  </AppText>
+                  <TermInfo term="aspect" size={14} />
+                </View>
+              </EnterView>
               <HairlineCard>
                 {score.data.topAspects.map((a, i) => (
-                  <View key={`${a.planetA}-${a.planetB}-${i}`}>
-                    <SynastryAspectRow aspect={a} />
+                  <EnterView key={`${a.planetA}-${a.planetB}-${i}`} index={i} delay={300}>
+                    <SynastryAspectRow aspect={a} delay={400 + Math.min(i, 8) * motion.stagger} />
                     {i < score.data!.topAspects.length - 1 ? (
                       <View style={styles.sep} />
                     ) : null}
-                  </View>
+                  </EnterView>
                 ))}
               </HairlineCard>
             </View>
 
             {/* View this person's charts (premium after 2 free) */}
-            <View style={styles.chartsRow}>
-              <Pressable
+            <EnterView index={4} style={styles.chartsRow}>
+              <PressableScale
                 style={styles.chartBtn}
+                scaleTo={0.96}
+                accessibilityRole="button"
                 onPress={() => router.push(`/compatibility/${String(id)}/chart` as Href)}
               >
                 <Ionicons name="planet-outline" size={18} color={colors.gold[300]} />
-                <AppText variant="bodySmall" color={colors.text.primary}>
+                <AppText
+                  variant="bodySmall"
+                  color={colors.text.primary}
+                  numberOfLines={2}
+                  style={styles.chartBtnText}
+                >
                   {t("compatibility.viewNatal")}
                 </AppText>
-              </Pressable>
-              <Pressable
+              </PressableScale>
+              <PressableScale
                 style={styles.chartBtn}
+                scaleTo={0.96}
+                accessibilityRole="button"
                 onPress={() => router.push(`/compatibility/${String(id)}/transits` as Href)}
               >
                 <Ionicons name="telescope-outline" size={18} color={colors.gold[300]} />
-                <AppText variant="bodySmall" color={colors.text.primary}>
+                <AppText
+                  variant="bodySmall"
+                  color={colors.text.primary}
+                  numberOfLines={2}
+                  style={styles.chartBtnText}
+                >
                   {t("compatibility.viewTransits")}
                 </AppText>
-              </Pressable>
-            </View>
+              </PressableScale>
+            </EnterView>
 
             {/* Reading — gated */}
-            <View style={styles.section}>
+            <EnterView index={5} style={styles.section}>
               <SectionHeader eyebrow={t("compatibility.readingTitle")} />
               {locked ? (
                 <HairlineCard>
@@ -168,10 +216,7 @@ export function CompatibilityResultScreen() {
                     <AppText variant="body" center>
                       {t("compatibility.lockedAspects")}
                     </AppText>
-                    <GoldButton
-                      label={t("paywall.unlock")}
-                      onPress={() => setPaywall(true)}
-                    />
+                    <GoldButton label={t("paywall.unlock")} onPress={() => setPaywall(true)} />
                   </View>
                 </HairlineCard>
               ) : reading.loading ? (
@@ -185,7 +230,7 @@ export function CompatibilityResultScreen() {
                   <AppText variant="serifBody">{reading.data.text}</AppText>
                 </HairlineCard>
               ) : null}
-            </View>
+            </EnterView>
           </>
         )}
       </ScrollView>
@@ -209,18 +254,21 @@ export function CompatibilityResultScreen() {
 }
 
 function CategoryBar({
+  index,
   label,
   hint,
   value,
   lowerIsBetter,
   lowerBetterLabel,
 }: {
+  index: number;
   label: string;
   hint: string;
   value: number;
   lowerIsBetter: boolean;
   lowerBetterLabel: string;
 }) {
+  const reduced = useReducedMotion();
   // "Goodness" drives the colour: for lower-is-better dims a low value is good.
   const goodness = lowerIsBetter ? 100 - value : value;
   const fillColor =
@@ -229,32 +277,52 @@ function CategoryBar({
       : goodness >= 40
         ? colors.gold[400]
         : colors.semantic.challenging;
+
+  const target = Math.max(4, Math.min(100, value));
+  const delay = reduced ? 0 : BARS_START + index * BAR_STEP;
+  const progress = useSharedValue(reduced ? target : 0);
+
+  useEffect(() => {
+    if (reduced) {
+      progress.value = withTiming(target, { duration: motion.duration.fast });
+      return;
+    }
+    progress.value = withDelay(
+      delay,
+      withTiming(target, { duration: 900, easing: Easing.out(Easing.cubic) }),
+    );
+  }, [target, delay, reduced, progress]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${progress.value}%`,
+  }));
+
   return (
     <View style={styles.dimRow}>
-      <View style={styles.barRow}>
-        <View style={styles.barLabelWrap}>
-          <AppText variant="bodySmall" color={colors.text.primary}>
+      <View style={styles.dimHeader}>
+        <View style={styles.dimLabelWrap}>
+          <AppText variant="bodySmall" color={colors.text.primary} style={styles.dimLabel}>
             {label}
           </AppText>
           {lowerIsBetter ? (
-            <AppText variant="label" color={colors.text.tertiary} style={styles.lowerTag}>
+            <AppText variant="labelLong" color={colors.text.tertiary} style={styles.lowerTag}>
               ↓ {lowerBetterLabel}
             </AppText>
           ) : null}
         </View>
-        <View style={styles.barTrack}>
-          <View
-            style={[
-              styles.barFill,
-              { width: `${Math.max(4, Math.min(100, value))}%`, backgroundColor: fillColor },
-            ]}
-          />
-        </View>
-        <AppText variant="numeric" color={colors.text.secondary} style={styles.barValue}>
-          {value}
-        </AppText>
+        <CountUp
+          value={value}
+          delay={delay}
+          duration={900}
+          variant="numeric"
+          color={colors.text.secondary}
+          style={styles.barValue}
+        />
       </View>
-      <AppText variant="bodySmall" color={colors.text.tertiary} style={styles.dimHint}>
+      <View style={styles.barTrack}>
+        <Animated.View style={[styles.barFill, { backgroundColor: fillColor }, fillStyle]} />
+      </View>
+      <AppText variant="bodySmall" color={colors.text.tertiary}>
         {hint}
       </AppText>
     </View>
@@ -267,7 +335,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   topTitle: {
     flex: 1,
@@ -278,6 +346,17 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
     gap: spacing.xl,
   },
+  intro: {
+    gap: spacing.xs,
+  },
+  eyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  eyebrowText: {
+    flexShrink: 1,
+  },
   loaderBox: {
     alignItems: "center",
     justifyContent: "center",
@@ -285,32 +364,34 @@ const styles = StyleSheet.create({
   },
   ringWrap: {
     alignItems: "center",
-    marginTop: spacing.md,
   },
   catCard: {
     gap: spacing.lg,
   },
   dimRow: {
-    gap: spacing.xs,
+    gap: spacing.xs + 2,
   },
-  barRow: {
+  dimHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
     gap: spacing.md,
   },
-  barLabelWrap: {
-    width: 116,
+  dimLabelWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "baseline",
+    columnGap: spacing.sm,
+  },
+  dimLabel: {
+    flexShrink: 1,
   },
   lowerTag: {
-    marginTop: 2,
-    fontSize: 9,
-    letterSpacing: 0.5,
-  },
-  dimHint: {
-    marginLeft: 116 + spacing.md,
+    fontSize: 11,
   },
   barTrack: {
-    flex: 1,
     height: 8,
     borderRadius: radii.pill,
     backgroundColor: colors.ink[700],
@@ -322,7 +403,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.gold[400],
   },
   barValue: {
-    width: 28,
+    minWidth: 28,
     textAlign: "right",
   },
   section: {
@@ -339,10 +420,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.sm,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    minHeight: 48,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
     backgroundColor: colors.ink[800],
+  },
+  chartBtnText: {
+    flexShrink: 1,
+    textAlign: "center",
   },
   sep: {
     height: StyleSheet.hairlineWidth,

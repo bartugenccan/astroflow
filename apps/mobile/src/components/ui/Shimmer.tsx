@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, View, DimensionValue } from "react-native";
 import { MotiView } from "moti";
+import { useReducedMotion } from "react-native-reanimated";
 import { colors, spacing } from "../../lib/design-system";
 
 interface ShimmerLinesProps {
@@ -10,6 +11,7 @@ interface ShimmerLinesProps {
 
 /** Gold shimmer placeholder lines used while AI content loads. */
 export function ShimmerLines({ lines = 3, widths }: ShimmerLinesProps) {
+  const reduced = useReducedMotion();
   return (
     <View style={styles.wrap}>
       {Array.from({ length: lines }).map((_, i) => (
@@ -17,7 +19,11 @@ export function ShimmerLines({ lines = 3, widths }: ShimmerLinesProps) {
           key={i}
           from={{ opacity: 0.08 }}
           animate={{ opacity: 0.2 }}
-          transition={{ loop: true, type: "timing", duration: 900, delay: i * 120 }}
+          transition={
+            reduced
+              ? { type: "timing", duration: 0 }
+              : { loop: true, type: "timing", duration: 900, delay: i * 120 }
+          }
           style={[
             styles.line,
             { width: widths?.[i] ?? (`${92 - i * 12}%` as DimensionValue) },

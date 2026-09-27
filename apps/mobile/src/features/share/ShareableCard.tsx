@@ -13,6 +13,16 @@ import { colors, gradients, fonts, spacing, radii } from "../../lib/design-syste
 // Logical card size (9:16). Captured at 3× → 1080×1920 PNG.
 export const CARD_W = 360;
 export const CARD_H = 640;
+/** Bottom band reserved for the watermark so long copy never runs under it. */
+const WATERMARK_ZONE = 96;
+
+/**
+ * Locale-correct uppercase (Turkish "i" → "İ"). The card's text styles don't
+ * use `textTransform` because the platform's casing is locale-less.
+ */
+function upper(text: string, locale: string): string {
+  return text.toLocaleUpperCase(locale === "tr" ? "tr-TR" : "en-US");
+}
 
 export type ShareCardData =
   | { variant: "daily"; insight: DailyInsight; date: Date }
@@ -42,6 +52,7 @@ export const ShareableCard = forwardRef<View, { data: ShareCardData }>(
               moonSign={data.moonSign}
               risingSign={data.risingSign}
               name={data.name}
+              locale={locale}
               t={t}
             />
           ) : (
@@ -50,6 +61,7 @@ export const ShareableCard = forwardRef<View, { data: ShareCardData }>(
               otherName={data.otherName}
               score={data.score}
               headline={data.headline}
+              locale={locale}
             />
           )}
         </View>
@@ -57,8 +69,12 @@ export const ShareableCard = forwardRef<View, { data: ShareCardData }>(
         {/* Watermark — the growth surface */}
         <View style={styles.watermark}>
           <Glyph name="Sun" size={18} color={colors.gold[300]} />
-          <AppText style={styles.brand}>{t("share.watermark")}</AppText>
-          <AppText style={styles.tagline}>{t("share.tagline")}</AppText>
+          <AppText style={styles.brand} numberOfLines={1}>
+            {t("share.watermark")}
+          </AppText>
+          <AppText style={styles.tagline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            {t("share.tagline")}
+          </AppText>
         </View>
       </View>
     );
@@ -83,14 +99,22 @@ function DailyContent({
   });
   return (
     <>
-      <AppText style={styles.eyebrow}>{t("share.dailyEyebrow")}</AppText>
-      <AppText style={styles.date}>{dateLabel}</AppText>
+      <AppText style={styles.eyebrow} numberOfLines={2}>
+        {upper(t("share.dailyEyebrow"), locale)}
+      </AppText>
+      <AppText style={styles.date} numberOfLines={1}>
+        {dateLabel}
+      </AppText>
       <View style={styles.moon}>
         <MoonPhase size={64} date={date} />
       </View>
-      <AppText style={styles.title}>{insight.title}</AppText>
+      <AppText style={styles.title} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.7}>
+        {insight.title}
+      </AppText>
       <StarDivider />
-      <AppText style={styles.summary}>{insight.summary}</AppText>
+      <AppText style={styles.summary} numberOfLines={6} adjustsFontSizeToFit minimumFontScale={0.8}>
+        {insight.summary}
+      </AppText>
     </>
   );
 }
@@ -100,12 +124,14 @@ function BigThreeContent({
   moonSign,
   risingSign,
   name,
+  locale,
   t,
 }: {
   sunSign: string;
   moonSign: string;
   risingSign: string;
   name: string;
+  locale: string;
   t: (k: any, p?: any) => string;
 }) {
   const rows: { glyph: string; label: string; sign: string }[] = [
@@ -115,8 +141,14 @@ function BigThreeContent({
   ];
   return (
     <>
-      {name ? <AppText style={styles.eyebrow}>{name}</AppText> : null}
-      <AppText style={styles.title}>{t("share.bigThreeTitle")}</AppText>
+      {name ? (
+        <AppText style={styles.eyebrow} numberOfLines={2}>
+          {upper(name, locale)}
+        </AppText>
+      ) : null}
+      <AppText style={styles.title} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
+        {t("share.bigThreeTitle")}
+      </AppText>
       <StarDivider />
       <View style={styles.bigThreeList}>
         {rows.map((r) => (
@@ -124,9 +156,13 @@ function BigThreeContent({
             <View style={styles.glyphRing}>
               <Glyph name={r.glyph} size={30} color={colors.gold[300]} />
             </View>
-            <View>
-              <AppText style={styles.b3Label}>{r.label}</AppText>
-              <AppText style={styles.b3Sign}>{t(`signs.${r.sign}` as any)}</AppText>
+            <View style={styles.b3Text}>
+              <AppText style={styles.b3Label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                {upper(r.label, locale)}
+              </AppText>
+              <AppText style={styles.b3Sign} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                {t(`signs.${r.sign}` as any)}
+              </AppText>
             </View>
           </View>
         ))}
@@ -140,21 +176,27 @@ function CompatibilityContent({
   otherName,
   score,
   headline,
+  locale,
 }: {
   name: string;
   otherName: string;
   score: number;
   headline: string;
+  locale: string;
 }) {
   return (
     <>
-      <AppText style={styles.eyebrow}>
-        {name} & {otherName}
+      <AppText style={styles.eyebrow} numberOfLines={2}>
+        {upper(`${name} & ${otherName}`, locale)}
       </AppText>
       <View style={styles.moon}>
         <ScoreRing score={score} size={180} animate={false} />
       </View>
-      {headline ? <AppText style={styles.summary}>{headline}</AppText> : null}
+      {headline ? (
+        <AppText style={styles.summary} numberOfLines={6} adjustsFontSizeToFit minimumFontScale={0.8}>
+          {headline}
+        </AppText>
+      ) : null}
     </>
   );
 }
@@ -167,7 +209,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.ink[950],
   },
   frame: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     margin: spacing.lg,
     borderRadius: radii.lg,
     borderWidth: 1,
@@ -178,13 +220,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: spacing.xxl,
+    paddingTop: spacing.xxl,
+    paddingBottom: WATERMARK_ZONE,
     gap: spacing.md,
   },
   eyebrow: {
     fontFamily: fonts.sansSemiBold,
     fontSize: 12,
     letterSpacing: 2,
-    textTransform: "uppercase",
     color: colors.gold[300],
     textAlign: "center",
   },
@@ -217,6 +260,7 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   bigThreeRow: {
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.lg,
@@ -234,8 +278,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansSemiBold,
     fontSize: 11,
     letterSpacing: 1.5,
-    textTransform: "uppercase",
     color: colors.text.tertiary,
+  },
+  b3Text: {
+    flexShrink: 1,
+    minWidth: 0,
   },
   b3Sign: {
     fontFamily: fonts.serif,
@@ -245,8 +292,8 @@ const styles = StyleSheet.create({
   watermark: {
     position: "absolute",
     bottom: spacing.xxl,
-    left: 0,
-    right: 0,
+    left: spacing.xxl,
+    right: spacing.xxl,
     alignItems: "center",
     gap: 2,
   },

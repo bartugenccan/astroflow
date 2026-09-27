@@ -10,22 +10,40 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import type { Tabs } from "expo-router";
+
+/**
+ * SDK 57 vendored react-navigation inside expo-router, so the standalone
+ * `@react-navigation/bottom-tabs` types no longer match what `<Tabs>` hands its
+ * `tabBar` prop. Derive the type from the component itself: it tracks whichever
+ * copy expo-router uses, without importing one of its internal build paths.
+ */
+type BottomTabBarProps = Parameters<
+  NonNullable<React.ComponentProps<typeof Tabs>["tabBar"]>
+>[0];
 import { colors, radii, spacing, motion } from "../lib/design-system";
 import { useUiStore } from "../store/useUiStore";
+import { useTranslation, TranslationKey } from "../i18n";
+import { AppText } from "./ui/AppText";
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: "moon",
-  chart: "planet",
-  transits: "telescope",
-  reading: "journal",
-  forecast: "calendar",
-  compatibility: "heart",
+  you: "planet",
+  ahead: "telescope",
   profile: "person-circle",
+};
+
+/** i18n key per route, so the bar can name its destinations. */
+const LABELS: Record<string, TranslationKey> = {
+  index: "tabs.today",
+  you: "tabs.you",
+  ahead: "tabs.ahead",
+  profile: "tabs.profile",
 };
 
 /** Floating pill tab bar with a gold glow that follows the active tab. */
 export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const sheetOpen = useUiStore((s) => s.sheetOpen);
   const hidden = useSharedValue(0);
@@ -66,6 +84,7 @@ export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
             <TabButton
               key={route.key}
               icon={ICONS[route.name] ?? "ellipse"}
+              label={LABELS[route.name] ? t(LABELS[route.name]) : undefined}
               focused={focused}
               onPress={onPress}
             />
@@ -78,10 +97,13 @@ export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
 
 function TabButton({
   icon,
+  label,
   focused,
   onPress,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
+  /** Named destinations: an icon alone asks the user to decode it. */
+  label?: string;
   focused: boolean;
   onPress: () => void;
 }) {
@@ -108,11 +130,22 @@ function TabButton({
       <Animated.View style={iconStyle}>
         <Ionicons
           name={icon}
-          size={22}
+          size={20}
           color={focused ? colors.gold[300] : colors.text.tertiary}
         />
       </Animated.View>
-      <Animated.View style={[styles.dot, dotStyle]} />
+      {label ? (
+        <AppText
+          variant="label"
+          color={focused ? colors.gold[300] : colors.text.tertiary}
+          numberOfLines={1}
+          style={styles.label}
+        >
+          {label}
+        </AppText>
+      ) : (
+        <Animated.View style={[styles.dot, dotStyle]} />
+      )}
     </Pressable>
   );
 }
@@ -136,10 +169,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing.md,
     gap: spacing.xs,
-    minWidth: 300,
+    // Fill the row (minus the side gutters) instead of a fixed minimum that
+    // overflowed on 320pt-wide phones.
+    width: "100%",
+    maxWidth: 420,
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(10,14,28,0.85)",
   },
   button: {
@@ -147,7 +183,12 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 3,
+  },
+  label: {
+    // The pill is tight; keep the label from forcing the icons apart.
+    fontSize: 9,
+    letterSpacing: 0.6,
   },
   glow: {
     position: "absolute",

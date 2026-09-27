@@ -1,7 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { MotiView } from "moti";
-import { BouncyButton } from "../../components/ui/BouncyButton";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  FadeInDown,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { AppText } from "../../components/ui/AppText";
 import { Glyph } from "../../components/Glyph";
 import { ShimmerLines } from "../../components/ui/Shimmer";
@@ -14,8 +23,9 @@ import {
   HouseInterpretation,
 } from "../../services/types";
 import { useCachedAsync } from "../../hooks/useCachedAsync";
+import { houseLabel } from "../../lib/astroLanguage";
 import { useTranslation, Locale } from "../../i18n";
-import { colors, spacing } from "../../lib/design-system";
+import { colors, spacing, motion } from "../../lib/design-system";
 
 interface Props {
   dto: CreateBirthProfileDto;
@@ -23,26 +33,49 @@ interface Props {
   locale: Locale;
 }
 
+/** Shared expand/collapse motion for the reading's accordion rows. */
+export function useExpandMotion(open: boolean) {
+  const reduced = useReducedMotion();
+  const progress = useSharedValue(open ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = reduced ? (open ? 1 : 0) : withSpring(open ? 1 : 0, motion.spring.snappy);
+  }, [open, reduced, progress]);
+
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${progress.value * 180}deg` }],
+  }));
+
+  return {
+    chevronStyle,
+    layout: reduced ? undefined : LinearTransition.springify()
+      .damping(motion.spring.gentle.damping)
+      .stiffness(motion.spring.gentle.stiffness),
+    entering: reduced ? undefined : FadeInDown.duration(motion.duration.base),
+    exiting: reduced ? undefined : FadeOut.duration(motion.duration.fast),
+  };
+}
+
 /** One expandable house card. Header renders from chart data; the AI reading
- *  is fetched lazily the first time the card is opened, then kept mounted. */
+ *  is fetched (or read from the warm cache) when the card is opened. */
 export function HouseRow({ dto, house, locale }: Props) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [hasOpened, setHasOpened] = useState(false);
+  const { chevronStyle, layout, entering, exiting } = useExpandMotion(open);
 
   const rulerName = t(`planets.${house.ruler}` as "planets.Sun");
   const signName = t(`signs.${house.sign}` as "signs.Aries");
   const isEmpty = house.planetsInHouse.length === 0;
   const primaryTag = primaryHouseTag(locale, house.house);
 
-  const toggle = () => {
-    setOpen((o) => !o);
-    setHasOpened(true);
-  };
-
   return (
-    <View style={styles.wrap}>
-      <BouncyButton onPress={toggle} scaleTo={0.99}>
+    <Animated.View layout={layout} style={styles.wrap}>
+      <PressableScale
+        onPress={() => setOpen((o) => !o)}
+        scaleTo={0.98}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+      >
         <View style={styles.header}>
           <View style={styles.num}>
             <AppText variant="numeric" color={colors.gold[300]}>
@@ -52,13 +85,8 @@ export function HouseRow({ dto, house, locale }: Props) {
           <Glyph name={house.sign} size={20} color={colors.gold[200]} />
           <View style={styles.meta}>
             <AppText variant="heading" color={colors.text.primary}>
-              {t("reading.house", { n: house.house })} · {signName}
+              {houseLabel(t, locale, house.house)} · {signName}
             </AppText>
-            <AppText variant="bodySmall" numberOfLines={1}>
-              {t("reading.rulerLabel")}: {rulerName}
-            </AppText>
-          </View>
-          <View style={styles.right}>
             {primaryTag ? (
               <View style={styles.tag}>
                 <AppText variant="label" color={colors.gold[300]}>
@@ -66,6 +94,11 @@ export function HouseRow({ dto, house, locale }: Props) {
                 </AppText>
               </View>
             ) : null}
+            <AppText variant="bodySmall">
+              {t("reading.rulerLabel")}: {rulerName}
+            </AppText>
+          </View>
+          <View style={styles.right}>
             <View style={styles.planetGlyphs}>
               {isEmpty ? (
                 <AppText variant="bodySmall" color={colors.text.tertiary}>
@@ -79,16 +112,19 @@ export function HouseRow({ dto, house, locale }: Props) {
                   ))
               )}
             </View>
+            <Animated.View style={chevronStyle}>
+              <Ionicons name="chevron-down" size={16} color={colors.text.tertiary} />
+            </Animated.View>
           </View>
         </View>
-      </BouncyButton>
+      </PressableScale>
 
-      {hasOpened ? (
-        <View style={open ? undefined : styles.hidden}>
+      {open ? (
+        <Animated.View entering={entering} exiting={exiting}>
           <HouseReading dto={dto} house={house.house} locale={locale} />
-        </View>
+        </Animated.View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -132,19 +168,19 @@ function HouseReading({
       {loading ? (
         <ShimmerLines lines={4} />
       ) : error ? (
-        <BouncyButton onPress={reload} haptic={false}>
+        <PressableScale
+          onPress={reload}
+          haptic="none"
+          style={styles.retry}
+          accessibilityRole="button"
+        >
+          <Ionicons name="refresh" size={16} color={colors.gold[300]} />
           <AppText variant="body" color={colors.gold[300]}>
             {t("reading.retry")}
           </AppText>
-        </BouncyButton>
+        </PressableScale>
       ) : (
-        <MotiView
-          from={{ opacity: 0, translateY: 6 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 260 }}
-        >
-          <AppText variant="serifBody">{data?.text}</AppText>
-        </MotiView>
+        <AppText variant="serifBody">{data?.text}</AppText>
       )}
     </View>
   );
@@ -167,6 +203,7 @@ const styles = StyleSheet.create({
   meta: {
     flex: 1,
     minWidth: 0,
+    gap: 4,
   },
   right: {
     flexShrink: 0,
@@ -174,6 +211,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   tag: {
+    alignSelf: "flex-start",
+    maxWidth: "100%",
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
     borderRadius: 999,
@@ -199,15 +238,17 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   themeChip: {
+    maxWidth: "100%",
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
     borderRadius: 999,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
   },
-  hidden: {
-    height: 0,
-    overflow: "hidden",
-    opacity: 0,
+  retry: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
   },
 });

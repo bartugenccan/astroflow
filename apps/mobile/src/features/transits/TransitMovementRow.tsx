@@ -1,10 +1,21 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { MotiView } from "moti";
-import { BouncyButton } from "../../components/ui/BouncyButton";
+import Animated, {
+  FadeInDown,
+  FadeOut,
+  LinearTransition,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { AppText } from "../../components/ui/AppText";
 import { Glyph } from "../../components/Glyph";
+import { TermInfo } from "../../components/TermInfo";
 import { ShimmerLines } from "../../components/ui/Shimmer";
+import { EnterView } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
 import { transitKey } from "../../services/interpretationCache";
 import {
@@ -13,8 +24,9 @@ import {
   TransitDetail,
 } from "../../services/types";
 import { useCachedAsync } from "../../hooks/useCachedAsync";
+import { aspectPhrase, aspectStrength, houseLabel } from "../../lib/astroLanguage";
 import { useTranslation, Locale } from "../../i18n";
-import { colors, spacing } from "../../lib/design-system";
+import { colors, spacing, radii, motion } from "../../lib/design-system";
 import { formatDuration } from "./formatDuration";
 
 interface Props {
@@ -31,37 +43,70 @@ const natureColor = (nature: string): string =>
       ? colors.moon
       : colors.text.tertiary;
 
+/** Layout spring for rows that grow/shrink (and their siblings sliding along). */
+export const rowLayoutTransition = LinearTransition.springify()
+  .damping(motion.spring.gentle.damping)
+  .stiffness(motion.spring.gentle.stiffness)
+  .mass(motion.spring.gentle.mass);
+
 /** One expandable transiting-planet card. Header renders from the report;
- *  the AI reading is fetched lazily on first open, then kept mounted. */
+ *  the AI reading is fetched lazily on first open (and stays in the cache). */
 export function TransitMovementRow({ dto, movement, date, locale }: Props) {
   const { t } = useTranslation();
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(false);
-  const [hasOpened, setHasOpened] = useState(false);
 
   const planetName = t(`planets.${movement.planet}` as "planets.Sun");
   const signName = t(`signs.${movement.sign}` as "signs.Aries");
-  const houseLabel = ordinalHouse(movement.natalHouse, locale);
+  const houseText = houseLabel(t, locale, movement.natalHouse);
 
-  const toggle = () => {
-    setOpen((o) => !o);
-    setHasOpened(true);
-  };
+  const rot = useSharedValue(0);
+  useEffect(() => {
+    rot.value = reduced ? (open ? 1 : 0) : withSpring(open ? 1 : 0, motion.spring.snappy);
+  }, [open, reduced, rot]);
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rot.value * 180}deg` }],
+  }));
 
   return (
-    <View style={styles.wrap}>
-      <BouncyButton onPress={toggle} scaleTo={0.99}>
-        <View style={styles.header}>
-          <Glyph name={movement.planet} size={24} color={colors.gold[200]} />
-          <View style={styles.meta}>
-            <AppText variant="heading" color={colors.text.primary} numberOfLines={1}>
+    <Animated.View
+      style={styles.wrap}
+      layout={reduced ? undefined : rowLayoutTransition}
+    >
+      <PressableScale
+        onPress={() => setOpen((o) => !o)}
+        scaleTo={0.98}
+        style={styles.header}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+      >
+        <Glyph name={movement.planet} size={24} color={colors.gold[200]} />
+        <View style={styles.meta}>
+          <View style={styles.titleLine}>
+            <AppText
+              variant="heading"
+              color={colors.text.primary}
+              numberOfLines={2}
+              style={styles.titleText}
+            >
               {planetName} · {signName}
-              {movement.retrograde ? ` · ${t("transits.retrograde")}` : ""}
             </AppText>
-            <AppText variant="bodySmall" numberOfLines={1}>
-              {t("transits.throughHouse", { h: houseLabel })} ·{" "}
-              {t("transits.remaining", { d: formatDuration(movement.daysInHouse, locale) })}
-            </AppText>
+            {movement.retrograde ? (
+              <View
+                style={styles.rxPill}
+                accessible
+                accessibilityLabel={t("transits.retrogradeA11y")}
+              >
+                <Glyph name="Retrograde" size={11} color={colors.moon} />
+              </View>
+            ) : null}
           </View>
+          <AppText variant="bodySmall" numberOfLines={2}>
+            {t("transits.throughHouse", { h: houseText })} ·{" "}
+            {t("transits.remaining", { d: formatDuration(movement.daysInHouse, locale) })}
+          </AppText>
+        </View>
+        <View style={styles.side}>
           <View style={styles.dots}>
             {movement.aspects.slice(0, 4).map((a, i) => (
               <View
@@ -70,15 +115,21 @@ export function TransitMovementRow({ dto, movement, date, locale }: Props) {
               />
             ))}
           </View>
+          <Animated.View style={chevronStyle}>
+            <Ionicons name="chevron-down" size={16} color={colors.text.tertiary} />
+          </Animated.View>
         </View>
-      </BouncyButton>
+      </PressableScale>
 
-      {hasOpened ? (
-        <View style={open ? undefined : styles.hidden}>
+      {open ? (
+        <Animated.View
+          entering={reduced ? undefined : FadeInDown.duration(motion.duration.base)}
+          exiting={reduced ? undefined : FadeOut.duration(motion.duration.fast)}
+        >
           <TransitReading dto={dto} movement={movement} date={date} locale={locale} />
-        </View>
+        </Animated.View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -88,25 +139,57 @@ function TransitReading({ dto, movement, date, locale }: Props) {
     transitKey(dto, movement.planet, date, locale),
     () => astrologyApi.getTransitDetail(dto, movement.planet, locale),
   );
+  const planetName = t(`planets.${movement.planet}` as "planets.Sun");
 
   return (
     <View style={styles.body}>
+      {movement.retrograde ? (
+        <View style={styles.rxHint}>
+          <View style={styles.rxPill}>
+            <Glyph name="Retrograde" size={11} color={colors.moon} />
+          </View>
+          <AppText variant="bodySmall" color={colors.text.secondary} style={styles.flexText}>
+            {t("astro.retrogradeHint")}
+          </AppText>
+          <TermInfo term="retrograde" size={14} />
+        </View>
+      ) : null}
+
       {/* Aspects to the natal chart — from the report, instant. */}
       {movement.aspects.length > 0 ? (
         <View style={styles.aspectsBlock}>
-          <AppText variant="label" color={colors.text.tertiary}>
-            {t("transits.aspectsLabel")}
-          </AppText>
-          {movement.aspects.map((a, i) => (
-            <View key={`${a.natalPlanet}-${a.aspect}-${i}`} style={styles.aspectRow}>
-              <Glyph name={movement.planet} size={14} color={colors.gold[200]} />
-              <Glyph name={a.aspect} size={13} color={natureColor(a.nature)} />
-              <Glyph name={a.natalPlanet} size={14} color={colors.moon} />
-              <AppText variant="bodySmall" color={colors.text.tertiary}>
-                {t(`planets.${a.natalPlanet}` as "planets.Sun")} · {a.orb.toFixed(1)}°
-              </AppText>
-            </View>
-          ))}
+          <View style={styles.labelRow}>
+            <AppText variant="labelLong" color={colors.text.tertiary} style={styles.flexText}>
+              {t("transits.aspectsLabel")}
+            </AppText>
+            <TermInfo term="aspect" size={14} />
+          </View>
+          {movement.aspects.map((a, i) => {
+            const natal = t(`planets.${a.natalPlanet}` as "planets.Sun");
+            return (
+              <View key={`${a.natalPlanet}-${a.aspect}-${i}`} style={styles.aspectRow}>
+                <View style={styles.aspectGlyphs}>
+                  <Glyph name={movement.planet} size={14} color={colors.gold[200]} />
+                  <Glyph name={a.aspect} size={13} color={natureColor(a.nature)} />
+                  <Glyph name={a.natalPlanet} size={14} color={colors.moon} />
+                </View>
+                <View style={styles.flexText}>
+                  <AppText variant="bodySmall" color={colors.text.secondary}>
+                    {aspectPhrase(t, a.aspect, planetName, natal)}
+                  </AppText>
+                  <AppText variant="bodySmall" color={colors.text.tertiary}>
+                    {aspectStrength(t, a.orb)} · {Math.abs(a.orb).toFixed(1)}°
+                  </AppText>
+                </View>
+              </View>
+            );
+          })}
+          <View style={styles.labelRow}>
+            <AppText variant="bodySmall" color={colors.text.tertiary} style={styles.flexText}>
+              {t("transits.orbHint")}
+            </AppText>
+            <TermInfo term="orb" size={14} />
+          </View>
         </View>
       ) : (
         <AppText variant="bodySmall" color={colors.text.tertiary}>
@@ -117,29 +200,19 @@ function TransitReading({ dto, movement, date, locale }: Props) {
       {loading ? (
         <ShimmerLines lines={4} />
       ) : error ? (
-        <BouncyButton onPress={reload} haptic={false}>
+        <PressableScale onPress={reload} haptic="none" style={styles.retry}>
+          <Ionicons name="refresh" size={16} color={colors.gold[300]} />
           <AppText variant="body" color={colors.gold[300]}>
             {t("reading.retry")}
           </AppText>
-        </BouncyButton>
+        </PressableScale>
       ) : (
-        <MotiView
-          from={{ opacity: 0, translateY: 6 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 260 }}
-        >
+        <EnterView distance={6}>
           <AppText variant="serifBody">{data?.text}</AppText>
-        </MotiView>
+        </EnterView>
       )}
     </View>
   );
-}
-
-function ordinalHouse(n: number, locale: Locale): string {
-  if (locale === "tr") return `${n}.`;
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
 const styles = StyleSheet.create({
@@ -155,9 +228,31 @@ const styles = StyleSheet.create({
   meta: {
     flex: 1,
     minWidth: 0,
+    gap: 2,
+  },
+  titleLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  titleText: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  rxPill: {
+    flexShrink: 0,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.moon,
+  },
+  side: {
+    flexShrink: 0,
+    alignItems: "flex-end",
+    gap: spacing.xs,
   },
   dots: {
-    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -172,17 +267,39 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.md,
   },
-  aspectsBlock: {
-    gap: spacing.xs,
-  },
-  aspectRow: {
+  rxHint: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
   },
-  hidden: {
-    height: 0,
-    overflow: "hidden",
-    opacity: 0,
+  aspectsBlock: {
+    gap: spacing.sm,
+  },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  aspectRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+  },
+  aspectGlyphs: {
+    flexShrink: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingTop: 2,
+  },
+  flexText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  retry: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
 });

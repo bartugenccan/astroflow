@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { StyleSheet, View, ScrollView } from "react-native";
-import { MotiView } from "moti";
 import { Canvas, Circle, RadialGradient, vec } from "@shopify/react-native-skia";
 import { Dimensions } from "react-native";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
@@ -11,6 +10,8 @@ import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { AstroMap } from "../../components/AstroMap";
 import { Glyph } from "../../components/Glyph";
+import { TermInfo } from "../../components/TermInfo";
+import { EnterView } from "../../lib/motion";
 import { PlacementRow } from "./PlacementRow";
 import { PlacementReading } from "./PlacementReading";
 import { astrologyApi } from "../../services/astrologyApi";
@@ -22,7 +23,9 @@ import {
 } from "../../services/types";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
-import { useUiStore } from "../../store/useUiStore";
+import { useCachedAsync } from "../../hooks/useCachedAsync";
+import { dtoKey } from "../../services/interpretationCache";
+import { houseLabel } from "../../lib/astroLanguage";
 import { useTranslation } from "../../i18n";
 import { colors, spacing, gradients, motion } from "../../lib/design-system";
 
@@ -43,57 +46,22 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
   const dto = dtoProp ?? ownDto;
   const profile = useAppStore((s) => s.birthProfile);
 
-  const [chart, setChart] = useState<NatalChartData | null>(null);
   const [selected, setSelected] = useState<PlanetPlacement | null>(null);
-  const setSheetOpen = useUiStore((s) => s.setSheetOpen);
 
-  const [placements, setPlacements] = useState<PlacementInterpretation[] | null>(null);
-  const [placementsLoading, setPlacementsLoading] = useState(false);
-  const [placementsError, setPlacementsError] = useState(false);
-  const [reloadNonce, setReloadNonce] = useState(0);
-
-  useEffect(() => {
-    if (!dto) return;
-    let active = true;
-    astrologyApi.getNatalChart(dto).then((c) => {
-      if (active) setChart(c);
-    });
-    return () => {
-      active = false;
-    };
-  }, [dto]);
-
-  // Prefetch every placement reading once the chart is available.
-  useEffect(() => {
-    if (!dto) return;
-    let active = true;
-    setPlacementsLoading(true);
-    setPlacementsError(false);
-    astrologyApi
-      .getPlacementInterpretations(dto, locale)
-      .then((p) => {
-        if (active) {
-          setPlacements(p);
-          setPlacementsLoading(false);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setPlacementsError(true);
-          setPlacementsLoading(false);
-        }
-      });
-    return () => {
-      active = false;
-    };
-  }, [dto, locale, reloadNonce]);
-
-  // Tell the floating tab bar to slide away while the sheet is open (covers
-  // open, close-button, backdrop tap, and drag-dismiss). Reset on unmount.
-  useEffect(() => {
-    setSheetOpen(!!selected);
-    return () => setSheetOpen(false);
-  }, [selected, setSheetOpen]);
+  // Cached like every other section, so switching back to "In a picture"
+  // renders the wheel instantly instead of re-fetching behind a loader.
+  const key = dto ? dtoKey(dto) : null;
+  const { data: chart } = useCachedAsync<NatalChartData>(
+    key && `chart|${key}`,
+    () => astrologyApi.getNatalChart(dto!),
+  );
+  const placementsQ = useCachedAsync<PlacementInterpretation[]>(
+    key && `placements|${key}|${locale}`,
+    () => astrologyApi.getPlacementInterpretations(dto!, locale),
+  );
+  const placements = placementsQ.data;
+  const placementsLoading = placementsQ.loading;
+  const placementsError = !!placementsQ.error;
 
   const selectedReading = selected
     ? placements?.find((p) => p.planet === selected.name)
@@ -113,14 +81,22 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <SectionHeader eyebrow="NATAL CHART" title={title ?? t("chart.title")} />
+        <EnterView from="none" style={styles.header}>
+          <View style={styles.eyebrowRow}>
+            <AppText variant="label" color={colors.text.gold} style={styles.shrink}>
+              {t("chart.eyebrow")}
+            </AppText>
+            <TermInfo term="natalChart" size={14} />
+          </View>
+          <AppText variant="title" style={styles.title}>
+            {title ?? t("chart.title")}
+          </AppText>
           {birthLine ? (
             <AppText variant="bodySmall" style={styles.birthLine}>
               {birthLine}
             </AppText>
           ) : null}
-        </View>
+        </EnterView>
 
         {!chart ? (
           <View style={styles.loading}>
@@ -159,15 +135,10 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
               <SectionHeader eyebrow={t("chart.placementsTitle")} />
               <HairlineCard style={styles.placementsCard}>
                 {chart.planets.map((planet, i) => (
-                  <MotiView
-                    key={planet.name}
-                    from={{ opacity: 0, translateX: 10 }}
-                    animate={{ opacity: 1, translateX: 0 }}
-                    transition={{ type: "timing", duration: 300, delay: i * 60 }}
-                  >
+                  <EnterView key={planet.name} index={i} delay={motion.stagger * 2} distance={10}>
                     <PlacementRow planet={planet} onPress={setSelected} />
                     {i < chart.planets.length - 1 ? <View style={styles.sep} /> : null}
-                  </MotiView>
+                  </EnterView>
                 ))}
               </HairlineCard>
             </View>
@@ -194,18 +165,21 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
               </View>
             </SheetReveal>
             <SheetReveal delay={motion.stagger}>
-              <AppText variant="numeric" color={colors.text.secondary}>
-                {t("chart.house", { n: selected.house })} · {selected.degree}°
-                {String(selected.minute).padStart(2, "0")}′
-                {selected.retrograde ? ` · ${t("chart.retrograde")}` : ""}
-              </AppText>
+              <View style={styles.sheetMeta}>
+                <AppText variant="numeric" color={colors.text.secondary} style={styles.shrink}>
+                  {houseLabel(t, locale, selected.house)} · {selected.degree}°
+                  {String(selected.minute).padStart(2, "0")}′
+                </AppText>
+                <TermInfo term="house" size={14} />
+              </View>
             </SheetReveal>
             <SheetReveal delay={motion.stagger * 2}>
               <PlacementReading
                 reading={selectedReading}
                 loading={placementsLoading}
                 error={placementsError}
-                onRetry={() => setReloadNonce((n) => n + 1)}
+                onRetry={placementsQ.reload}
+                retrograde={selected.retrograde}
               />
             </SheetReveal>
           </View>
@@ -225,13 +199,9 @@ function SheetReveal({
   children: React.ReactNode;
 }) {
   return (
-    <MotiView
-      from={{ opacity: 0, translateY: 8 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: "timing", duration: 320, delay: 120 + delay }}
-    >
+    <EnterView delay={120 + delay} distance={8} style={styles.sheetBlock}>
       {children}
-    </MotiView>
+    </EnterView>
   );
 }
 
@@ -256,6 +226,18 @@ const styles = StyleSheet.create({
   },
   header: {
     gap: spacing.sm,
+  },
+  eyebrowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  shrink: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  title: {
+    marginTop: spacing.xs,
   },
   birthLine: {
     marginTop: spacing.xs,
@@ -285,6 +267,17 @@ const styles = StyleSheet.create({
   sheetBody: {
     alignItems: "center",
     gap: spacing.md,
+  },
+  sheetBlock: {
+    alignSelf: "stretch",
+    alignItems: "center",
+  },
+  sheetMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    flexWrap: "wrap",
+    gap: spacing.xs,
   },
   sheetGlyph: {
     alignItems: "center",

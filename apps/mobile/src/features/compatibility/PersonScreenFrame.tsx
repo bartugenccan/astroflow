@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, Pressable } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { StyleSheet, View } from "react-native";
+import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
@@ -9,6 +9,8 @@ import { HairlineCard } from "../../components/ui/HairlineCard";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { GoldButton } from "../../components/ui/GoldButton";
 import { PaywallSheet } from "../../components/PaywallSheet";
+import { BackButton } from "../../components/ui/BackButton";
+import { EnterView } from "../../lib/motion";
 import { ChartScreen } from "../chart/ChartScreen";
 import { TransitsScreen } from "../transits/TransitsScreen";
 import { savedPersonToDto, usePerson, usePersonChartAccess } from "./savedPerson";
@@ -31,7 +33,6 @@ function formatDate(iso: string, locale: string): string {
  */
 export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
   const { t, locale } = useTranslation();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { person, loading } = usePerson(id);
@@ -43,14 +44,11 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
     if (allowed && id) markViewed(id);
   }, [allowed, id, markViewed]);
 
+  // Floating disc so the back affordance stays legible over the chart art.
   const back = (
-    <Pressable
-      hitSlop={12}
-      onPress={() => router.back()}
-      style={[styles.back, { top: insets.top + spacing.sm }]}
-    >
-      <Ionicons name="chevron-back" size={24} color={colors.text.primary} />
-    </Pressable>
+    <View style={[styles.back, { top: insets.top + spacing.sm }]}>
+      <BackButton />
+    </View>
   );
 
   if (loading || !person) {
@@ -69,6 +67,7 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
       <ScreenWrapper>
         {back}
         <View style={styles.center}>
+          <EnterView scale style={styles.fullWidth}>
           <HairlineCard style={styles.lockCard}>
             <Ionicons name="lock-closed" size={24} color={colors.gold[300]} />
             <AppText variant="title" center>
@@ -79,6 +78,7 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
             </AppText>
             <GoldButton label={t("paywall.unlockPremium")} onPress={() => setPaywall(true)} />
           </HairlineCard>
+          </EnterView>
         </View>
         <PaywallSheet visible={paywall} onClose={() => setPaywall(false)} variant="premium" />
       </ScreenWrapper>
@@ -108,11 +108,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: spacing.lg,
     zIndex: 10,
-    width: 38,
-    height: 38,
+    width: 42,
+    height: 42,
+    // BackButton carries a -8 left margin for inline headers; cancel it here.
+    paddingLeft: 8,
     borderRadius: radii.pill,
-    alignItems: "center",
     justifyContent: "center",
+    alignItems: "flex-start",
     backgroundColor: colors.ink[800],
     borderWidth: 1,
     borderColor: colors.border.hairline,
@@ -122,6 +124,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: spacing.xl,
+  },
+  fullWidth: {
+    width: "100%",
   },
   lockCard: {
     alignItems: "center",

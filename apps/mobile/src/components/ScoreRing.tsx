@@ -5,9 +5,12 @@ import Animated, {
   useSharedValue,
   useAnimatedProps,
   withTiming,
+  withDelay,
   Easing,
+  useReducedMotion,
 } from "react-native-reanimated";
 import { AppText } from "./ui/AppText";
+import { CountUp } from "./ui/CountUp";
 import { colors, fonts } from "../lib/design-system";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -18,6 +21,10 @@ interface ScoreRingProps {
   stroke?: number;
   label?: string;
   animate?: boolean;
+  /** Delay before the sweep starts (ms) — lets a ring wait for its card. */
+  delay?: number;
+  /** Replace the default number + label in the middle. */
+  center?: React.ReactNode;
 }
 
 /**
@@ -30,7 +37,10 @@ export function ScoreRing({
   stroke = 10,
   label,
   animate = true,
+  delay = 0,
+  center,
 }: ScoreRingProps) {
+  const reduced = useReducedMotion();
   const clamped = Math.max(0, Math.min(100, score));
   const r = (size - stroke) / 2;
   const cx = size / 2;
@@ -40,15 +50,18 @@ export function ScoreRing({
   const progress = useSharedValue(animate ? 0 : clamped / 100);
 
   useEffect(() => {
-    if (animate) {
-      progress.value = withTiming(clamped / 100, {
-        duration: 900,
-        easing: Easing.out(Easing.cubic),
-      });
+    if (animate && !reduced) {
+      progress.value = withDelay(
+        delay,
+        withTiming(clamped / 100, {
+          duration: 1100,
+          easing: Easing.out(Easing.cubic),
+        }),
+      );
     } else {
       progress.value = clamped / 100;
     }
-  }, [clamped, animate, progress]);
+  }, [clamped, animate, delay, reduced, progress]);
 
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: circumference * (1 - progress.value),
@@ -86,17 +99,27 @@ export function ScoreRing({
         />
       </Svg>
       <View style={styles.center} pointerEvents="none">
-        <AppText
-          variant="display"
-          style={{ fontFamily: fonts.serif, color: colors.text.primary }}
-        >
-          {Math.round(clamped)}
-        </AppText>
-        {label ? (
-          <AppText variant="label" color={colors.text.tertiary}>
-            {label}
-          </AppText>
-        ) : null}
+        {center ?? (
+          <>
+            <CountUp
+              value={Math.round(clamped)}
+              animate={animate}
+              delay={delay}
+              variant="display"
+              style={{ fontFamily: fonts.serif, color: colors.text.primary }}
+            />
+            {label ? (
+              <AppText
+                variant="label"
+                color={colors.text.tertiary}
+                numberOfLines={1}
+                style={{ maxWidth: size * 0.7 }}
+              >
+                {label}
+              </AppText>
+            ) : null}
+          </>
+        )}
       </View>
     </View>
   );
@@ -104,7 +127,7 @@ export function ScoreRing({
 
 const styles = StyleSheet.create({
   center: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -31,6 +31,7 @@ import {
   TransitReport,
   TransitDetail,
   TransitOverview,
+  YearAhead,
 } from "./types";
 import { Locale } from "../i18n";
 import { generateNatalChart } from "./mock/natalChart";
@@ -48,6 +49,7 @@ import {
   mockTransitOverview,
 } from "./mock/interpretations";
 import { mockBestDays, mockForecast } from "./mock/forecast";
+import { mockYearAhead } from "./mock/yearAhead";
 import { mockCompatibility, mockCompatibilityReading } from "./mock/compatibility";
 import {
   mockGuidance,
@@ -112,6 +114,8 @@ export interface AstrologyApi {
     locale: Locale,
     start?: string,
   ): Promise<Forecast>;
+  /** Solar Return, read as the year from this birthday to the next. */
+  getYearAhead(dto: CreateBirthProfileDto, locale: Locale): Promise<YearAhead>;
 
   // Compatibility / synastry
   getCompatibility(
@@ -262,6 +266,11 @@ const mockAstrologyApi: AstrologyApi = {
   async getForecast(dto, period, locale, start) {
     await delay();
     return mockForecast(dto, period, locale, start);
+  },
+
+  async getYearAhead(dto, locale) {
+    await delay();
+    return mockYearAhead(dto, locale);
   },
 
   async getCompatibility(self, other) {

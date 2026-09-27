@@ -1,7 +1,7 @@
 import React from "react";
-import { Pressable, StyleSheet, ViewStyle } from "react-native";
+import { StyleSheet, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
+import { PressableScale } from "./PressableScale";
 import { colors, radii } from "../../lib/design-system";
 
 interface ShareButtonProps {
@@ -13,16 +13,16 @@ interface ShareButtonProps {
 /** Small gold share affordance — a hairline-ringed icon button. */
 export function ShareButton({ onPress, size = 34, style }: ShareButtonProps) {
   return (
-    <Pressable
+    <PressableScale
       hitSlop={8}
-      onPress={() => {
-        Haptics.selectionAsync().catch(() => {});
-        onPress();
-      }}
+      onPress={onPress}
+      scaleTo={0.88}
       style={[styles.btn, { width: size, height: size }, style]}
+      accessibilityRole="button"
+      accessibilityLabel="Share"
     >
       <Ionicons name="share-outline" size={size * 0.5} color={colors.gold[300]} />
-    </Pressable>
+    </PressableScale>
   );
 }
 

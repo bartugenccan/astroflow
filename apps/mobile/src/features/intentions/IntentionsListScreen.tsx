@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { StyleSheet, View, ScrollView, Pressable } from "react-native";
-import { useRouter, type Href } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
+import { StyleSheet, View, ScrollView } from "react-native";
+import { useRouter, useFocusEffect, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { MotiView } from "moti";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
 import { GoldButton } from "../../components/ui/GoldButton";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { PaywallSheet } from "../../components/PaywallSheet";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { BackButton } from "../../components/ui/BackButton";
+import { EnterView } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
 import { useAsync } from "../../hooks/useAsync";
 import { useAppStore, FREE_INTENTIONS } from "../../store/useAppStore";
@@ -42,8 +43,11 @@ export function IntentionsListScreen() {
 
   return (
     <ScreenWrapper>
+      <View style={styles.topBar}>
+        <BackButton />
+      </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
+        <EnterView style={styles.header}>
           <AppText variant="label" color={colors.text.gold}>
             {t("intentions.eyebrow")}
           </AppText>
@@ -51,13 +55,15 @@ export function IntentionsListScreen() {
           <AppText variant="body" style={styles.subtitle}>
             {t("intentions.subtitle")}
           </AppText>
-        </View>
+        </EnterView>
 
-        <GoldButton
-          label={t("intentions.newIntention")}
-          onPress={onNew}
-          icon={<Ionicons name="add" size={18} color={colors.text.onGold} />}
-        />
+        <EnterView index={1}>
+          <GoldButton
+            label={t("intentions.newIntention")}
+            onPress={onNew}
+            icon={<Ionicons name="add" size={18} color={colors.text.onGold} />}
+          />
+        </EnterView>
 
         {intentions.loading ? (
           <View style={styles.loaderBox}>
@@ -66,16 +72,15 @@ export function IntentionsListScreen() {
         ) : count > 0 ? (
           <View style={styles.list}>
             {intentions.data!.map((it, i) => (
-              <MotiView
-                key={it.id}
-                from={{ opacity: 0, translateY: 10 }}
-                animate={{ opacity: 1, translateY: 0 }}
-                transition={{ type: "timing", duration: 300, delay: i * 70 }}
-              >
-                <Pressable onPress={() => router.push(`/intentions/${it.id}` as Href)}>
+              <EnterView key={it.id} index={i} delay={140}>
+                <PressableScale
+                  scaleTo={0.98}
+                  accessibilityRole="button"
+                  onPress={() => router.push(`/intentions/${it.id}` as Href)}
+                >
                   <HairlineCard style={styles.card}>
                     <View style={styles.cardHead}>
-                      <AppText variant="heading" style={styles.cardGoal}>
+                      <AppText variant="heading" numberOfLines={3} style={styles.cardGoal}>
                         {it.goalText}
                       </AppText>
                       <View style={styles.streakPill}>
@@ -88,23 +93,26 @@ export function IntentionsListScreen() {
                     <AppText variant="bodySmall" numberOfLines={2} style={styles.cardAff}>
                       “{it.affirmation}”
                     </AppText>
-                    <AppText variant="label" color={colors.text.tertiary}>
+                    <AppText variant="labelLong" color={colors.text.tertiary}>
                       {t("intentions.progressLabel", {
                         count: it.progress.count,
                         target: it.progress.target,
                       })}
                     </AppText>
                   </HairlineCard>
-                </Pressable>
-              </MotiView>
+                </PressableScale>
+              </EnterView>
             ))}
           </View>
         ) : (
-          <HairlineCard>
-            <AppText variant="body" center>
-              {t("intentions.empty")}
-            </AppText>
-          </HairlineCard>
+          <EnterView index={2}>
+            <HairlineCard style={styles.emptyCard}>
+              <Ionicons name="sparkles-outline" size={24} color={colors.gold[300]} />
+              <AppText variant="body" center>
+                {t("intentions.empty")}
+              </AppText>
+            </HairlineCard>
+          </EnterView>
         )}
       </ScrollView>
 
@@ -114,9 +122,13 @@ export function IntentionsListScreen() {
 }
 
 const styles = StyleSheet.create({
+  topBar: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
   content: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: 120,
     gap: spacing.xl,
   },
@@ -127,12 +139,14 @@ const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   cardHead: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
     gap: spacing.md,
   },
-  cardGoal: { flex: 1 },
+  cardGoal: { flex: 1, minWidth: 0 },
+  emptyCard: { alignItems: "center", gap: spacing.md, paddingVertical: spacing.xl },
   streakPill: {
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,

@@ -1,14 +1,6 @@
-import React, { useCallback } from "react";
-import { StyleSheet, ViewStyle, StyleProp } from "react-native";
-import * as Haptics from "expo-haptics";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  runOnJS,
-} from "react-native-reanimated";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { motion } from "../../lib/design-system";
+import React from "react";
+import { ViewStyle, StyleProp } from "react-native";
+import { PressableScale } from "./PressableScale";
 
 interface BouncyButtonProps {
   children: React.ReactNode;
@@ -17,9 +9,15 @@ interface BouncyButtonProps {
   disabled?: boolean;
   haptic?: boolean;
   scaleTo?: number;
+  accessibilityLabel?: string;
 }
 
-/** Generic tactile press wrapper — spring scale + selection haptic. */
+/**
+ * Legacy name for the generic tactile press wrapper. It now delegates to
+ * `PressableScale` (a plain Pressable underneath), so it nests safely inside
+ * ScrollViews/sheets, honours reduce-motion, and keeps accessibility roles —
+ * the old gesture-handler Tap version did none of those.
+ */
 export function BouncyButton({
   children,
   onPress,
@@ -27,44 +25,19 @@ export function BouncyButton({
   disabled = false,
   haptic = true,
   scaleTo = 0.96,
+  accessibilityLabel,
 }: BouncyButtonProps) {
-  const scale = useSharedValue(1);
-
-  const fire = useCallback(() => {
-    if (haptic) Haptics.selectionAsync();
-    onPress();
-  }, [onPress, haptic]);
-
-  const tap = Gesture.Tap()
-    .enabled(!disabled)
-    .onBegin(() => {
-      "worklet";
-      scale.value = withSpring(scaleTo, motion.spring.snappy);
-    })
-    .onFinalize(() => {
-      "worklet";
-      scale.value = withSpring(1, motion.spring.snappy);
-    })
-    .onEnd(() => {
-      "worklet";
-      runOnJS(fire)();
-    });
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   return (
-    <GestureDetector gesture={tap}>
-      <Animated.View style={[animStyle, style, disabled && styles.disabled]}>
-        {children}
-      </Animated.View>
-    </GestureDetector>
+    <PressableScale
+      onPress={onPress}
+      style={style}
+      disabled={disabled}
+      haptic={haptic ? "selection" : "none"}
+      scaleTo={scaleTo}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      {children}
+    </PressableScale>
   );
 }
-
-const styles = StyleSheet.create({
-  disabled: {
-    opacity: 0.5,
-  },
-});

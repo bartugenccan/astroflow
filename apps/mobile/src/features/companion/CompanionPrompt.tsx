@@ -1,9 +1,10 @@
 import React from "react";
-import { StyleSheet, View, Pressable, ScrollView } from "react-native";
+import { StyleSheet, View, ScrollView } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { GuidanceTopic } from "../../services/types";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { colors, spacing, radii } from "../../lib/design-system";
@@ -35,15 +36,20 @@ export function CompanionPrompt({
         contentContainerStyle={styles.chips}
       >
         {TOPICS.map((tp) => (
-          <Pressable key={tp} style={styles.chip} onPress={() => onSelectTopic(tp)}>
-            <AppText variant="bodySmall" color={colors.text.primary}>
+          <PressableScale
+            key={tp}
+            style={styles.chip}
+            scaleTo={0.92}
+            onPress={() => onSelectTopic(tp)}
+          >
+            <AppText variant="bodySmall" color={colors.text.primary} numberOfLines={1}>
               {t(`companion.topics.${tp}` as TranslationKey)}
             </AppText>
-          </Pressable>
+          </PressableScale>
         ))}
       </ScrollView>
 
-      <Pressable onPress={() => router.push("/companion" as Href)}>
+      <PressableScale scaleTo={0.98} onPress={() => router.push("/companion" as Href)}>
         <HairlineCard style={styles.talkRow}>
           <Ionicons name="sparkles-outline" size={18} color={colors.gold[300]} />
           <AppText variant="body" color={colors.text.secondary} style={styles.talkText}>
@@ -51,7 +57,7 @@ export function CompanionPrompt({
           </AppText>
           <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
         </HairlineCard>
-      </Pressable>
+      </PressableScale>
     </View>
   );
 }
@@ -80,5 +86,6 @@ const styles = StyleSheet.create({
   },
   talkText: {
     flex: 1,
+    minWidth: 0,
   },
 });

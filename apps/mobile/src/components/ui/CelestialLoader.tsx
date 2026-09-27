@@ -5,6 +5,7 @@ import {
   useSharedValue,
   useDerivedValue,
   withRepeat,
+  useReducedMotion,
   withTiming,
   Easing,
 } from "react-native-reanimated";
@@ -29,8 +30,13 @@ export function CelestialLoader({ size = "lg", label }: Props) {
 
   const spin = useSharedValue(0);
   const pulse = useSharedValue(0);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
+    if (reduced) {
+      pulse.value = 0.5;
+      return;
+    }
     spin.value = withRepeat(
       withTiming(1, { duration: 2600, easing: Easing.linear }),
       -1,
@@ -41,7 +47,7 @@ export function CelestialLoader({ size = "lg", label }: Props) {
       -1,
       true,
     );
-  }, [spin, pulse]);
+  }, [spin, pulse, reduced]);
 
   const arcPath = useMemo(() => {
     const p = Skia.Path.Make();

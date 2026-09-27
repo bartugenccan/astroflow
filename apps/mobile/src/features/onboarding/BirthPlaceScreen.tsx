@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, TextInput, Pressable, ScrollView } from "react-native";
+import { StyleSheet, View, TextInput, ScrollView } from "react-native";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { MotiView } from "moti";
@@ -135,8 +136,9 @@ export function BirthPlaceScreen() {
                     animate={{ opacity: 1, translateY: 0 }}
                     transition={{ type: "timing", duration: 240, delay: Math.min(i, 8) * 35 }}
                   >
-                    <Pressable
+                    <PressableScale
                       onPress={() => selectCity(c)}
+                      scaleTo={0.98}
                       style={[styles.cityRow, selected && styles.cityRowSelected]}
                     >
                       <View style={styles.cityText}>
@@ -150,7 +152,7 @@ export function BirthPlaceScreen() {
                       {selected ? (
                         <Ionicons name="checkmark-circle" size={20} color={colors.gold[300]} />
                       ) : null}
-                    </Pressable>
+                    </PressableScale>
                   </MotiView>
                 );
               })
@@ -188,7 +190,7 @@ export function BirthPlaceScreen() {
         </View>
       )}
 
-      <Pressable onPress={() => setManual((m) => !m)} style={styles.toggle}>
+      <PressableScale onPress={() => setManual((m) => !m)} scaleTo={0.95} style={styles.toggle}>
         <Ionicons
           name={manual ? "search" : "location-outline"}
           size={16}
@@ -197,7 +199,7 @@ export function BirthPlaceScreen() {
         <AppText variant="bodySmall" color={colors.gold[300]}>
           {manual ? t("onboarding.placeSearchPlaceholder") : t("onboarding.manualCoords")}
         </AppText>
-      </Pressable>
+      </PressableScale>
     </OnboardingFrame>
   );
 }
@@ -244,6 +246,7 @@ const styles = StyleSheet.create({
   },
   cityText: {
     flex: 1,
+    minWidth: 0,
     marginRight: spacing.sm,
   },
   cityRowSelected: {

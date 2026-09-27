@@ -25,6 +25,8 @@ import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "./AppText";
+import { PressableScale } from "./PressableScale";
+import { useUiStore } from "../../store/useUiStore";
 import { colors, spacing, radii, motion, blurIntensity, shadows } from "../../lib/design-system";
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
@@ -56,6 +58,16 @@ export function SpringBottomSheet({
   const translateY = useSharedValue(SHEET_HEIGHT);
   const backdropOpacity = useSharedValue(0);
   const materialize = useSharedValue(0); // 0 → hidden, 1 → settled (scale/opacity pop)
+  const pushSheet = useUiStore((s) => s.pushSheet);
+  const popSheet = useUiStore((s) => s.popSheet);
+
+  // Every open sheet hides the floating tab bar; the counter in the store
+  // keeps it hidden while any sheet (even a stacked one) is still up.
+  useEffect(() => {
+    if (!visible) return;
+    pushSheet();
+    return popSheet;
+  }, [visible, pushSheet, popSheet]);
 
   const handleClose = useCallback(() => {
     "worklet";
@@ -138,15 +150,18 @@ export function SpringBottomSheet({
             <View style={styles.grabber} />
             {title ? (
               <View style={styles.header}>
-                <AppText variant="title" style={styles.title} numberOfLines={1}>
+                <AppText variant="title" style={styles.title} numberOfLines={2}>
                   {title}
                 </AppText>
-                <Ionicons
-                  name="close"
-                  size={22}
-                  color={colors.text.tertiary}
+                <PressableScale
                   onPress={onClose}
-                />
+                  hitSlop={12}
+                  scaleTo={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel="Close"
+                >
+                  <Ionicons name="close" size={22} color={colors.text.tertiary} />
+                </PressableScale>
               </View>
             ) : null}
           </View>
@@ -178,12 +193,12 @@ export function SpringBottomSheet({
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 1000,
     elevation: 1000,
   },
   backdropTint: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(6, 8, 16, 0.55)",
   },
   sheet: {
@@ -222,7 +237,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -230,6 +245,7 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
+    minWidth: 0,
     marginRight: spacing.sm,
   },
   scroll: {

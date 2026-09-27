@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { MotiView } from "moti";
+import { useRouter, type Href } from "expo-router";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { ChartReveal } from "../../components/ChartReveal";
 import { BigThree } from "../../components/BigThree";
@@ -11,15 +12,15 @@ import { StarDivider } from "../../components/ui/StarDivider";
 import { astrologyApi } from "../../services/astrologyApi";
 import { BirthProfileResponse, CreateBirthProfileDto } from "../../services/types";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
-import { useAppStore } from "../../store/useAppStore";
-import { useTranslation } from "../../i18n";
+import { EnterView } from "../../lib/motion";
+import { useTranslation, TranslationKey } from "../../i18n";
 import { colors, spacing } from "../../lib/design-system";
 
 export function RevealScreen() {
   const { t } = useTranslation();
+  const router = useRouter();
   const draft = useOnboardingDraft();
-  const clearDraft = useOnboardingDraft((s) => s.clear);
-  const completeOnboarding = useAppStore((s) => s.completeOnboarding);
+  const setDraftProfile = useOnboardingDraft((s) => s.setProfile);
 
   const [profile, setProfile] = useState<BirthProfileResponse | null>(null);
   const [revealed, setRevealed] = useState(false);
@@ -41,10 +42,18 @@ export function RevealScreen() {
 
   const ready = profile && revealed;
 
+  // Onboarding completes at the end of the intro tour, so a newcomer learns
+  // what the app holds (including the birthday chart) before landing in it.
   const enter = () => {
     if (!profile) return;
-    completeOnboarding(draft.name.trim() || "Traveler", profile);
-    clearDraft();
+    setDraftProfile(profile);
+    router.push("/(onboarding)/tour" as Href);
+  };
+
+  const tr = (group: "planets" | "elements", v: string) => {
+    const key = `${group}.${v}` as TranslationKey;
+    const out = t(key);
+    return out === key ? v : out;
   };
 
   return (
@@ -65,30 +74,35 @@ export function RevealScreen() {
             </MotiView>
           </View>
         ) : (
-          <MotiView
-            from={{ opacity: 0, translateY: 24 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "spring", damping: 16, stiffness: 120 }}
-            style={styles.result}
-          >
-            <AppText variant="label" color={colors.text.gold} center>
-              {t("onboarding.revealReady")}
-            </AppText>
-            <HairlineCard style={styles.card}>
-              <BigThree
-                sunSign={profile.sunSign}
-                moonSign={profile.moonSign}
-                risingSign={profile.risingSign}
-              />
-              <View style={styles.divider}>
-                <StarDivider />
-              </View>
-              <AppText variant="serifBody" center>
-                {profile.dominantElement} • {profile.dominantPlanet}
+          <View style={styles.result}>
+            <EnterView distance={24}>
+              <AppText variant="label" color={colors.text.gold} center>
+                {t("onboarding.revealReady")}
               </AppText>
-            </HairlineCard>
-            <GoldButton label={t("onboarding.enterApp")} onPress={enter} />
-          </MotiView>
+            </EnterView>
+            <EnterView index={1} distance={24} scale>
+              <HairlineCard style={styles.card}>
+                <BigThree
+                  sunSign={profile.sunSign}
+                  moonSign={profile.moonSign}
+                  risingSign={profile.risingSign}
+                />
+                <View style={styles.divider}>
+                  <StarDivider />
+                </View>
+                <AppText variant="labelLong" center>
+                  {t("onboarding.dominantLabel")}
+                </AppText>
+                <AppText variant="serifBody" center>
+                  {tr("elements", profile.dominantElement)} •{" "}
+                  {tr("planets", profile.dominantPlanet)}
+                </AppText>
+              </HairlineCard>
+            </EnterView>
+            <EnterView index={2}>
+              <GoldButton label={t("onboarding.enterApp")} onPress={enter} />
+            </EnterView>
+          </View>
         )}
       </View>
     </ScreenWrapper>

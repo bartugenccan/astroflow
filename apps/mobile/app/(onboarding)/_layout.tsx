@@ -15,6 +15,7 @@ export default function OnboardingLayout() {
       <Stack.Screen name="birth-time" />
       <Stack.Screen name="birth-place" />
       <Stack.Screen name="reveal" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="tour" options={{ gestureEnabled: false, animation: "slide_from_right" }} />
     </Stack>
   );
 }

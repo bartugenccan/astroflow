@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { StyleSheet, View, ScrollView, Alert } from "react-native";
 import { useRouter, type Href } from "expo-router";
-import { MotiView } from "moti";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
@@ -9,12 +8,12 @@ import { HairlineCard } from "../../components/ui/HairlineCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { LangSwitch } from "../../components/ui/LangSwitch";
 import { BigThree } from "../../components/BigThree";
-import { BouncyButton } from "../../components/ui/BouncyButton";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { BirthDetailsSheet } from "./BirthDetailsSheet";
 import { astrologyApi } from "../../services/astrologyApi";
 import { useAppStore } from "../../store/useAppStore";
-import { useUiStore } from "../../store/useUiStore";
 import { useTranslation } from "../../i18n";
+import { EnterView } from "../../lib/motion";
 import { colors, spacing } from "../../lib/design-system";
 
 export function ProfileScreen() {
@@ -26,19 +25,12 @@ export function ProfileScreen() {
   const setLocale = useAppStore((s) => s.setLocale);
   const setBirthProfile = useAppStore((s) => s.setBirthProfile);
   const reset = useAppStore((s) => s.reset);
-  const setSheetOpen = useUiStore((s) => s.setSheetOpen);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const openEditor = () => {
-    setEditing(true);
-    setSheetOpen(true);
-  };
-  const closeEditor = () => {
-    setEditing(false);
-    setSheetOpen(false);
-  };
+  const openEditor = () => setEditing(true);
+  const closeEditor = () => setEditing(false);
 
   const handleSave = async (birthDate: string, birthTime: string) => {
     if (!profile) return;
@@ -85,48 +77,49 @@ export function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
-        <MotiView
-          from={{ opacity: 0, translateY: 10 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 400 }}
-          style={styles.header}
-        >
-          <SectionHeader eyebrow="PROFILE" title={displayName || t("profile.title")} />
-        </MotiView>
+        <EnterView style={styles.header}>
+          <SectionHeader eyebrow={t("profile.eyebrow")} title={displayName || t("profile.title")} />
+        </EnterView>
 
         {profile ? (
-          <MotiView
-            from={{ opacity: 0, translateY: 12 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 400, delay: 100 }}
-          >
+          <EnterView index={1}>
             <BigThree
               sunSign={profile.sunSign}
               moonSign={profile.moonSign}
               risingSign={profile.risingSign}
             />
-          </MotiView>
+          </EnterView>
         ) : null}
 
         {/* Compatibility entry */}
-        <View style={styles.section}>
+        <EnterView index={2} style={styles.section}>
           <SectionHeader eyebrow={t("compatibility.title")} />
-          <BouncyButton onPress={() => router.push("/compatibility" as Href)} scaleTo={0.99}>
-            <HairlineCard style={styles.compatRow}>
-              <View style={styles.compatIcon}>
-                <Ionicons name="heart-outline" size={20} color={colors.gold[300]} />
-              </View>
-              <View style={styles.compatText}>
-                <AppText variant="heading">{t("compatibility.addPerson")}</AppText>
-                <AppText variant="bodySmall">{t("compatibility.subtitle")}</AppText>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-            </HairlineCard>
-          </BouncyButton>
-        </View>
+          <NavCard
+            icon="heart-outline"
+            title={t("compatibility.addPerson")}
+            subtitle={t("compatibility.subtitle")}
+            onPress={() => router.push("/compatibility" as Href)}
+          />
+        </EnterView>
+
+        {/* Explore: birthday chart + glossary */}
+        <EnterView index={3} style={styles.section}>
+          <NavCard
+            icon="gift-outline"
+            title={t("yearAhead.title")}
+            subtitle={t("yearAhead.techName")}
+            onPress={() => router.push("/year-ahead" as Href)}
+          />
+          <NavCard
+            icon="book-outline"
+            title={t("glossary.ui.openGlossary")}
+            subtitle={t("glossary.ui.openGlossarySub")}
+            onPress={() => router.push("/glossary" as Href)}
+          />
+        </EnterView>
 
         {/* Birth details */}
-        <View style={styles.section}>
+        <EnterView index={4} style={styles.section}>
           <SectionHeader eyebrow={t("profile.birthDataTitle")} />
           <HairlineCard>
             {birthRows.map((row, i) => {
@@ -134,12 +127,17 @@ export function ProfileScreen() {
                 <View style={styles.dataRow}>
                   <View style={styles.dataLeft}>
                     <Ionicons name={row.icon} size={18} color={colors.gold[300]} />
-                    <AppText variant="body" color={colors.text.secondary}>
+                    <AppText variant="body" color={colors.text.secondary} numberOfLines={1}>
                       {row.label}
                     </AppText>
                   </View>
                   <View style={styles.dataRight}>
-                    <AppText variant="body" color={colors.text.primary}>
+                    <AppText
+                      variant="body"
+                      color={colors.text.primary}
+                      numberOfLines={2}
+                      style={styles.dataValue}
+                    >
                       {row.value}
                     </AppText>
                     {row.editable ? (
@@ -151,9 +149,14 @@ export function ProfileScreen() {
               return (
                 <View key={row.label}>
                   {row.editable ? (
-                    <BouncyButton onPress={openEditor} scaleTo={0.99}>
+                    <PressableScale
+                      onPress={openEditor}
+                      scaleTo={0.98}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t("profile.editBirth")}: ${row.label}`}
+                    >
                       {inner}
-                    </BouncyButton>
+                    </PressableScale>
                   ) : (
                     inner
                   )}
@@ -162,21 +165,21 @@ export function ProfileScreen() {
               );
             })}
           </HairlineCard>
-        </View>
+        </EnterView>
 
         {/* Settings */}
-        <View style={styles.section}>
+        <EnterView index={5} style={styles.section}>
           <SectionHeader eyebrow={t("profile.settingsTitle")} />
           <HairlineCard>
             <View style={styles.settingRow}>
-              <AppText variant="body" color={colors.text.primary}>
+              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
                 {t("profile.language")}
               </AppText>
               <LangSwitch value={locale} onChange={setLocale} />
             </View>
             <View style={styles.sep} />
             <View style={styles.settingRow}>
-              <AppText variant="body" color={colors.text.primary}>
+              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
                 {t("profile.notifications")}
               </AppText>
               <View style={styles.comingSoon}>
@@ -189,7 +192,7 @@ export function ProfileScreen() {
               <>
                 <View style={styles.sep} />
                 <View style={styles.settingRow}>
-                  <AppText variant="body" color={colors.text.primary}>
+                  <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
                     {t("paywall.premiumBadge")}
                   </AppText>
                   <View style={styles.premiumBadge}>
@@ -203,7 +206,7 @@ export function ProfileScreen() {
             ) : null}
             <View style={styles.sep} />
             <View style={styles.settingRow}>
-              <AppText variant="body" color={colors.text.primary}>
+              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
                 {t("profile.version")}
               </AppText>
               <AppText variant="body" color={colors.text.tertiary}>
@@ -211,15 +214,22 @@ export function ProfileScreen() {
               </AppText>
             </View>
           </HairlineCard>
-        </View>
+        </EnterView>
 
         {/* Start over */}
-        <BouncyButton onPress={confirmReset} scaleTo={0.97} style={styles.startOver}>
-          <Ionicons name="refresh-outline" size={18} color={colors.text.tertiary} />
-          <AppText variant="body" color={colors.text.tertiary}>
-            {t("profile.startOver")}
-          </AppText>
-        </BouncyButton>
+        <EnterView index={6}>
+          <PressableScale
+            onPress={confirmReset}
+            scaleTo={0.96}
+            style={styles.startOver}
+            accessibilityRole="button"
+          >
+            <Ionicons name="refresh-outline" size={18} color={colors.text.tertiary} />
+            <AppText variant="body" color={colors.text.tertiary} style={styles.shrink}>
+              {t("profile.startOver")}
+            </AppText>
+          </PressableScale>
+        </EnterView>
       </ScrollView>
 
       {profile ? (
@@ -233,6 +243,38 @@ export function ProfileScreen() {
         />
       ) : null}
     </ScreenWrapper>
+  );
+}
+
+/** A tappable hairline row leading to another screen. */
+function NavCard({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  return (
+    <PressableScale onPress={onPress} scaleTo={0.98} accessibilityRole="button">
+      <HairlineCard style={styles.navRow}>
+        <View style={styles.navIcon}>
+          <Ionicons name={icon} size={20} color={colors.gold[300]} />
+        </View>
+        <View style={styles.navText}>
+          <AppText variant="heading" numberOfLines={2}>
+            {title}
+          </AppText>
+          <AppText variant="bodySmall" numberOfLines={2}>
+            {subtitle}
+          </AppText>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+      </HairlineCard>
+    </PressableScale>
   );
 }
 
@@ -268,20 +310,37 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   dataLeft: {
+    flexShrink: 0,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
   },
   dataRight: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "flex-end",
     gap: spacing.sm,
+    marginLeft: spacing.md,
+  },
+  dataValue: {
+    flexShrink: 1,
+    textAlign: "right",
   },
   settingRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing.md,
     paddingVertical: spacing.md,
+  },
+  settingLabel: {
+    flex: 1,
+    minWidth: 0,
+  },
+  shrink: {
+    flexShrink: 1,
   },
   comingSoon: {
     borderWidth: 1,
@@ -301,12 +360,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     backgroundColor: colors.glow.goldSoft,
   },
-  compatRow: {
+  navRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
   },
-  compatIcon: {
+  navIcon: {
     width: 40,
     height: 40,
     borderRadius: 999,
@@ -315,8 +374,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
   },
-  compatText: {
+  navText: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   sep: {

@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { MotiView } from "moti";
-import { BouncyButton } from "../../components/ui/BouncyButton";
+import { Ionicons } from "@expo/vector-icons";
+import Animated from "react-native-reanimated";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { AppText } from "../../components/ui/AppText";
 import { Glyph } from "../../components/Glyph";
 import { AspectInterpretation } from "../../services/types";
-import { useTranslation } from "../../i18n";
+import { aspectName, aspectPhrase, aspectStrength } from "../../lib/astroLanguage";
+import { useTranslation, TranslationKey } from "../../i18n";
 import { colors, spacing } from "../../lib/design-system";
+import { useExpandMotion } from "./HouseRow";
 
 function tint(type: string): string {
   if (type === "harmonic") return colors.semantic.harmonic;
@@ -18,11 +21,17 @@ function tint(type: string): string {
 export function AspectRow({ aspect }: { aspect: AspectInterpretation }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const { chevronStyle, layout, entering, exiting } = useExpandMotion(open);
   const color = tint(aspect.type);
 
   return (
-    <View style={styles.wrap}>
-      <BouncyButton onPress={() => setOpen((o) => !o)} scaleTo={0.98}>
+    <Animated.View layout={layout} style={styles.wrap}>
+      <PressableScale
+        onPress={() => setOpen((o) => !o)}
+        scaleTo={0.98}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+      >
         <View style={styles.header}>
           <View style={styles.glyphs}>
             <Glyph name={aspect.planet1} size={18} color={colors.gold[300]} />
@@ -30,28 +39,37 @@ export function AspectRow({ aspect }: { aspect: AspectInterpretation }) {
             <Glyph name={aspect.planet2} size={18} color={colors.gold[300]} />
           </View>
           <View style={styles.meta}>
+            {/* Both planets are the reader's own, so neither is "yours". */}
             <AppText variant="body" color={colors.text.primary}>
-              {aspect.planet1} {aspect.aspect} {aspect.planet2}
+              {aspectPhrase(
+                t,
+                aspect.aspect,
+                t(`planets.${aspect.planet1}` as TranslationKey),
+                t(`planets.${aspect.planet2}` as TranslationKey),
+                false,
+              )}
             </AppText>
-            <AppText variant="numeric" color={colors.text.tertiary}>
-              {aspect.orb.toFixed(1)}° orb
+            <AppText variant="bodySmall" color={colors.text.tertiary}>
+              {aspectStrength(t, aspect.orb)}
             </AppText>
           </View>
+          <Animated.View style={chevronStyle}>
+            <Ionicons name="chevron-down" size={16} color={colors.text.tertiary} />
+          </Animated.View>
         </View>
-      </BouncyButton>
+      </PressableScale>
 
       {open ? (
-        <MotiView
-          from={{ opacity: 0, translateY: -6 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 240 }}
-        >
+        <Animated.View entering={entering} exiting={exiting}>
+          <AppText variant="numeric" color={colors.text.tertiary} style={styles.body}>
+            {aspectName(t, aspect.aspect)} · {aspect.orb.toFixed(1)}°
+          </AppText>
           <AppText variant="body" color={colors.text.secondary} style={styles.body}>
             {aspect.text}
           </AppText>
-        </MotiView>
+        </Animated.View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -69,9 +87,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
     width: 72,
+    flexShrink: 0,
   },
   meta: {
     flex: 1,
+    minWidth: 0,
   },
   body: {
     marginTop: spacing.sm,

@@ -131,6 +131,15 @@ export const typography = StyleSheet.create({
     textTransform: "uppercase",
     color: colors.text.tertiary,
   } as TextStyle,
+  // Sentence-length labels (questions, hints) — untracked, not uppercased, so
+  // they don't balloon in width the way `label` does in Turkish.
+  labelLong: {
+    fontFamily: fonts.sansSemiBold,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.4,
+    color: colors.text.tertiary,
+  } as TextStyle,
   numeric: {
     fontFamily: fonts.sansMedium,
     fontSize: 13,

@@ -1,26 +1,48 @@
 import React, { useMemo, useState } from "react";
-import { StyleSheet, View, ScrollView, Pressable } from "react-native";
-import { MotiView } from "moti";
+import { StyleSheet, View, ScrollView } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { Segmented } from "../../components/ui/Segmented";
+import { CountUp } from "../../components/ui/CountUp";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { PremiumGate } from "../../components/PremiumGate";
 import { GoldButton } from "../../components/ui/GoldButton";
+import { EnterView } from "../../lib/motion";
 import { BestDaysGrid } from "./BestDaysGrid";
+import { ScoreBar } from "./ScoreBar";
 import { astrologyApi } from "../../services/astrologyApi";
 import { BestDayScore, ForecastPeriod, LifeArea } from "../../services/types";
 import { bestDaysKey, forecastKey } from "../../services/interpretationCache";
 import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
-import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, spacing, radii } from "../../lib/design-system";
+import { useTranslation, TranslationKey, Locale } from "../../i18n";
+import { colors, spacing, radii, motion } from "../../lib/design-system";
 
 const AREAS: LifeArea[] = ["love", "career", "money", "energy"];
+
+/** "2026-09-27" → "Sunday, 27 September" / "27 Eylül Pazar". Non-ISO strings pass through. */
+function formatDay(iso: string | undefined, locale: Locale, withWeekday = true): string {
+  if (!iso) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
+  try {
+    return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
+      ...(withWeekday ? { weekday: "long" as const } : {}),
+      day: "numeric",
+      month: "long",
+    });
+  } catch {
+    return iso;
+  }
+}
 
 export function ForecastScreen() {
   const { t, locale } = useTranslation();
@@ -56,25 +78,33 @@ export function ForecastScreen() {
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerRow}>
+        {/* Compact header — the Ahead switcher above already names the section. */}
+        <EnterView index={0} style={styles.headerRow}>
           <AppText variant="label" color={colors.text.gold}>
             {t("forecast.eyebrow")}
           </AppText>
-          <AppText variant="title">{t("forecast.title")}</AppText>
-        </View>
+          <AppText variant="title" style={styles.titleText}>
+            {t("forecast.title")}
+          </AppText>
+          <AppText variant="bodySmall" color={colors.text.tertiary}>
+            {t("forecast.intro")}
+          </AppText>
+        </EnterView>
 
-        {/* Weekly / Monthly segmented control */}
-        <Segmented
-          value={period}
-          onChange={setPeriod}
-          options={[
-            { key: "weekly", label: t("forecast.weekly") },
-            { key: "monthly", label: t("forecast.monthly") },
-          ]}
-        />
+        {/* Weekly / Monthly */}
+        <EnterView index={1}>
+          <Segmented
+            value={period}
+            onChange={setPeriod}
+            options={[
+              { key: "weekly", label: t("forecast.weekly") },
+              { key: "monthly", label: t("forecast.monthly") },
+            ]}
+          />
+        </EnterView>
 
         {/* Best Days */}
-        <View style={styles.section}>
+        <EnterView index={2} style={styles.section}>
           <SectionHeader eyebrow={t("forecast.bestDaysTitle")} />
           <View style={styles.areaChips}>
             {AREAS.map((a) => (
@@ -101,21 +131,29 @@ export function ForecastScreen() {
                   onDayPress={setSelectedDay}
                 />
                 {monthLocked ? (
-                  <Pressable style={styles.lockRow} onPress={() => setPaywall(true)}>
-                    <AppText variant="bodySmall" color={colors.gold[300]} center>
+                  <PressableScale
+                    style={styles.lockRow}
+                    onPress={() => setPaywall(true)}
+                    scaleTo={0.98}
+                    haptic="light"
+                    accessibilityRole="button"
+                  >
+                    <Ionicons name="lock-closed" size={14} color={colors.gold[300]} />
+                    <AppText variant="bodySmall" color={colors.gold[300]} style={styles.lockText}>
                       {t("bestDays.lockedHint")}
                     </AppText>
-                  </Pressable>
+                    <Ionicons name="chevron-forward" size={14} color={colors.gold[300]} />
+                  </PressableScale>
                 ) : null}
               </>
             ) : (
               <AppText variant="body">{t("forecast.error")}</AppText>
             )}
           </HairlineCard>
-        </View>
+        </EnterView>
 
         {/* Forecast prose */}
-        <View style={styles.section}>
+        <EnterView index={3} style={styles.section}>
           <SectionHeader eyebrow={t("forecast.overviewTitle")} />
           {forecastGated ? (
             <LockedForecast onUnlock={() => setPaywall(true)} label={t("forecast.lockedMonthlyTitle")} />
@@ -127,9 +165,11 @@ export function ForecastScreen() {
             </HairlineCard>
           ) : forecast.data ? (
             <>
-              <HairlineCard>
-                <AppText variant="serifBody">{forecast.data.overview}</AppText>
-              </HairlineCard>
+              <EnterView>
+                <HairlineCard>
+                  <AppText variant="serifBody">{forecast.data.overview}</AppText>
+                </HairlineCard>
+              </EnterView>
 
               {/* Themes: free for premium, gated for non-premium weekly */}
               <View style={styles.themes}>
@@ -141,12 +181,7 @@ export function ForecastScreen() {
                 >
                   <View style={styles.themeList}>
                     {forecast.data.themes.map((th, i) => (
-                      <MotiView
-                        key={th.area}
-                        from={{ opacity: 0, translateY: 8 }}
-                        animate={{ opacity: 1, translateY: 0 }}
-                        transition={{ type: "timing", duration: 300, delay: i * 80 }}
-                      >
+                      <EnterView key={th.area} index={i + 1}>
                         <HairlineCard style={styles.themeCard}>
                           <AppText variant="label" color={colors.text.gold}>
                             {t(`lifeAreas.${th.area}` as TranslationKey)}
@@ -155,7 +190,7 @@ export function ForecastScreen() {
                             {th.text}
                           </AppText>
                         </HairlineCard>
-                      </MotiView>
+                      </EnterView>
                     ))}
                   </View>
                 </PremiumGate>
@@ -165,16 +200,16 @@ export function ForecastScreen() {
               {forecast.data.keyDates.length > 0 ? (
                 <View style={styles.themes}>
                   <SectionHeader eyebrow={t("forecast.keyDatesTitle")} />
-                  <HairlineCard>
-                    {forecast.data.keyDates.map((kd) => (
-                      <View key={kd.date} style={styles.keyDateRow}>
-                        <AppText variant="numeric" color={colors.gold[300]}>
-                          {kd.date}
+                  <HairlineCard style={styles.keyDates}>
+                    {forecast.data.keyDates.map((kd, i) => (
+                      <EnterView key={`${kd.date}-${i}`} index={i} style={styles.keyDateRow}>
+                        <AppText variant="numeric" color={colors.gold[300]} style={styles.keyDateDate}>
+                          {formatDay(kd.date, locale, false)}
                         </AppText>
                         <AppText variant="body" style={styles.keyDateLabel}>
                           {kd.label}
                         </AppText>
-                      </View>
+                      </EnterView>
                     ))}
                   </HairlineCard>
                 </View>
@@ -185,29 +220,42 @@ export function ForecastScreen() {
               <AppText variant="body">{t("forecast.error")}</AppText>
             </HairlineCard>
           )}
-        </View>
+        </EnterView>
       </ScrollView>
 
       {/* Day detail */}
       <SpringBottomSheet
         visible={selectedDay !== null}
         onClose={() => setSelectedDay(null)}
-        title={selectedDay?.date}
+        title={formatDay(selectedDay?.date, locale)}
       >
         {selectedDay ? (
           <View style={styles.daySheet}>
-            {AREAS.map((a) => {
+            <EnterView index={0}>
+              <AppText variant="bodySmall" color={colors.text.tertiary}>
+                {t("bestDays.sheetHint")}
+              </AppText>
+            </EnterView>
+            {AREAS.map((a, i) => {
               const reason = bestDays.data?.top[a]?.find((d) => d.date === selectedDay.date)?.reason;
+              const score = selectedDay[a];
+              const delay = motion.duration.fast + i * motion.stagger;
               return (
-                <View key={a} style={styles.dayRow}>
+                <EnterView key={`${selectedDay.date}-${a}`} index={i + 1} style={styles.dayRow}>
                   <View style={styles.dayRowHead}>
-                    <AppText variant="heading">{t(`lifeAreas.${a}` as TranslationKey)}</AppText>
-                    <AppText variant="heading" color={colors.gold[300]}>
-                      {selectedDay[a]}
+                    <AppText variant="heading" style={styles.dayArea}>
+                      {t(`lifeAreas.${a}` as TranslationKey)}
                     </AppText>
+                    <CountUp
+                      value={score}
+                      delay={delay}
+                      variant="heading"
+                      color={colors.gold[300]}
+                    />
                   </View>
+                  <ScoreBar value={score} delay={delay} />
                   <AppText variant="body">{reason ?? t("bestDays.noReason")}</AppText>
-                </View>
+                </EnterView>
               );
             })}
           </View>
@@ -227,45 +275,20 @@ export function ForecastScreen() {
   );
 }
 
-function Segmented<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { key: T; label: string }[];
-}) {
-  return (
-    <View style={styles.segmented}>
-      {options.map((o) => {
-        const active = o.key === value;
-        return (
-          <Pressable
-            key={o.key}
-            onPress={() => onChange(o.key)}
-            style={[styles.segment, active && styles.segmentActive]}
-          >
-            <AppText
-              variant="heading"
-              color={active ? colors.text.onGold : colors.text.secondary}
-            >
-              {o.label}
-            </AppText>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}>
+    <PressableScale
+      onPress={onPress}
+      scaleTo={0.92}
+      haptic={active ? "none" : "selection"}
+      style={[styles.chip, active && styles.chipActive]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+    >
       <AppText variant="bodySmall" color={active ? colors.gold[200] : colors.text.tertiary}>
         {label}
       </AppText>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -286,29 +309,16 @@ function LockedForecast({ onUnlock, label }: { onUnlock: () => void; label: stri
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.md,
     paddingBottom: 120,
     gap: spacing.xl,
   },
   headerRow: {
     gap: spacing.xs,
   },
-  segmented: {
-    flexDirection: "row",
-    backgroundColor: colors.ink[800],
-    borderRadius: radii.pill,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    alignItems: "center",
-    borderRadius: radii.pill,
-  },
-  segmentActive: {
-    backgroundColor: colors.gold[400],
+  titleText: {
+    fontSize: 24,
+    lineHeight: 30,
   },
   section: {
     gap: spacing.md,
@@ -335,10 +345,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xl,
   },
   lockRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border.hairline,
+  },
+  lockText: {
+    flexShrink: 1,
+    minWidth: 0,
+    textAlign: "center",
   },
   themes: {
     gap: spacing.md,
@@ -353,25 +372,39 @@ const styles = StyleSheet.create({
   themeText: {
     marginTop: spacing.xs,
   },
+  keyDates: {
+    gap: spacing.sm,
+  },
   keyDateRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: spacing.md,
     paddingVertical: spacing.xs,
   },
+  keyDateDate: {
+    flexShrink: 0,
+    maxWidth: "40%",
+    paddingTop: 3,
+  },
   keyDateLabel: {
     flex: 1,
+    minWidth: 0,
   },
   daySheet: {
     gap: spacing.lg,
   },
   dayRow: {
-    gap: spacing.xs,
+    gap: spacing.sm,
   },
   dayRowHead: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: spacing.md,
+  },
+  dayArea: {
+    flex: 1,
+    minWidth: 0,
   },
   lockedForecast: {
     gap: spacing.lg,

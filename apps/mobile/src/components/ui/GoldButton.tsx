@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   runOnJS,
+  useReducedMotion,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { AppText } from "./AppText";
@@ -39,8 +40,11 @@ export function GoldButton({
   style,
   icon,
 }: GoldButtonProps) {
+  const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const inactive = disabled || loading;
+  // Reduce-motion: no scale travel — a brief dim still confirms the press.
+  const pressScale = reduced ? 1 : 0.97;
   const solid = variant === "solid";
 
   const fire = useCallback(() => {
@@ -52,7 +56,7 @@ export function GoldButton({
     .enabled(!inactive)
     .onBegin(() => {
       "worklet";
-      scale.value = withSpring(0.97, motion.spring.snappy);
+      scale.value = withSpring(pressScale, motion.spring.snappy);
     })
     .onFinalize(() => {
       "worklet";
@@ -65,6 +69,7 @@ export function GoldButton({
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+    opacity: reduced && scale.value < 1 ? 0.85 : 1,
   }));
 
   const body = (
@@ -76,6 +81,9 @@ export function GoldButton({
           {icon}
           <AppText
             variant="heading"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
             style={[
               styles.label,
               { color: solid ? colors.text.onGold : colors.gold[300] },
@@ -90,7 +98,14 @@ export function GoldButton({
 
   return (
     <GestureDetector gesture={tap}>
-      <Animated.View style={[animStyle, { opacity: inactive ? 0.5 : 1 }, style]}>
+      <Animated.View
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: inactive, busy: loading }}
+        style={[{ opacity: inactive ? 0.5 : 1 }, style]}
+      >
+        <Animated.View style={animStyle}>
         {solid ? (
           <LinearGradient
             colors={gradients.goldButton}
@@ -103,6 +118,7 @@ export function GoldButton({
         ) : (
           <View style={[styles.container, styles.ghost]}>{body}</View>
         )}
+        </Animated.View>
       </Animated.View>
     </GestureDetector>
   );
@@ -110,7 +126,8 @@ export function GoldButton({
 
 const styles = StyleSheet.create({
   container: {
-    height: 56,
+    minHeight: 56,
+    paddingVertical: spacing.md,
     borderRadius: radii.pill,
     paddingHorizontal: spacing.xl,
     justifyContent: "center",
@@ -122,12 +139,15 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   inner: {
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
   },
   label: {
+    flexShrink: 1,
+    textAlign: "center",
     fontFamily: fonts.sansSemiBold,
     letterSpacing: 0.3,
   },

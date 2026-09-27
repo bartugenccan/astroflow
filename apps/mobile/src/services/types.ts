@@ -287,6 +287,60 @@ export interface Forecast {
   keyDates: { date: string; label: string }[];
 }
 
+// ─── Year Ahead / Solar Return (mirror apps/api) ─────────────────────────────
+
+/** One placement in the return chart. Only shown under "show me why". */
+export interface YearAheadPlacement {
+  name: string;
+  sign: string;
+  degree: number;
+  minute: number;
+  house: number;
+  retrograde: boolean;
+  symbol: string;
+}
+
+/** The raw return chart. Kept out of the way until the reader asks for it. */
+export interface YearAheadChart {
+  returnAtUtc: string;
+  returnDateLocal: string;
+  ageTurning: number;
+  windowStart: string;
+  windowEnd: string;
+  ascendantSign: string;
+  midheavenSign: string;
+  sunHouse: number;
+  moonSign: string;
+  moonHouse: number;
+  planets: YearAheadPlacement[];
+  angularPlanets: string[];
+  houseEmphasis: { house: number; planets: string[] }[];
+  aspectsToSun: {
+    planet: string;
+    aspect: string;
+    orb: number;
+    type: AspectType;
+  }[];
+}
+
+/**
+ * "Your Year Ahead" — the birthday-to-birthday reading. Plain language leads;
+ * `why` and `chart` are the progressive-disclosure half.
+ */
+export interface YearAhead {
+  start: string;
+  end: string;
+  age: number;
+  headline: string;
+  overview: string;
+  strengths: ForecastTheme[];
+  tender: ForecastTheme[];
+  turningPoints: { month: string; label: string }[];
+  why: string;
+  focusAreas: LifeArea[];
+  chart: YearAheadChart;
+}
+
 // ─── Compatibility / synastry (mirror apps/api) ──────────────────────────────
 export interface SynastryTopAspect {
   planetA: string;

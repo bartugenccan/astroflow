@@ -135,6 +135,10 @@ export const forecastKey = (
   locale: Locale,
 ) => `forecast|${dtoKey(dto)}|${period}|${locale}`;
 
+/** Year-ahead reading — one per chart+locale; the window only rolls on a birthday. */
+export const yearAheadKey = (dto: CreateBirthProfileDto, locale: Locale) =>
+  `yearahead|${dtoKey(dto)}|${locale}`;
+
 export const compatibilityKey = (
   self: CreateBirthProfileDto,
   other: CreateBirthProfileDto,

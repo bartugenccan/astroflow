@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { StyleSheet, View, ScrollView, Pressable, Alert } from "react-native";
+import React, { useRef, useState } from "react";
+import { StyleSheet, View, ScrollView, Alert } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
@@ -8,7 +8,12 @@ import { HairlineCard } from "../../components/ui/HairlineCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { GoldButton } from "../../components/ui/GoldButton";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { BackButton } from "../../components/ui/BackButton";
+import { CountUp } from "../../components/ui/CountUp";
 import { CheckInSheet } from "./CheckInSheet";
+import { StarBurst } from "./StarBurst";
+import { EnterView } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
 import { CheckInResult, Intention } from "../../services/types";
 import { useAsync } from "../../hooks/useAsync";
@@ -22,6 +27,10 @@ export function IntentionDetailScreen() {
   const loaded = useAsync(() => astrologyApi.getIntention(String(id)), [id]);
   const [local, setLocal] = useState<Intention | null>(null);
   const [checking, setChecking] = useState(false);
+  // Bumped when the sheet closes after a check-in that completed the day, so
+  // the celebration plays on this screen once the sheet is out of the way.
+  const [burstKey, setBurstKey] = useState(0);
+  const pendingBurst = useRef(false);
 
   const intention = local ?? loaded.data;
   const done = intention ? intention.progress.count >= intention.progress.target : false;
@@ -29,6 +38,16 @@ export function IntentionDetailScreen() {
   const applyResult = (r: CheckInResult) => {
     if (!intention) return;
     setLocal({ ...intention, progress: r.progress, streak: r.streak });
+    if (r.dayCompleted) pendingBurst.current = true;
+  };
+
+  const closeSheet = () => {
+    setChecking(false);
+    if (pendingBurst.current) {
+      pendingBurst.current = false;
+      // Let the sheet finish sliding away before the stars fly.
+      setTimeout(() => setBurstKey((k) => k + 1), 260);
+    }
   };
 
   const confirmDelete = () => {
@@ -48,15 +67,21 @@ export function IntentionDetailScreen() {
   return (
     <ScreenWrapper>
       <View style={styles.topBar}>
-        <Pressable hitSlop={12} onPress={() => router.back()}>
-          <Ionicons name="chevron-back" size={26} color={colors.text.secondary} />
-        </Pressable>
+        <BackButton />
         <AppText variant="heading" numberOfLines={1} style={styles.topTitle}>
           {intention?.goalText ?? t("intentions.title")}
         </AppText>
-        <Pressable hitSlop={10} onPress={confirmDelete}>
+        <PressableScale
+          hitSlop={10}
+          scaleTo={0.85}
+          haptic="light"
+          style={styles.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t("intentions.delete")}
+          onPress={confirmDelete}
+        >
           <Ionicons name="trash-outline" size={18} color={colors.text.tertiary} />
-        </Pressable>
+        </PressableScale>
       </View>
 
       {!intention ? (
@@ -66,48 +91,77 @@ export function IntentionDetailScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Streak + progress */}
-          <View style={styles.statsRow}>
+          <EnterView style={styles.statsRow}>
             <HairlineCard style={styles.statCard}>
-              <AppText variant="display" style={styles.statNum}>
-                {intention.streak.currentStreak}
-              </AppText>
-              <AppText variant="label" color={colors.text.tertiary}>
+              <View style={styles.statNumRow}>
+                <Ionicons name="flame" size={20} color={colors.gold[300]} />
+                <CountUp
+                  value={intention.streak.currentStreak}
+                  delay={200}
+                  duration={800}
+                  variant="display"
+                  style={styles.statNum}
+                />
+              </View>
+              <AppText
+                variant="labelLong"
+                color={colors.text.tertiary}
+                center
+                numberOfLines={2}
+                style={styles.statLabel}
+              >
                 {t("intentions.streakLabel")}
               </AppText>
+              <StarBurst playKey={burstKey} radius={70} />
             </HairlineCard>
             <HairlineCard style={styles.statCard}>
-              <AppText variant="display" style={styles.statNum}>
+              <AppText
+                variant="display"
+                style={styles.statNum}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
                 {intention.progress.count}/{intention.progress.target}
               </AppText>
-              <AppText variant="label" color={colors.text.tertiary}>
+              <AppText
+                variant="labelLong"
+                color={colors.text.tertiary}
+                center
+                numberOfLines={2}
+                style={styles.statLabel}
+              >
                 {t("intentions.todayPractice")}
               </AppText>
             </HairlineCard>
-          </View>
+          </EnterView>
 
           {/* Affirmation */}
-          <View style={styles.section}>
+          <EnterView index={1} style={styles.section}>
             <SectionHeader eyebrow={t("intentions.affirmationLabel")} />
             <HairlineCard elevated>
               <AppText variant="serifBody" center>
                 “{intention.affirmation}”
               </AppText>
             </HairlineCard>
-          </View>
+          </EnterView>
 
           {done ? (
-            <View style={styles.doneRow}>
+            <EnterView key="done" index={2} scale style={styles.doneRow}>
               <Ionicons name="checkmark-circle" size={20} color={colors.semantic.harmonic} />
-              <AppText variant="heading" color={colors.text.primary}>
+              <AppText variant="heading" color={colors.text.primary} style={styles.shrink}>
                 {t("intentions.doneToday")}
               </AppText>
-            </View>
+              <StarBurst playKey={burstKey} radius={90} count={12} />
+            </EnterView>
           ) : (
-            <GoldButton
-              label={t("intentions.checkInCta")}
-              onPress={() => setChecking(true)}
-              icon={<Ionicons name="add" size={18} color={colors.text.onGold} />}
-            />
+            <EnterView key="cta" index={2}>
+              <GoldButton
+                label={t("intentions.checkInCta")}
+                onPress={() => setChecking(true)}
+                icon={<Ionicons name="add" size={18} color={colors.text.onGold} />}
+              />
+            </EnterView>
           )}
         </ScrollView>
       )}
@@ -115,7 +169,7 @@ export function IntentionDetailScreen() {
       {intention ? (
         <CheckInSheet
           visible={checking}
-          onClose={() => setChecking(false)}
+          onClose={closeSheet}
           intentionId={intention.id}
           affirmation={intention.affirmation}
           onResult={applyResult}
@@ -129,10 +183,17 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
+    gap: spacing.sm,
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
   },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  shrink: { flexShrink: 1 },
   topTitle: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: {
@@ -147,8 +208,20 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
+    minWidth: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    padding: spacing.lg,
+    overflow: "visible",
+  },
+  statNumRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
+  },
+  statLabel: {
+    alignSelf: "stretch",
   },
   statNum: {
     fontSize: 34,
