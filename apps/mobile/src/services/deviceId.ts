@@ -4,6 +4,15 @@ import * as Crypto from "expo-crypto";
 const KEY = "astroflow-device-id";
 let cached: string | null = null;
 
+/**
+ * Forgets the identifier so the next `getDeviceId()` mints a new one — to the
+ * backend this looks like a brand-new device with no saved data.
+ */
+export async function resetDeviceId(): Promise<void> {
+  cached = null;
+  await AsyncStorage.removeItem(KEY);
+}
+
 /** Stable anonymous device identifier, generated once and persisted. */
 export async function getDeviceId(): Promise<string> {
   if (cached) return cached;

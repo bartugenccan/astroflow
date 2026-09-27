@@ -22,6 +22,8 @@ interface StarBurstProps {
   count?: number;
   /** How far (px) the stars travel from the centre. */
   radius?: number;
+  /** Multiplies each star's size — the tab bar uses small ones (~0.55). */
+  starScale?: number;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -31,7 +33,13 @@ interface StarBurstProps {
  * touches, so drop it over whatever just "completed". With reduce-motion on,
  * the stars simply fade in place instead of travelling.
  */
-export function StarBurst({ playKey, count = 10, radius = 64, style }: StarBurstProps) {
+export function StarBurst({
+  playKey,
+  count = 10,
+  radius = 64,
+  starScale = 1,
+  style,
+}: StarBurstProps) {
   const reduced = useReducedMotion();
   const progress = useSharedValue(0);
 
@@ -43,11 +51,11 @@ export function StarBurst({ playKey, count = 10, radius = 64, style }: StarBurst
         return {
           angle: (i / count) * Math.PI * 2 + jitter * 0.5,
           dist: radius * (0.7 + (((i * 53) % 7) / 7) * 0.45),
-          size: 9 + ((i * 29) % 3) * 3,
+          size: Math.max(4, Math.round((9 + ((i * 29) % 3) * 3) * starScale)),
           lag: ((i * 17) % 5) * 0.03,
         };
       }),
-    [count, radius],
+    [count, radius, starScale],
   );
 
   useEffect(() => {

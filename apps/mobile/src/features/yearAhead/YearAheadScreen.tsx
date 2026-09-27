@@ -30,8 +30,8 @@ import { colors, spacing, radii } from "../../lib/design-system";
 
 /**
  * "Your Birthday Chart" — the Solar Return, written for someone who has never
- * heard the phrase. It's its own route (`/year-ahead`), reached from the Today
- * "Your year" card, so it no longer hides as the third segment of a tab.
+ * heard the phrase. It's its own route (`/year-ahead`), reached from the Solar
+ * Return card pinned to the top of the Future tab.
  *
  * The screen opens by saying what a solar return is, names the technique once
  * (with an ⓘ into the glossary) for people who want the real term, then reads
@@ -60,13 +60,17 @@ export function YearAheadScreen() {
           <AppText variant="label" color={colors.text.gold}>
             {t("yearAhead.eyebrow")}
           </AppText>
-          <AppText variant="title">{t("yearAhead.title")}</AppText>
+          {/* The technique's real name is the headline — it's what people
+              search for and share — with the plain-language name under it. */}
           <View style={styles.techRow}>
-            <AppText variant="numeric" color={colors.text.tertiary}>
+            <AppText variant="display" style={styles.srTitle}>
               {t("yearAhead.techName")}
             </AppText>
-            <TermInfo term="solarReturn" />
+            <TermInfo term="solarReturn" size={18} />
           </View>
+          <AppText variant="heading" color={colors.gold[200]}>
+            {t("yearAhead.title")}
+          </AppText>
         </EnterView>
 
         {/* What this is, before anything else — a reading you can't place
@@ -364,7 +368,10 @@ const styles = StyleSheet.create({
   techRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.xs,
+    gap: spacing.sm,
+  },
+  srTitle: {
+    flexShrink: 1,
   },
   whatCard: {
     gap: spacing.md,

@@ -51,7 +51,7 @@ export const glossaryEn = {
       life:
         "Astrology reads the chart as a portrait of temperament: what drives you (Sun), what you need to feel safe (Moon), how you meet the world (Rising), and how the rest of your energies cooperate or clash. It doesn't change — everything else in the app is compared against it.",
       example:
-        "The wheel in the You tab, under \"In a picture\", is your natal chart. Each glyph on the ring is a planet in its sign.",
+        "The wheel in the For You tab (Your chart → \"See your chart as a wheel\") is your natal chart. Each glyph on the ring is a planet in its sign.",
     },
     bigThree: {
       title: "The Big Three",
@@ -169,7 +169,7 @@ export const glossaryEn = {
       how:
         "Today's planetary positions are compared with your chart. When a moving planet makes a meaningful angle to one of yours, that's a transit. Fast planets (Moon, Mercury, Venus) create day- or week-long moods; slow ones (Saturn, Pluto) create chapters that last months.",
       life:
-        "Transits don't make things happen; they describe the weather you're walking through — when it's a good moment to push, rest, talk, or wait. The Today and Ahead tabs are built from them.",
+        "Transits don't make things happen; they describe the weather you're walking through — when it's a good moment to push, rest, talk, or wait. The Today tab shows them live, and the Future tab's forecast is built from them.",
       example:
         "Jupiter crossing your Sun: a period of confidence and opportunity. Saturn squaring your Moon: a heavier stretch that asks for patience.",
     },

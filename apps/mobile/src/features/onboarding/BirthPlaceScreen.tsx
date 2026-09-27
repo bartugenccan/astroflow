@@ -93,6 +93,7 @@ export function BirthPlaceScreen() {
       ctaLabel={t("common.continue")}
       onNext={onNext}
       nextDisabled={!canContinue}
+      bodyAlign="top"
     >
       {!manual ? (
         <View style={styles.flex}>
@@ -227,9 +228,11 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginLeft: spacing.xs,
   },
+  // Fills whatever space is left under the search field, so the field stays
+  // put and the list simply scrolls — whether there are 0 or 20 results.
   results: {
+    flex: 1,
     marginTop: spacing.md,
-    maxHeight: 260,
   },
   empty: {
     paddingVertical: spacing.lg,

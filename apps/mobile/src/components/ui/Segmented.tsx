@@ -29,6 +29,9 @@ export function Segmented<T extends string>({
 }: SegmentedProps<T>) {
   const [width, setWidth] = useState(0);
   const index = Math.max(0, options.findIndex((o) => o.key === value));
+  // Four or more segments share ~80pt each on a phone — step the label down a
+  // size so Turkish labels ("Niyetler") fit without ellipsis.
+  const compact = options.length >= 4;
   const segW = width > 0 ? (width - PAD * 2) / options.length : 0;
   const x = useSharedValue(0);
 
@@ -72,6 +75,7 @@ export function Segmented<T extends string>({
               color={active ? colors.text.onGold : colors.text.secondary}
               numberOfLines={1}
               maxFontSizeMultiplier={1.15}
+              style={compact ? styles.compactLabel : undefined}
             >
               {o.label}
             </AppText>
@@ -83,6 +87,10 @@ export function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
+  compactLabel: {
+    fontSize: 14,
+    lineHeight: 19,
+  },
   segmented: {
     flexDirection: "row",
     backgroundColor: colors.ink[800],

@@ -1,5 +1,12 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, View, TextInput, ScrollView } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+} from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
@@ -18,8 +25,34 @@ import { useTranslation } from "../../i18n";
 import { colors, spacing, radii, fonts } from "../../lib/design-system";
 
 const MONTHS: Record<string, string[]> = {
-  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-  tr: ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"],
+  en: [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ],
+  tr: [
+    "Oca",
+    "Şub",
+    "Mar",
+    "Nis",
+    "May",
+    "Haz",
+    "Tem",
+    "Ağu",
+    "Eyl",
+    "Eki",
+    "Kas",
+    "Ara",
+  ],
 };
 const YEAR_MIN = 1940;
 const YEAR_MAX = 2020;
@@ -47,24 +80,55 @@ export function AddPersonScreen() {
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // The place search sits at the bottom of a long form. When it's focused we
+  // scroll it to the top of the viewport so the field and its results stay
+  // above the keyboard, however few results there are.
+  const scrollRef = useRef<ScrollView>(null);
+  const placeY = useRef(0);
+  const revealPlace = () => {
+    // Wait a beat for the keyboard to start opening and the view to resize.
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, placeY.current - spacing.md),
+        animated: true,
+      });
+    }, 150);
+  };
+
   const years: WheelItem[] = useMemo(
-    () => Array.from({ length: YEAR_MAX - YEAR_MIN + 1 }, (_, i) => ({ label: String(YEAR_MIN + i), value: YEAR_MIN + i })),
+    () =>
+      Array.from({ length: YEAR_MAX - YEAR_MIN + 1 }, (_, i) => ({
+        label: String(YEAR_MIN + i),
+        value: YEAR_MIN + i,
+      })),
     [],
   );
   const months: WheelItem[] = useMemo(
-    () => (MONTHS[locale] ?? MONTHS.en).map((m, i) => ({ label: m, value: i + 1 })),
+    () =>
+      (MONTHS[locale] ?? MONTHS.en).map((m, i) => ({ label: m, value: i + 1 })),
     [locale],
   );
   const days: WheelItem[] = useMemo(() => {
     const n = new Date(year, month, 0).getDate();
-    return Array.from({ length: n }, (_, i) => ({ label: String(i + 1), value: i + 1 }));
+    return Array.from({ length: n }, (_, i) => ({
+      label: String(i + 1),
+      value: i + 1,
+    }));
   }, [month, year]);
   const hours: WheelItem[] = useMemo(
-    () => Array.from({ length: 24 }, (_, i) => ({ label: String(i).padStart(2, "0"), value: i })),
+    () =>
+      Array.from({ length: 24 }, (_, i) => ({
+        label: String(i).padStart(2, "0"),
+        value: i,
+      })),
     [],
   );
   const minutes: WheelItem[] = useMemo(
-    () => Array.from({ length: 60 }, (_, i) => ({ label: String(i).padStart(2, "0"), value: i })),
+    () =>
+      Array.from({ length: 60 }, (_, i) => ({
+        label: String(i).padStart(2, "0"),
+        value: i,
+      })),
     [],
   );
 
@@ -125,119 +189,180 @@ export function AddPersonScreen() {
         <View style={styles.topSpacer} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
-        {/* Name */}
-        <EnterView index={0} style={styles.field}>
-          <AppText variant="label" color={colors.text.gold}>
-            {t("compatibility.nameLabel")}
-          </AppText>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder={t("compatibility.namePlaceholder")}
-            placeholderTextColor={colors.text.tertiary}
-            style={styles.input}
-            autoCorrect={false}
-          />
-        </EnterView>
-
-        {/* Date */}
-        <EnterView index={1} style={styles.field}>
-          <AppText variant="label" color={colors.text.gold}>
-            {t("compatibility.birthDateQ")}
-          </AppText>
-          <View style={styles.wheelRow}>
-            <WheelPicker items={days} selectedIndex={dayIndex} onChange={(i) => setDay(days[i].value)} width={64} />
-            <WheelPicker items={months} selectedIndex={month - 1} onChange={(i) => setMonth(months[i].value)} width={90} />
-            <WheelPicker items={years} selectedIndex={year - YEAR_MIN} onChange={(i) => setYear(years[i].value)} width={92} />
-          </View>
-        </EnterView>
-
-        {/* Time */}
-        <EnterView index={2} style={styles.field}>
-          <AppText variant="label" color={colors.text.gold}>
-            {t("compatibility.birthTimeQ")}
-          </AppText>
-          {!unknown ? (
-            <View style={styles.wheelRow}>
-              <WheelPicker items={hours} selectedIndex={hour} onChange={(i) => setHour(hours[i].value)} width={80} />
-              <AppText variant="display" color={colors.text.tertiary}>:</AppText>
-              <WheelPicker items={minutes} selectedIndex={minute} onChange={(i) => setMinute(minutes[i].value)} width={80} />
-            </View>
-          ) : null}
-          <PressableScale
-            onPress={() => setUnknown((u) => !u)}
-            style={styles.unknownRow}
-            scaleTo={0.97}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: unknown }}
-          >
-            <Ionicons
-              name={unknown ? "checkbox" : "square-outline"}
-              size={20}
-              color={unknown ? colors.gold[300] : colors.text.tertiary}
-            />
-            <AppText variant="body" color={colors.text.secondary} style={styles.shrink}>
-              {t("compatibility.unknownTime")}
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={Platform.OS === "ios"}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Name */}
+          <EnterView index={0} style={styles.field}>
+            <AppText variant="label" color={colors.text.gold}>
+              {t("compatibility.nameLabel")}
             </AppText>
-          </PressableScale>
-        </EnterView>
-
-        {/* Place */}
-        <EnterView index={3} style={styles.field}>
-          <AppText variant="label" color={colors.text.gold}>
-            {t("compatibility.birthPlaceQ")}
-          </AppText>
-          <View style={styles.searchField}>
-            <Ionicons name="search" size={18} color={colors.text.tertiary} />
             <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder={t("onboarding.placeSearchPlaceholder")}
+              value={name}
+              onChangeText={setName}
+              placeholder={t("compatibility.namePlaceholder")}
               placeholderTextColor={colors.text.tertiary}
-              style={styles.searchInput}
+              style={styles.input}
               autoCorrect={false}
             />
-            {searching ? <CelestialLoader size="sm" /> : null}
-          </View>
-          {!citySelected ? (
-            <View style={styles.results}>
-              {results.slice(0, 6).map((c, i) => (
-                <EnterView key={c.id} index={i} distance={6}>
-                  <PressableScale
-                    onPress={() => {
-                      setCity(c);
-                      setQuery(cityLabel(c));
-                    }}
-                    style={styles.cityRow}
-                    scaleTo={0.98}
-                    accessibilityRole="button"
-                  >
-                    <AppText variant="heading" numberOfLines={2}>
-                      {c.name}
-                    </AppText>
-                    <AppText variant="bodySmall" numberOfLines={2}>
-                      {c.admin1 && c.admin1 !== c.name ? `${c.admin1} · ${c.country}` : c.country}
-                    </AppText>
-                  </PressableScale>
-                </EnterView>
-              ))}
-            </View>
-          ) : null}
-        </EnterView>
+          </EnterView>
 
-        <GoldButton
-          label={t("compatibility.save")}
-          onPress={onSave}
-          loading={saving}
-          disabled={!canSave}
-          style={{ marginTop: spacing.md }}
-        />
-      </ScrollView>
+          {/* Date */}
+          <EnterView index={1} style={styles.field}>
+            <AppText variant="label" color={colors.text.gold}>
+              {t("compatibility.birthDateQ")}
+            </AppText>
+            <View style={styles.wheelRow}>
+              <WheelPicker
+                items={days}
+                selectedIndex={dayIndex}
+                onChange={(i) => setDay(days[i].value)}
+                width={64}
+              />
+              <WheelPicker
+                items={months}
+                selectedIndex={month - 1}
+                onChange={(i) => setMonth(months[i].value)}
+                width={90}
+              />
+              <WheelPicker
+                items={years}
+                selectedIndex={year - YEAR_MIN}
+                onChange={(i) => setYear(years[i].value)}
+                width={92}
+              />
+            </View>
+          </EnterView>
+
+          {/* Time */}
+          <EnterView index={2} style={styles.field}>
+            <AppText variant="label" color={colors.text.gold}>
+              {t("compatibility.birthTimeQ")}
+            </AppText>
+            {!unknown ? (
+              <View style={styles.wheelRow}>
+                <WheelPicker
+                  items={hours}
+                  selectedIndex={hour}
+                  onChange={(i) => setHour(hours[i].value)}
+                  width={80}
+                />
+                <AppText variant="display" color={colors.text.tertiary}>
+                  :
+                </AppText>
+                <WheelPicker
+                  items={minutes}
+                  selectedIndex={minute}
+                  onChange={(i) => setMinute(minutes[i].value)}
+                  width={80}
+                />
+              </View>
+            ) : null}
+            <PressableScale
+              onPress={() => setUnknown((u) => !u)}
+              style={styles.unknownRow}
+              scaleTo={0.97}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: unknown }}
+            >
+              <Ionicons
+                name={unknown ? "checkbox" : "square-outline"}
+                size={20}
+                color={unknown ? colors.gold[300] : colors.text.tertiary}
+              />
+              <AppText
+                variant="body"
+                color={colors.text.secondary}
+                style={styles.shrink}
+              >
+                {t("compatibility.unknownTime")}
+              </AppText>
+            </PressableScale>
+          </EnterView>
+
+          {/* Place */}
+          <View onLayout={(e) => (placeY.current = e.nativeEvent.layout.y)}>
+            <EnterView index={3} style={styles.field}>
+              <AppText variant="label" color={colors.text.gold}>
+                {t("compatibility.birthPlaceQ")}
+              </AppText>
+              <View style={styles.searchField}>
+                <Ionicons
+                  name="search"
+                  size={18}
+                  color={colors.text.tertiary}
+                />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  onFocus={revealPlace}
+                  placeholder={t("onboarding.placeSearchPlaceholder")}
+                  placeholderTextColor={colors.text.tertiary}
+                  style={styles.searchInput}
+                  autoCorrect={false}
+                />
+                {searching ? <CelestialLoader size="sm" /> : null}
+              </View>
+              {!citySelected ? (
+                // Fixed minimum height: the area doesn't collapse while typing, so
+                // the form below (and the field itself) never jumps.
+                <View style={styles.results}>
+                  {!searching &&
+                  query.trim().length >= 2 &&
+                  results.length === 0 ? (
+                    <AppText
+                      variant="body"
+                      color={colors.text.tertiary}
+                      style={styles.noResults}
+                    >
+                      {t("onboarding.placeNoResults")}
+                    </AppText>
+                  ) : null}
+                  {results.slice(0, 6).map((c, i) => (
+                    <EnterView key={c.id} index={i} distance={6}>
+                      <PressableScale
+                        onPress={() => {
+                          setCity(c);
+                          setQuery(cityLabel(c));
+                        }}
+                        style={styles.cityRow}
+                        scaleTo={0.98}
+                        accessibilityRole="button"
+                      >
+                        <AppText variant="heading" numberOfLines={2}>
+                          {c.name}
+                        </AppText>
+                        <AppText variant="bodySmall" numberOfLines={2}>
+                          {c.admin1 && c.admin1 !== c.name
+                            ? `${c.admin1} · ${c.country}`
+                            : c.country}
+                        </AppText>
+                      </PressableScale>
+                    </EnterView>
+                  ))}
+                </View>
+              ) : null}
+            </EnterView>
+          </View>
+
+          <GoldButton
+            label={t("compatibility.save")}
+            onPress={onSave}
+            loading={saving}
+            disabled={!canSave}
+            style={{ marginTop: spacing.md }}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenWrapper>
   );
 }
@@ -259,6 +384,13 @@ const styles = StyleSheet.create({
   },
   shrink: {
     flexShrink: 1,
+  },
+  flex: {
+    flex: 1,
+  },
+  noResults: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.sm,
   },
   content: {
     paddingHorizontal: spacing.xl,
@@ -312,6 +444,7 @@ const styles = StyleSheet.create({
   results: {
     marginTop: spacing.sm,
     gap: spacing.xs,
+    minHeight: 200,
   },
   cityRow: {
     paddingVertical: spacing.md,

@@ -1,16 +1,18 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { StyleSheet, View, ViewStyle } from "react-native";
+import { Platform, StyleSheet, View, ViewStyle } from "react-native";
 import * as Haptics from "expo-haptics";
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
   useAnimatedStyle,
+  useAnimatedReaction,
   useAnimatedRef,
   scrollTo,
   interpolate,
   Extrapolation,
   runOnJS,
   runOnUI,
+  SharedValue,
 } from "react-native-reanimated";
 import { AppText } from "./AppText";
 import { colors, fonts } from "../../lib/design-system";
@@ -26,13 +28,26 @@ export interface WheelItem {
 
 interface WheelPickerProps {
   items: WheelItem[];
+  /** Initial row. Read on mount only — the wheel owns its position after that. */
   selectedIndex: number;
   onChange: (index: number) => void;
   width?: number;
   style?: ViewStyle;
 }
 
-/** A snapping wheel column. Items scale/fade by distance from centre; haptic tick per row. */
+/**
+ * A snapping wheel column. Items scale/fade by distance from centre; haptic
+ * tick per row.
+ *
+ * Everything that follows the finger runs on the UI thread: the scroll handler
+ * only writes `scrollY`, and a reaction watches the *row* under the centre
+ * line, crossing to JS once per row instead of once per frame. Flooding JS
+ * with a message every frame is what made the digits stutter.
+ *
+ * The committed value is always the row the user sees centred — the same
+ * `scrollY` that drives the visuals — so what's saved can't drift from what's
+ * shown (the "picked the 24th, profile says the 23rd" bug).
+ */
 export function WheelPicker({
   items,
   selectedIndex,
@@ -40,70 +55,68 @@ export function WheelPicker({
   width = 88,
   style,
 }: WheelPickerProps) {
-  const scrollY = useSharedValue(selectedIndex * ITEM_HEIGHT);
-  const lastIndex = useRef(selectedIndex);
+  const initialIndex = useRef(selectedIndex).current;
+  const scrollY = useSharedValue(initialIndex * ITEM_HEIGHT);
+  const lastIndex = useRef(initialIndex);
   const aref = useAnimatedRef<Animated.ScrollView>();
-  const didInit = useRef(false);
-  // Mount-only initial offset. MUST NOT be tied to the live `selectedIndex`:
-  // if `contentOffset` changes on re-render, iOS re-applies it mid-scroll (every
-  // `report()` → `setDay()` re-render), nudging a carefully-dialed wheel one row
-  // short — the iOS "birth date always −1" bug. Position after mount is driven
-  // imperatively by the scrollTo effect below, never by this prop.
-  const initialOffset = useRef(selectedIndex * ITEM_HEIGHT).current;
+  const count = items.length;
 
-  // Position imperatively, but ONLY on mount and on EXTERNAL changes — never in
-  // response to this wheel's own scroll. `contentOffset` alone isn't honored on
-  // Android's first mount (wheel pinned to index 0), so we scrollTo to seed the
-  // right row. Crucially, `report()` sets `lastIndex.current` to the value it
-  // just committed BEFORE calling onChange, so when the parent echoes that value
-  // back as `selectedIndex`, `external` is false and we skip scrollTo. Without
-  // this guard the effect fired on every scroll tick and yanked the wheel back a
-  // step, committing one short (the "birth date is always −1" bug).
+  // Seed the position once. `contentOffset` isn't honoured on Android's first
+  // mount, so scroll imperatively too.
+  //
+  // Deliberately NOT re-synced from `selectedIndex` afterwards: while the user
+  // scrolls, the parent re-renders with values that lag a row or two behind
+  // the finger, and treating one of those stale echoes as an "external change"
+  // yanked the wheel back a row — committing one short.
   useEffect(() => {
-    const external = selectedIndex !== lastIndex.current;
-    if (didInit.current && !external) return;
-    didInit.current = true;
-    const y = selectedIndex * ITEM_HEIGHT;
-    scrollY.value = y;
-    lastIndex.current = selectedIndex;
+    const y = initialIndex * ITEM_HEIGHT;
     runOnUI(() => {
       "worklet";
       scrollTo(aref, 0, y, false);
     })();
-  }, [selectedIndex, aref, scrollY]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const report = useCallback(
+  const commit = useCallback(
     (index: number) => {
-      const clamped = Math.max(0, Math.min(items.length - 1, index));
-      if (clamped !== lastIndex.current) {
-        lastIndex.current = clamped;
-        Haptics.selectionAsync();
-        onChange(clamped);
-      }
+      const clamped = Math.max(0, Math.min(count - 1, index));
+      if (clamped === lastIndex.current) return;
+      lastIndex.current = clamped;
+      Haptics.selectionAsync().catch(() => {});
+      onChange(clamped);
     },
-    [items.length, onChange],
+    [count, onChange],
   );
 
-  // Settle-detection lives INSIDE the reanimated handler on purpose. On iOS the
-  // plain JS-thread `onMomentumScrollEnd`/`onScrollEndDrag` props are unreliable
-  // once a reanimated `onScroll` owns the ScrollView's event delivery, so the
-  // authoritative "landed here" commit must come from the handler's own
-  // `onEndDrag`/`onMomentumEnd` lifecycle (UI thread, true final offset).
-  // Without this the last committed value was a throttled mid-fling `onScroll`
-  // reading, one row behind where the native snap settles — the "−1" bug.
+  // The list can shrink under the wheel (31 → 30 days when the month
+  // changes). Pull the wheel onto the new last row and report it.
+  useEffect(() => {
+    if (lastIndex.current <= count - 1) return;
+    const last = count - 1;
+    runOnUI(() => {
+      "worklet";
+      scrollTo(aref, 0, last * ITEM_HEIGHT, true);
+    })();
+    commit(last);
+  }, [count, aref, commit]);
+
+  // One JS call per row crossed, from the same value the rows render from.
+  useAnimatedReaction(
+    () => Math.round(scrollY.value / ITEM_HEIGHT),
+    (index, prev) => {
+      if (prev !== null && index !== prev) runOnJS(commit)(index);
+    },
+    [commit],
+  );
+
   const onScroll = useAnimatedScrollHandler({
     onScroll: (e) => {
       scrollY.value = e.contentOffset.y;
-      runOnJS(report)(Math.round(e.contentOffset.y / ITEM_HEIGHT));
     },
-    // Fires at finger-lift (pre-snap). Rounding maps to the interval iOS snaps
-    // to (nearest), so it's already the correct target for gentle placements.
-    onEndDrag: (e) => {
-      runOnJS(report)(Math.round(e.contentOffset.y / ITEM_HEIGHT));
-    },
-    // Fires after a fling's snap animation completes, with the true rest offset.
+    // Belt and braces: the resting offset after a fling / snap is the truth.
     onMomentumEnd: (e) => {
-      runOnJS(report)(Math.round(e.contentOffset.y / ITEM_HEIGHT));
+      scrollY.value = e.contentOffset.y;
+      runOnJS(commit)(Math.round(e.contentOffset.y / ITEM_HEIGHT));
     },
   });
 
@@ -113,12 +126,15 @@ export function WheelPicker({
         ref={aref}
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
-        decelerationRate="fast"
+        // iOS "fast" gives the crisp picker feel; on Android it stops almost
+        // dead and the snap looks like a jump, so let it glide.
+        decelerationRate={Platform.OS === "ios" ? "fast" : "normal"}
         bounces={false}
+        overScrollMode="never"
         onScroll={onScroll}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingVertical: PAD }}
-        contentOffset={{ x: 0, y: initialOffset }}
+        contentOffset={{ x: 0, y: initialIndex * ITEM_HEIGHT }}
       >
         {items.map((item, i) => (
           <WheelRow key={item.value} label={item.label} index={i} scrollY={scrollY} />
@@ -132,17 +148,19 @@ export function WheelPicker({
   );
 }
 
-function WheelRow({
+const WheelRow = React.memo(function WheelRow({
   label,
   index,
   scrollY,
 }: {
   label: string;
   index: number;
-  scrollY: { value: number };
+  scrollY: SharedValue<number>;
 }) {
   const animStyle = useAnimatedStyle(() => {
     const distance = Math.abs(scrollY.value / ITEM_HEIGHT - index);
+    // Rows far off-screen skip the interpolation work entirely.
+    if (distance > 3) return { opacity: 0, transform: [{ scale: 0.66 }] };
     const scale = interpolate(distance, [0, 1, 2], [1, 0.82, 0.66], Extrapolation.CLAMP);
     const opacity = interpolate(distance, [0, 1, 2], [1, 0.4, 0.16], Extrapolation.CLAMP);
     return { opacity, transform: [{ scale }] };
@@ -155,7 +173,7 @@ function WheelRow({
       </AppText>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -17,6 +17,11 @@ interface Entry<T> {
 
 const cache = new Map<string, Entry<unknown>>();
 
+/** Drops every cached interpretation (used by the developer data wipe). */
+export function clearInterpretationCache(): void {
+  cache.clear();
+}
+
 /** Stable value key for a birth chart — matches the fields the API keys on. */
 export function dtoKey(dto: CreateBirthProfileDto): string {
   return `${dto.birthDate}|${dto.birthTime}|${dto.latitude}|${dto.longitude}`;

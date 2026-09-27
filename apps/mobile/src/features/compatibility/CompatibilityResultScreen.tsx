@@ -157,11 +157,18 @@ export function CompatibilityResultScreen() {
                   </AppText>
                   <TermInfo term="aspect" size={14} />
                 </View>
+                <AppText variant="bodySmall" style={styles.tapHint}>
+                  {t("synastry.tapToExplain")}
+                </AppText>
               </EnterView>
               <HairlineCard>
                 {score.data.topAspects.map((a, i) => (
                   <EnterView key={`${a.planetA}-${a.planetB}-${i}`} index={i} delay={300}>
-                    <SynastryAspectRow aspect={a} delay={400 + Math.min(i, 8) * motion.stagger} />
+                    <SynastryAspectRow
+                      aspect={a}
+                      otherName={person?.label ?? "—"}
+                      delay={400 + Math.min(i, 8) * motion.stagger}
+                    />
                     {i < score.data!.topAspects.length - 1 ? (
                       <View style={styles.sep} />
                     ) : null}
@@ -330,6 +337,9 @@ function CategoryBar({
 }
 
 const styles = StyleSheet.create({
+  tapHint: {
+    marginTop: spacing.xs,
+  },
   topBar: {
     flexDirection: "row",
     alignItems: "center",

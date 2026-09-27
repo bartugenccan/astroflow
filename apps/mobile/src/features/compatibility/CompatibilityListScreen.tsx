@@ -15,10 +15,16 @@ import { astrologyApi } from "../../services/astrologyApi";
 import { useAsync } from "../../hooks/useAsync";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
+import { formatDayMonthYear } from "../../lib/dates";
 import { colors, spacing, radii } from "../../lib/design-system";
 
-export function CompatibilityListScreen() {
-  const { t } = useTranslation();
+/**
+ * Compatibility home: what it is, "Add a person", and the saved people. No
+ * screen chrome or ScrollView — it renders on `/compatibility` and inside the
+ * "For You" tab's Match section.
+ */
+export function CompatibilityList() {
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const people = useAsync(() => astrologyApi.listPeople(), []);
 
@@ -45,89 +51,122 @@ export function CompatibilityListScreen() {
   };
 
   return (
+    <View style={styles.wrap}>
+      <EnterView style={styles.header}>
+        <View style={styles.eyebrowRow}>
+          <AppText
+            variant="label"
+            color={colors.text.gold}
+            style={styles.shrink}
+          >
+            {t("compatibility.eyebrow")}
+          </AppText>
+          <TermInfo term="synastry" size={14} />
+        </View>
+        <AppText variant="title">{t("compatibility.title")}</AppText>
+        <AppText variant="body" style={styles.subtitle}>
+          {t("compatibility.subtitle")}
+        </AppText>
+      </EnterView>
+
+      <EnterView index={1}>
+        <GoldButton
+          label={t("compatibility.addPerson")}
+          onPress={() => router.push("/compatibility/add")}
+          icon={<Ionicons name="add" size={18} color={colors.text.onGold} />}
+        />
+      </EnterView>
+
+      {people.loading ? (
+        <View style={styles.loaderBox}>
+          <CelestialLoader size="sm" />
+        </View>
+      ) : people.data && people.data.length > 0 ? (
+        <View style={styles.list}>
+          <EnterView index={2}>
+            <AppText variant="label" color={colors.text.gold}>
+              {t("compatibility.peopleTitle")}
+            </AppText>
+          </EnterView>
+          {people.data.map((p, i) => (
+            <EnterView key={p.id} index={i} delay={180}>
+              <PressableScale
+                scaleTo={0.98}
+                accessibilityRole="button"
+                onPress={() => router.push(`/compatibility/${p.id}` as Href)}
+              >
+                <HairlineCard style={styles.personCard}>
+                  <View style={styles.personGlyph}>
+                    <Glyph
+                      name={p.sunSign}
+                      size={24}
+                      color={colors.gold[300]}
+                    />
+                  </View>
+                  <View style={styles.personInfo}>
+                    <AppText variant="heading" numberOfLines={2}>
+                      {p.label}
+                    </AppText>
+                    <AppText variant="bodySmall" numberOfLines={2}>
+                      {t(`signs.${p.sunSign}` as never)} ·{" "}
+                      {formatDayMonthYear(locale, p.birthDate)}
+                    </AppText>
+                  </View>
+                  <PressableScale
+                    hitSlop={10}
+                    scaleTo={0.85}
+                    haptic="light"
+                    style={styles.trash}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("compatibility.delete")}
+                    onPress={() => confirmDelete(p.id)}
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={18}
+                      color={colors.text.tertiary}
+                    />
+                  </PressableScale>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={18}
+                    color={colors.text.tertiary}
+                  />
+                </HairlineCard>
+              </PressableScale>
+            </EnterView>
+          ))}
+        </View>
+      ) : (
+        <EnterView index={2}>
+          <HairlineCard style={styles.emptyCard}>
+            <Ionicons
+              name="people-outline"
+              size={26}
+              color={colors.gold[300]}
+            />
+            <AppText variant="body" center>
+              {t("compatibility.noPeople")}
+            </AppText>
+          </HairlineCard>
+        </EnterView>
+      )}
+    </View>
+  );
+}
+
+/** `/compatibility` — the same list on its own screen, with a back button. */
+export function CompatibilityListScreen() {
+  return (
     <ScreenWrapper>
       <View style={styles.topBar}>
         <BackButton />
       </View>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <EnterView style={styles.header}>
-          <View style={styles.eyebrowRow}>
-            <AppText variant="label" color={colors.text.gold} style={styles.shrink}>
-              {t("compatibility.eyebrow")}
-            </AppText>
-            <TermInfo term="synastry" size={14} />
-          </View>
-          <AppText variant="title">{t("compatibility.title")}</AppText>
-          <AppText variant="body" style={styles.subtitle}>
-            {t("compatibility.subtitle")}
-          </AppText>
-        </EnterView>
-
-        <EnterView index={1}>
-          <GoldButton
-            label={t("compatibility.addPerson")}
-            onPress={() => router.push("/compatibility/add")}
-            icon={<Ionicons name="add" size={18} color={colors.text.onGold} />}
-          />
-        </EnterView>
-
-        {people.loading ? (
-          <View style={styles.loaderBox}>
-            <CelestialLoader size="sm" />
-          </View>
-        ) : people.data && people.data.length > 0 ? (
-          <View style={styles.list}>
-            <EnterView index={2}>
-              <AppText variant="label" color={colors.text.gold}>
-                {t("compatibility.peopleTitle")}
-              </AppText>
-            </EnterView>
-            {people.data.map((p, i) => (
-              <EnterView key={p.id} index={i} delay={180}>
-                <PressableScale
-                  scaleTo={0.98}
-                  accessibilityRole="button"
-                  onPress={() => router.push(`/compatibility/${p.id}` as Href)}
-                >
-                  <HairlineCard style={styles.personCard}>
-                    <View style={styles.personGlyph}>
-                      <Glyph name={p.sunSign} size={24} color={colors.gold[300]} />
-                    </View>
-                    <View style={styles.personInfo}>
-                      <AppText variant="heading" numberOfLines={2}>
-                        {p.label}
-                      </AppText>
-                      <AppText variant="bodySmall" numberOfLines={2}>
-                        {t(`signs.${p.sunSign}` as never)} · {p.birthDate}
-                      </AppText>
-                    </View>
-                    <PressableScale
-                      hitSlop={10}
-                      scaleTo={0.85}
-                      haptic="light"
-                      style={styles.trash}
-                      accessibilityRole="button"
-                      accessibilityLabel={t("compatibility.delete")}
-                      onPress={() => confirmDelete(p.id)}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={colors.text.tertiary} />
-                    </PressableScale>
-                    <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-                  </HairlineCard>
-                </PressableScale>
-              </EnterView>
-            ))}
-          </View>
-        ) : (
-          <EnterView index={2}>
-            <HairlineCard style={styles.emptyCard}>
-              <Ionicons name="people-outline" size={26} color={colors.gold[300]} />
-              <AppText variant="body" center>
-                {t("compatibility.noPeople")}
-              </AppText>
-            </HairlineCard>
-          </EnterView>
-        )}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <CompatibilityList />
       </ScrollView>
     </ScreenWrapper>
   );
@@ -142,6 +181,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.sm,
     paddingBottom: 120,
+    gap: spacing.xl,
+  },
+  wrap: {
     gap: spacing.xl,
   },
   header: {

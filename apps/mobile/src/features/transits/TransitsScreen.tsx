@@ -8,7 +8,12 @@ import {
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
-import { Canvas, Circle as SkCircle, RadialGradient, vec } from "@shopify/react-native-skia";
+import {
+  Canvas,
+  Circle as SkCircle,
+  RadialGradient,
+  vec,
+} from "@shopify/react-native-skia";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { HairlineCard } from "../../components/ui/HairlineCard";
@@ -46,7 +51,36 @@ interface TransitsScreenProps {
   title?: string;
 }
 
-export function TransitsScreen({ dto: dtoProp, title }: TransitsScreenProps = {}) {
+/** The transit report on its own scrolling screen (a saved person's sky). */
+export function TransitsScreen({ dto, title }: TransitsScreenProps = {}) {
+  return (
+    <ScreenWrapper>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <TransitsContent dto={dto} title={title} />
+      </ScrollView>
+    </ScreenWrapper>
+  );
+}
+
+interface TransitsContentProps extends TransitsScreenProps {
+  /** Stagger offset when rendered below other blocks (Today's greeting). */
+  enterIndex?: number;
+}
+
+/**
+ * The sky today against a birth chart: header + explainer, the bi-wheel, the
+ * AI overview and the per-planet rows. No ScrollView — the Today tab embeds it
+ * at the top of its own scroll, and `TransitsScreen` wraps it for a saved
+ * person.
+ */
+export function TransitsContent({
+  dto: dtoProp,
+  title,
+  enterIndex = 0,
+}: TransitsContentProps) {
   const { t, locale } = useTranslation();
   const ownDto = useBirthDto();
   const dto = dtoProp ?? ownDto;
@@ -57,9 +91,8 @@ export function TransitsScreen({ dto: dtoProp, title }: TransitsScreenProps = {}
     key && `report|${key}|${today}`,
     () => astrologyApi.getTransitReport(dto!),
   );
-  const chart = useCachedAsync<NatalChartData>(
-    key && `chart|${key}`,
-    () => astrologyApi.getNatalChart(dto!),
+  const chart = useCachedAsync<NatalChartData>(key && `chart|${key}`, () =>
+    astrologyApi.getNatalChart(dto!),
   );
   const overview = useCachedAsync<TransitOverview>(
     key ? transitOverviewKey(dto!, today, locale) : null,
@@ -86,119 +119,128 @@ export function TransitsScreen({ dto: dtoProp, title }: TransitsScreenProps = {}
   const isOwn = !dtoProp;
 
   return (
-    <ScreenWrapper>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Compact header — the Ahead switcher above already names the section. */}
-        <EnterView index={0} style={styles.header}>
-          <AppText variant="label" color={colors.text.gold}>
-            {t("transits.eyebrow")}
+    <View style={styles.stack}>
+      <EnterView index={enterIndex} style={styles.header}>
+        <AppText variant="label" color={colors.text.gold}>
+          {t("transits.eyebrow")}
+        </AppText>
+        <View style={styles.titleRow}>
+          <AppText variant="title" style={styles.titleText}>
+            {title ?? t("transits.title")}
           </AppText>
-          <View style={styles.titleRow}>
-            <AppText variant="title" style={styles.titleText}>
-              {title ?? t("transits.title")}
-            </AppText>
-            <TermInfo term="transit" size={16} />
-          </View>
-          {isOwn ? (
-            <AppText variant="bodySmall" color={colors.text.tertiary}>
-              {t("transits.intro")}
-            </AppText>
-          ) : null}
-        </EnterView>
+          <TermInfo term="transit" size={16} />
+        </View>
+        {isOwn ? (
+          <AppText variant="bodySmall" color={colors.text.tertiary}>
+            {t("transits.intro")}
+          </AppText>
+        ) : null}
+      </EnterView>
 
-        {/* Transit bi-wheel — natal inner, transiting outer */}
-        {chart.data && report.data ? (
-          <EnterView index={1} scale>
-            <View style={styles.wheelWrap}>
-              <Canvas style={StyleSheet.absoluteFill}>
-                <SkCircle cx={W / 2} cy={W / 2} r={W * 0.42} opacity={0.5}>
-                  <RadialGradient
-                    c={vec(W / 2, W / 2)}
-                    r={W * 0.42}
-                    colors={[gradients.skyRadialCenter, "transparent"]}
-                  />
-                </SkCircle>
-              </Canvas>
-              <TransitWheel natal={chart.data} report={report.data} />
+      {/* Transit bi-wheel — natal inner, transiting outer */}
+      {chart.data && report.data ? (
+        <EnterView index={enterIndex + 1} scale>
+          <View style={styles.wheelWrap}>
+            <Canvas style={StyleSheet.absoluteFill}>
+              <SkCircle cx={W / 2} cy={W / 2} r={W * 0.42} opacity={0.5}>
+                <RadialGradient
+                  c={vec(W / 2, W / 2)}
+                  r={W * 0.42}
+                  colors={[gradients.skyRadialCenter, "transparent"]}
+                />
+              </SkCircle>
+            </Canvas>
+            <TransitWheel natal={chart.data} report={report.data} />
+          </View>
+          <View style={styles.legend}>
+            <View style={styles.legendItem}>
+              <View
+                style={[styles.legendDot, { backgroundColor: colors.moon }]}
+              />
+              <AppText
+                variant="label"
+                color={colors.text.tertiary}
+                style={styles.legendText}
+              >
+                {t("transits.natalLabel")}
+              </AppText>
+              <TermInfo term="natalChart" size={13} />
             </View>
-            <View style={styles.legend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.moon }]} />
-                <AppText variant="label" color={colors.text.tertiary} style={styles.legendText}>
-                  {t("transits.natalLabel")}
-                </AppText>
-                <TermInfo term="natalChart" size={13} />
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: colors.gold[300] }]} />
-                <AppText variant="label" color={colors.text.tertiary} style={styles.legendText}>
-                  {t("transits.transitLabel")}
-                </AppText>
-              </View>
+            <View style={styles.legendItem}>
+              <View
+                style={[
+                  styles.legendDot,
+                  { backgroundColor: colors.gold[300] },
+                ]}
+              />
+              <AppText
+                variant="label"
+                color={colors.text.tertiary}
+                style={styles.legendText}
+              >
+                {t("transits.transitLabel")}
+              </AppText>
             </View>
-          </EnterView>
-        ) : (
-          <View style={styles.wheelLoading}>
-            <CelestialLoader label={t("common.loading")} />
           </View>
-        )}
-
-        {/* The sky now — overview */}
-        <EnterView index={2}>
-          <HairlineCard elevated style={styles.hero}>
-            <AppText variant="label" color={colors.text.gold}>
-              {t("transits.skyOverviewTitle")}
-            </AppText>
-            <Loader
-              loading={overview.loading}
-              error={!!overview.error}
-              onRetry={overview.reload}
-              retryLabel={t("reading.retry")}
-            >
-              <AppText variant="serifBody">{overview.data?.text}</AppText>
-            </Loader>
-          </HairlineCard>
         </EnterView>
+      ) : (
+        <View style={styles.wheelLoading}>
+          <CelestialLoader label={t("common.loading")} />
+        </View>
+      )}
 
-        {/* Per-planet transit cards */}
-        <EnterView index={3} style={styles.section}>
-          <View style={styles.sectionHead}>
-            <SectionHeader eyebrow={t("transits.movementsTitle")} />
-            <AppText variant="bodySmall" color={colors.text.tertiary}>
-              {t("transits.tapPlanet")}
-            </AppText>
-          </View>
-          <HairlineCard style={styles.listCard}>
-            <Loader
-              loading={report.loading}
-              error={!!report.error}
-              onRetry={report.reload}
-              retryLabel={t("reading.retry")}
-            >
-              {report.data && dto
-                ? report.data.movements.map((m, i) => (
-                    <Animated.View
-                      key={m.planet}
-                      layout={reduced ? undefined : rowLayoutTransition}
-                    >
-                      {i > 0 ? <View style={styles.sep} /> : null}
-                      <TransitMovementRow
-                        dto={dto}
-                        movement={m}
-                        date={report.data!.date}
-                        locale={locale}
-                      />
-                    </Animated.View>
-                  ))
-                : null}
-            </Loader>
-          </HairlineCard>
-        </EnterView>
-      </ScrollView>
-    </ScreenWrapper>
+      {/* The sky now — overview */}
+      <EnterView index={enterIndex + 2}>
+        <HairlineCard elevated style={styles.hero}>
+          <AppText variant="label" color={colors.text.gold}>
+            {t("transits.skyOverviewTitle")}
+          </AppText>
+          <Loader
+            loading={overview.loading}
+            error={!!overview.error}
+            onRetry={overview.reload}
+            retryLabel={t("reading.retry")}
+          >
+            <AppText variant="serifBody">{overview.data?.text}</AppText>
+          </Loader>
+        </HairlineCard>
+      </EnterView>
+
+      {/* Per-planet transit cards */}
+      <EnterView index={enterIndex + 3} style={styles.section}>
+        <View style={styles.sectionHead}>
+          <SectionHeader eyebrow={t("transits.movementsTitle")} />
+          <AppText variant="bodySmall" color={colors.text.tertiary}>
+            {t("transits.tapPlanet")}
+          </AppText>
+        </View>
+        <HairlineCard style={styles.listCard}>
+          <Loader
+            loading={report.loading}
+            error={!!report.error}
+            onRetry={report.reload}
+            retryLabel={t("reading.retry")}
+          >
+            {report.data && dto
+              ? report.data.movements.map((m, i) => (
+                  <Animated.View
+                    key={m.planet}
+                    layout={reduced ? undefined : rowLayoutTransition}
+                  >
+                    {i > 0 ? <View style={styles.sep} /> : null}
+                    <TransitMovementRow
+                      dto={dto}
+                      movement={m}
+                      date={report.data!.date}
+                      locale={locale}
+                    />
+                  </Animated.View>
+                ))
+              : null}
+          </Loader>
+        </HairlineCard>
+      </EnterView>
+    </View>
   );
 }
 
@@ -233,6 +275,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.md,
     paddingBottom: 120,
+    gap: spacing.xl,
+  },
+  stack: {
     gap: spacing.xl,
   },
   header: {

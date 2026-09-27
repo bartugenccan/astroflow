@@ -38,7 +38,14 @@
       "expo-sharing",
       "expo-splash-screen",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "AstroFlow uses the microphone only to record your affirmations in your own voice. Recordings stay on your device.",
+          "recordAudioAndroid": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -14,6 +14,7 @@ import { astrologyApi } from "../../services/astrologyApi";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
+import { wipeAllLocalData } from "../../services/devReset";
 import { colors, spacing } from "../../lib/design-system";
 
 export function ProfileScreen() {
@@ -57,6 +58,19 @@ export function ProfileScreen() {
     ]);
   };
 
+  const confirmWipe = () => {
+    Alert.alert(t("profile.devWipe"), t("profile.devWipeConfirm"), [
+      { text: t("profile.cancel"), style: "cancel" },
+      {
+        text: t("profile.devWipeAction"),
+        style: "destructive",
+        onPress: () => {
+          wipeAllLocalData().catch(() => {});
+        },
+      },
+    ]);
+  };
+
   const birthRows = profile
     ? [
         { icon: "calendar-outline" as const, label: t("profile.date"), value: formatDate(profile.birthDate, locale), editable: true },
@@ -92,24 +106,9 @@ export function ProfileScreen() {
         ) : null}
 
         {/* Compatibility entry */}
-        <EnterView index={2} style={styles.section}>
-          <SectionHeader eyebrow={t("compatibility.title")} />
-          <NavCard
-            icon="heart-outline"
-            title={t("compatibility.addPerson")}
-            subtitle={t("compatibility.subtitle")}
-            onPress={() => router.push("/compatibility" as Href)}
-          />
-        </EnterView>
-
-        {/* Explore: birthday chart + glossary */}
+        {/* Compatibility lives in For You → Match and the Solar Return only in
+            Future — Profile keeps settings and the reference glossary. */}
         <EnterView index={3} style={styles.section}>
-          <NavCard
-            icon="gift-outline"
-            title={t("yearAhead.title")}
-            subtitle={t("yearAhead.techName")}
-            onPress={() => router.push("/year-ahead" as Href)}
-          />
           <NavCard
             icon="book-outline"
             title={t("glossary.ui.openGlossary")}
@@ -230,6 +229,24 @@ export function ProfileScreen() {
             </AppText>
           </PressableScale>
         </EnterView>
+
+        {/* Developer builds only: behave like a fresh install (new device ID,
+            no local data). Never shipped to users. */}
+        {__DEV__ ? (
+          <EnterView index={7}>
+            <PressableScale
+              onPress={confirmWipe}
+              scaleTo={0.96}
+              style={styles.startOver}
+              accessibilityRole="button"
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.semantic.error} />
+              <AppText variant="body" color={colors.semantic.error} style={styles.shrink}>
+                {t("profile.devWipe")}
+              </AppText>
+            </PressableScale>
+          </EnterView>
+        ) : null}
       </ScrollView>
 
       {profile ? (

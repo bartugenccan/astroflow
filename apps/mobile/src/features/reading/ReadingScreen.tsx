@@ -36,7 +36,13 @@ import { EnterView } from "../../lib/motion";
 import { useTranslation } from "../../i18n";
 import { colors, spacing, radii, motion } from "../../lib/design-system";
 
-export function ReadingScreen() {
+interface ReadingScreenProps {
+  /** Rendered right under the title, inside the scroll (e.g. the "see your
+   *  chart as a wheel" card in the For You tab). */
+  headerSlot?: React.ReactNode;
+}
+
+export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
   const { t, locale } = useTranslation();
   const dto = useBirthDto();
   const profile = useAppStore((s) => s.birthProfile);
@@ -111,6 +117,8 @@ export function ReadingScreen() {
         <EnterView from="none">
           <SectionHeader eyebrow={t("reading.eyebrow")} title={t("reading.title")} />
         </EnterView>
+
+        {headerSlot}
 
         {/* Big Three hero */}
         <EnterView index={1}>

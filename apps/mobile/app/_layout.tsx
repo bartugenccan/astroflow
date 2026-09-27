@@ -66,6 +66,7 @@ export default function RootLayout() {
           <Stack.Protected guard={hasOnboarded}>
             <Stack.Screen name="(tabs)" options={{ animation: "fade" }} />
             <Stack.Screen name="year-ahead" />
+            <Stack.Screen name="chart" />
             <Stack.Screen name="compatibility" />
             <Stack.Screen name="intentions" />
             <Stack.Screen name="glossary" />

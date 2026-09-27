@@ -495,3 +495,29 @@ export interface IntentionCheckInHistory {
   aiResponse: string;
   createdAt: string;
 }
+
+// ─── Affirmations (device-local practice) ─────────────────────────────────────
+
+export type AffirmationCategory = "money" | "love" | "career" | "health" | "confidence" | "calm";
+
+/**
+ * One affirmation. Built-ins carry an i18n key (`builtinKey`) so they follow
+ * the app language; the user's own carry their `text` verbatim.
+ */
+export interface Affirmation {
+  id: string;
+  category: AffirmationCategory;
+  builtinKey?: string;
+  text?: string;
+  custom: boolean;
+  createdAt: string;
+}
+
+/** What the user did on one calendar day ("YYYY-MM-DD", local time). */
+export interface AffirmationDay {
+  date: string;
+  /** Affirmation ids ticked as done that day. */
+  done: string[];
+  /** Times each affirmation was repeated that day. */
+  reps: Record<string, number>;
+}

@@ -17,6 +17,12 @@ interface OnboardingFrameProps {
   ctaLabel: string;
   onNext: () => void;
   nextDisabled?: boolean;
+  /**
+   * "center" suits fixed-size bodies (wheels). "top" is for bodies whose
+   * height changes as you type (search results): centred content re-centres
+   * on every change and pushes the input around — often under the keyboard.
+   */
+  bodyAlign?: "center" | "top";
 }
 
 /** Shared layout for the middle onboarding steps. */
@@ -28,12 +34,13 @@ export function OnboardingFrame({
   ctaLabel,
   onNext,
   nextDisabled = false,
+  bodyAlign = "center",
 }: OnboardingFrameProps) {
   return (
     <ScreenWrapper variant="dense" edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.container}>
           {step !== undefined ? (
@@ -64,7 +71,9 @@ export function OnboardingFrame({
             ) : null}
           </MotiView>
 
-          <View style={styles.body}>{children}</View>
+          <View style={[styles.body, bodyAlign === "top" && styles.bodyTop]}>
+            {children}
+          </View>
 
           <MotiView
             from={{ opacity: 0 }}
@@ -103,5 +112,8 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     justifyContent: "center",
+  },
+  bodyTop: {
+    justifyContent: "flex-start",
   },
 });

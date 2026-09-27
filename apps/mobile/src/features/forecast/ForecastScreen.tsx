@@ -44,7 +44,12 @@ function formatDay(iso: string | undefined, locale: Locale, withWeekday = true):
   }
 }
 
-export function ForecastScreen() {
+interface ForecastScreenProps {
+  /** Rendered first inside the scroll — the Future tab pins the Solar Return here. */
+  headerSlot?: React.ReactNode;
+}
+
+export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
   const { t, locale } = useTranslation();
   const dto = useBirthDto();
   const premium = useAppStore((s) => s.isPremium);
@@ -78,7 +83,8 @@ export function ForecastScreen() {
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Compact header — the Ahead switcher above already names the section. */}
+        {headerSlot}
+
         <EnterView index={0} style={styles.headerRow}>
           <AppText variant="label" color={colors.text.gold}>
             {t("forecast.eyebrow")}

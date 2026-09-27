@@ -3,25 +3,26 @@ import { StyleSheet, View } from "react-native";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { Segmented } from "../../components/ui/Segmented";
 import { SectionPager } from "../../components/ui/SectionPager";
-import { ChartScreen } from "../chart/ChartScreen";
-import { ReadingScreen } from "../reading/ReadingScreen";
+import { IntentionsPane } from "../affirmations/IntentionsPane";
+import { ChartPane, AskPane, MatchPane } from "./YouPanes";
 import { useTranslation } from "../../i18n";
 import { spacing } from "../../lib/design-system";
 
-const SECTIONS = ["story", "picture"] as const;
+const SECTIONS = ["chart", "ask", "intentions", "match"] as const;
 type Section = (typeof SECTIONS)[number];
 
 /**
- * "You" — everything the birth chart says about the person, in one tab.
+ * "For You" — everything about the person in one tab: their chart, a place to
+ * ask about what's on their mind, their affirmations and goals, and how they
+ * match with others. Nothing here depends on the day (that's Today) or on
+ * timing (that's Future).
  *
- * Was two separate tabs (Chart and Reading) that answered the same question in
- * two registers: the wheel and the words. They are one destination now, split
- * by a segmented control. Both sections stay mounted once opened, so flipping
- * between them keeps scroll position and never reloads the wheel.
+ * Sections stay mounted once opened, so switching keeps scroll position and
+ * never reloads.
  */
 export function YouScreen() {
   const { t } = useTranslation();
-  const [section, setSection] = useState<Section>("story");
+  const [section, setSection] = useState<Section>("chart");
 
   return (
     <ScreenWrapper>
@@ -30,15 +31,27 @@ export function YouScreen() {
           value={section}
           onChange={setSection}
           options={[
-            { key: "story", label: t("you.story") },
-            { key: "picture", label: t("you.picture") },
+            { key: "chart", label: t("you.chart") },
+            { key: "ask", label: t("you.ask") },
+            { key: "intentions", label: t("you.intentions") },
+            { key: "match", label: t("you.compat") },
           ]}
         />
       </View>
       <SectionPager
         order={SECTIONS}
         active={section}
-        render={(key) => (key === "story" ? <ReadingScreen /> : <ChartScreen />)}
+        render={(key) =>
+          key === "chart" ? (
+            <ChartPane />
+          ) : key === "ask" ? (
+            <AskPane />
+          ) : key === "intentions" ? (
+            <IntentionsPane />
+          ) : (
+            <MatchPane />
+          )
+        }
       />
     </ScreenWrapper>
   );

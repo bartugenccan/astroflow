@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue,
@@ -9,12 +9,15 @@ import Animated, {
   Easing,
   useReducedMotion,
 } from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { Glyph } from "../../components/Glyph";
 import { SynastryTopAspect } from "../../services/types";
-import { aspectPhrase } from "../../lib/astroLanguage";
-import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, spacing, motion } from "../../lib/design-system";
+import { aspectPhrase, aspectStrength } from "../../lib/astroLanguage";
+import { useExpandMotion } from "../reading/HouseRow";
+import { useTranslation, TranslationKey, TFunction } from "../../i18n";
+import { colors, spacing, radii, motion } from "../../lib/design-system";
 
 const NATURE_COLOR: Record<string, string> = {
   harmonic: colors.semantic.harmonic,
@@ -27,18 +30,32 @@ const HALF_DRAW = 320;
 
 interface SynastryAspectRowProps {
   aspect: SynastryTopAspect;
+  /** The other person's name, used to label whose planet is whose. */
+  otherName: string;
   /** Delay before the connecting line starts drawing (ms). */
   delay?: number;
+}
+
+/** i18n lookup that falls back to "" for planets/aspects we have no copy for. */
+function copy(t: TFunction, key: string): string {
+  const out = t(key as TranslationKey);
+  return out === key ? "" : out;
 }
 
 /**
  * One cross-chart contact: your planet — aspect — their planet. The connecting
  * line draws from your planet to theirs, with the aspect dot popping in at the
  * midpoint, so the row reads as "a thread between you".
+ *
+ * Tapping opens the explanation a newcomer needs to read the one-line phrase:
+ * what each of the two planets stands for in a relationship, what the angle
+ * between them means, and how to work with it.
  */
-export function SynastryAspectRow({ aspect, delay = 0 }: SynastryAspectRowProps) {
+export function SynastryAspectRow({ aspect, otherName, delay = 0 }: SynastryAspectRowProps) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
+  const [open, setOpen] = useState(false);
+  const { chevronStyle, layout, entering, exiting } = useExpandMotion(open);
   const tint = NATURE_COLOR[aspect.nature] ?? colors.semantic.neutral;
 
   const left = useSharedValue(reduced ? 1 : 0);
@@ -68,38 +85,113 @@ export function SynastryAspectRow({ aspect, delay = 0 }: SynastryAspectRowProps)
     transform: [{ scale: dot.value }],
   }));
 
+  const nameA = t(`planets.${aspect.planetA}` as TranslationKey);
+  const nameB = t(`planets.${aspect.planetB}` as TranslationKey);
+  const roleA = copy(t, `synastry.role${aspect.planetA}`);
+  const roleB = copy(t, `synastry.role${aspect.planetB}`);
+  const meaning = copy(t, `synastry.mean${aspect.aspect}`);
+  const tip = copy(t, `synastry.tip${aspect.aspect}`);
+
   return (
-    <View style={styles.wrap}>
-      <View style={styles.row}>
-        <View style={styles.planet}>
-          <Glyph name={aspect.planetA} size={22} color={colors.moon} />
+    <Animated.View layout={layout} style={styles.wrap}>
+      <PressableScale
+        onPress={() => setOpen((o) => !o)}
+        scaleTo={0.98}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+      >
+        <View style={styles.row}>
+          <View style={styles.side}>
+            <Glyph name={aspect.planetA} size={22} color={colors.moon} />
+            <AppText variant="bodySmall" center numberOfLines={2} style={styles.sideLabel}>
+              {t("synastry.you")} · {nameA}
+            </AppText>
+          </View>
+          <View style={styles.middle}>
+            <Animated.View style={[styles.aspectLine, { backgroundColor: tint }, leftStyle]} />
+            <Animated.View style={[styles.aspectDot, { backgroundColor: tint }, dotStyle]} />
+            <Animated.View style={[styles.aspectLine, { backgroundColor: tint }, rightStyle]} />
+          </View>
+          <View style={styles.side}>
+            <Glyph name={aspect.planetB} size={22} color={colors.gold[300]} />
+            <AppText variant="bodySmall" center numberOfLines={2} style={styles.sideLabel}>
+              {otherName} · {nameB}
+            </AppText>
+          </View>
         </View>
-        <View style={styles.middle}>
-          <Animated.View style={[styles.aspectLine, { backgroundColor: tint }, leftStyle]} />
-          <Animated.View style={[styles.aspectDot, { backgroundColor: tint }, dotStyle]} />
-          <Animated.View style={[styles.aspectLine, { backgroundColor: tint }, rightStyle]} />
+
+        {/* The diagram shows the contact; this says what it means. */}
+        <View style={styles.phraseRow}>
+          <AppText variant="bodySmall" color={tint} center style={styles.phrase}>
+            {aspectPhrase(t, aspect.aspect, nameA, nameB, false)}
+          </AppText>
+          <Animated.View style={chevronStyle}>
+            <Ionicons name="chevron-down" size={14} color={colors.text.tertiary} />
+          </Animated.View>
         </View>
-        <View style={styles.planet}>
-          <Glyph name={aspect.planetB} size={22} color={colors.gold[300]} />
-        </View>
+      </PressableScale>
+
+      {open ? (
+        <Animated.View entering={entering} exiting={exiting} style={styles.detail}>
+          {roleA ? (
+            <Block
+              icon={<Glyph name={aspect.planetA} size={16} color={colors.moon} />}
+              title={`${t("synastry.you")} · ${nameA}`}
+              body={roleA}
+            />
+          ) : null}
+          {roleB ? (
+            <Block
+              icon={<Glyph name={aspect.planetB} size={16} color={colors.gold[300]} />}
+              title={`${otherName} · ${nameB}`}
+              body={roleB}
+            />
+          ) : null}
+          {meaning ? (
+            <Block
+              icon={<Glyph name={aspect.aspect} size={16} color={tint} />}
+              title={t("synastry.aspectTitle")}
+              body={meaning}
+            />
+          ) : null}
+          {tip ? (
+            <View style={[styles.tip, { borderColor: tint }]}>
+              <AppText variant="labelLong" color={tint}>
+                {t("synastry.tipTitle")}
+              </AppText>
+              <AppText variant="body" color={colors.text.primary}>
+                {tip}
+              </AppText>
+            </View>
+          ) : null}
+          <AppText variant="bodySmall" color={colors.text.tertiary}>
+            {t("synastry.strength", {
+              s: aspectStrength(t, aspect.orb),
+              orb: Math.abs(aspect.orb).toFixed(1),
+            })}
+          </AppText>
+        </Animated.View>
+      ) : null}
+    </Animated.View>
+  );
+}
+
+function Block({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
+  return (
+    <View style={styles.block}>
+      <View style={styles.blockHead}>
+        {icon}
+        <AppText variant="heading" color={colors.text.primary} style={styles.blockTitle}>
+          {title}
+        </AppText>
       </View>
-      {/* The diagram shows the contact; this says what it means. */}
-      <AppText variant="bodySmall" color={tint} center style={styles.phrase}>
-        {aspectPhrase(
-          t,
-          aspect.aspect,
-          t(`planets.${aspect.planetA}` as TranslationKey),
-          t(`planets.${aspect.planetB}` as TranslationKey),
-          false,
-        )}
-      </AppText>
+      <AppText variant="body">{body}</AppText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    gap: spacing.xs,
     paddingVertical: spacing.sm,
   },
   aspectDot: {
@@ -110,19 +202,25 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     paddingVertical: spacing.sm,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
-  planet: {
-    width: 32,
+  side: {
+    width: 76,
     alignItems: "center",
+    gap: spacing.xs,
+  },
+  sideLabel: {
+    maxWidth: 76,
   },
   middle: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    // Line up with the glyph centres, not the labels below them.
+    height: 22,
   },
   aspectLine: {
     flex: 1,
@@ -131,8 +229,37 @@ const styles = StyleSheet.create({
     // Grow from the left edge so the thread visibly travels A → B.
     transformOrigin: "left",
   },
+  phraseRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
   phrase: {
     flexShrink: 1,
-    paddingHorizontal: spacing.sm,
+  },
+  detail: {
+    gap: spacing.md,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
+  block: {
+    gap: spacing.xs,
+  },
+  blockHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  blockTitle: {
+    flexShrink: 1,
+  },
+  tip: {
+    gap: spacing.xs,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    borderLeftWidth: 2,
+    backgroundColor: colors.ink[800],
   },
 });

@@ -49,7 +49,7 @@ export const glossaryTr: typeof glossaryEn = {
       life:
         "Astroloji haritayı bir mizaç portresi olarak okur: seni ne harekete geçirir (Güneş), kendini güvende hissetmek için neye ihtiyaç duyarsın (Ay), dünyayla nasıl tanışırsın (Yükselen) ve diğer enerjilerin birbiriyle nasıl anlaşır ya da çatışır. Harita değişmez — uygulamadaki her şey onunla karşılaştırılır.",
       example:
-        "Sen sekmesinde \"Resimle\" bölümündeki çark senin doğum haritan. Halkadaki her sembol, burcundaki bir gezegen.",
+        "Sana Özel sekmesinde (Haritan → \"Haritanı çark olarak gör\") açılan çark senin doğum haritan. Halkadaki her sembol, burcundaki bir gezegen.",
     },
     bigThree: {
       title: "Büyük Üçlü",
@@ -167,7 +167,7 @@ export const glossaryTr: typeof glossaryEn = {
       how:
         "Bugünkü gezegen konumları haritanla karşılaştırılır. Hareket eden bir gezegen seninkilerden birine anlamlı bir açı yaptığında bu bir transittir. Hızlı gezegenler (Ay, Merkür, Venüs) bir gün ya da bir hafta süren ruh hâlleri; yavaş olanlar (Satürn, Plüton) aylarca süren dönemler yaratır.",
       life:
-        "Transitler bir şeyleri olmaya zorlamaz; içinden geçtiğin havayı anlatır — ne zaman ilerlemek, dinlenmek, konuşmak ya da beklemek için iyi bir an olduğunu. Bugün ve İleride sekmeleri bunlardan oluşur.",
+        "Transitler bir şeyleri olmaya zorlamaz; içinden geçtiğin havayı anlatır — ne zaman ilerlemek, dinlenmek, konuşmak ya da beklemek için iyi bir an olduğunu. Bugün sekmesi onları canlı gösterir; Gelecek sekmesindeki öngörü de bunlardan oluşur.",
       example:
         "Jüpiter'in Güneş'inin üzerinden geçmesi: özgüven ve fırsat dönemi. Satürn'ün Ay'ına kare yapması: sabır isteyen daha ağır bir dönem.",
     },

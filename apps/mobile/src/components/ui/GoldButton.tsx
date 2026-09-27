@@ -79,11 +79,14 @@ export function GoldButton({
       ) : (
         <>
           {icon}
+          {/* No adjustsFontSizeToFit: the label's row is shrink-wrapped, so the
+              first measure pass saw almost no width and the text was shrunk to
+              a sliver ("Add a person" rendered tiny; Android also ignores
+              minimumFontScale). Full size, wrapping to a second line if a
+              translation is ever that long. */}
           <AppText
             variant="heading"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.8}
+            numberOfLines={2}
             style={[
               styles.label,
               { color: solid ? colors.text.onGold : colors.gold[300] },
