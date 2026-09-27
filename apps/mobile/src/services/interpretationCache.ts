@@ -1,4 +1,4 @@
-import { CreateBirthProfileDto } from "./types";
+import { CreateBirthProfileDto, TarotSpread } from "./types";
 import { astrologyApi } from "./astrologyApi";
 import { Locale } from "../i18n";
 
@@ -162,6 +162,27 @@ export const guidanceKey = (
   date: string,
   locale: Locale,
 ) => `guidance|${dtoKey(dto)}|${topic}|${date}|${locale}`;
+
+/** One spread = category + question + the exact draw (ids + orientation). */
+const spreadKey = (s: TarotSpread) =>
+  `${s.category}|${(s.question ?? "").trim().toLowerCase()}|${s.cards
+    .map((c) => `${c.cardId}${c.reversed ? "R" : ""}`)
+    .join(",")}`;
+
+export const tarotCardKey = (
+  dto: CreateBirthProfileDto,
+  spread: TarotSpread,
+  index: number,
+  date: string,
+  locale: Locale,
+) => `tarot-card|${dtoKey(dto)}|${spreadKey(spread)}|${index}|${date}|${locale}`;
+
+export const tarotSynthesisKey = (
+  dto: CreateBirthProfileDto,
+  spread: TarotSpread,
+  date: string,
+  locale: Locale,
+) => `tarot-synth|${dtoKey(dto)}|${spreadKey(spread)}|${date}|${locale}`;
 
 /** Warm this week's best-days + the weekly forecast after Today settles. */
 export async function prefetchForecast(

@@ -27,6 +27,8 @@ import {
   PlacementInterpretation,
   SavedPerson,
   SavePersonInput,
+  TarotCardReading,
+  TarotSynthesis,
   TransitData,
   TransitReport,
   TransitDetail,
@@ -253,4 +255,11 @@ export const httpAstrologyApi: AstrologyApi = {
 
   getIntentionHistory: (id) =>
     request<IntentionCheckInHistory[]>("GET", `intentions/${id}/history`),
+
+  // Tarot
+  getTarotCard: (dto, spread, index, locale) =>
+    request<TarotCardReading>("POST", "tarot/card", { ...dto, ...spread, index }, { locale }),
+
+  getTarotSynthesis: (dto, spread, locale) =>
+    request<TarotSynthesis>("POST", "tarot/synthesis", { ...dto, ...spread }, { locale }),
 };

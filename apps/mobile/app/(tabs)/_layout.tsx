@@ -6,11 +6,12 @@ import { BackgroundProvided } from "../../src/components/ScreenWrapper";
 import { colors } from "../../src/lib/design-system";
 
 /**
- * Four destinations: Today (what the sky is doing now + the day's guidance),
- * For You (your chart, questions, affirmations, compatibility), Future
- * (Solar Return + forecasts) and Profile.
+ * Five destinations: Today (what the sky is doing now + the day's guidance),
+ * For You (your chart, questions, affirmations, compatibility), Tarot (a
+ * three-card spread with detailed readings), Future (Solar Return + forecasts)
+ * and Profile.
  *
- * One star field sits behind all four tabs and the scenes are transparent, so
+ * One star field sits behind all five tabs and the scenes are transparent, so
  * switching tabs never re-mounts a Skia canvas (a re-mounted canvas stayed
  * black until it redrew). Tabs stay attached, the navigator's fade is off —
  * each tab eases in with `FocusFade` instead, which never starts invisible.
@@ -31,6 +32,7 @@ export default function TabsLayout() {
         >
           <Tabs.Screen name="index" options={{ title: "Today" }} />
           <Tabs.Screen name="you" options={{ title: "For You" }} />
+          <Tabs.Screen name="tarot" options={{ title: "Tarot" }} />
           <Tabs.Screen name="ahead" options={{ title: "Future" }} />
           <Tabs.Screen name="profile" options={{ title: "Profile" }} />
         </Tabs>

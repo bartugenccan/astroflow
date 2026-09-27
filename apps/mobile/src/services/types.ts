@@ -521,3 +521,45 @@ export interface AffirmationDay {
   /** Times each affirmation was repeated that day. */
   reps: Record<string, number>;
 }
+
+// ─── Tarot (mirrors apps/api/src/modules/tarot/tarot.types.ts) ────────────────
+
+export type TarotCategory = "general" | "love" | "career" | "money" | "health" | "spiritual";
+
+/** One drawn card; its index in the spread is its position (0..2). */
+export interface TarotDrawnCard {
+  cardId: string;
+  reversed: boolean;
+}
+
+export interface TarotSpread {
+  category: TarotCategory;
+  question?: string;
+  cards: TarotDrawnCard[];
+}
+
+export interface TarotCardReading {
+  cardId: string;
+  position: number;
+  positionName: string;
+  reversed: boolean;
+  headline: string;
+  keywords: string[];
+  /** The card's imagery and archetype, upright or reversed. */
+  essence: string;
+  /** What the card says in this position of the spread. */
+  inPosition: string;
+  /** Personal reading: category + question + chart + the day's sky. */
+  forYou: string;
+  shadow: string;
+  advice: string;
+  /** Golden Dawn astrological correspondence. */
+  astro: string;
+}
+
+export interface TarotSynthesis {
+  title: string;
+  story: string;
+  guidance: string[];
+  affirmation: string;
+}

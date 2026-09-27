@@ -27,6 +27,9 @@ import {
   PlacementInterpretation,
   SavedPerson,
   SavePersonInput,
+  TarotCardReading,
+  TarotSpread,
+  TarotSynthesis,
   TransitData,
   TransitReport,
   TransitDetail,
@@ -58,6 +61,7 @@ import {
   mockAffirmation,
   mockCheckInReply,
 } from "./mock/companion";
+import { mockTarotCard, mockTarotSynthesis } from "./mock/tarot";
 import { delay } from "./delay";
 import { httpAstrologyApi } from "./httpAstrologyApi";
 import { USE_HTTP } from "./config";
@@ -167,6 +171,19 @@ export interface AstrologyApi {
     locale: Locale,
   ): Promise<CheckInResult>;
   getIntentionHistory(id: string): Promise<IntentionCheckInHistory[]>;
+
+  // Tarot — one detailed reading per card (fetched in parallel) + the whole spread.
+  getTarotCard(
+    dto: CreateBirthProfileDto,
+    spread: TarotSpread,
+    index: number,
+    locale: Locale,
+  ): Promise<TarotCardReading>;
+  getTarotSynthesis(
+    dto: CreateBirthProfileDto,
+    spread: TarotSpread,
+    locale: Locale,
+  ): Promise<TarotSynthesis>;
 }
 
 const mockAstrologyApi: AstrologyApi = {
@@ -438,6 +455,17 @@ const mockAstrologyApi: AstrologyApi = {
   async getIntentionHistory() {
     await delay();
     return [];
+  },
+
+  // Tarot
+  async getTarotCard(_dto, spread, index, locale) {
+    await delay();
+    return mockTarotCard(spread, index, locale);
+  },
+
+  async getTarotSynthesis(_dto, spread, locale) {
+    await delay();
+    return mockTarotSynthesis(spread, locale);
   },
 };
 

@@ -19,6 +19,9 @@ interface AppState {
   // Companion daily message quota (free tier — see FREE_DAILY_MESSAGES).
   companionMsgDate: string;
   companionMsgCount: number;
+  // Tarot daily reading quota (free tier — see FREE_DAILY_TAROT).
+  tarotDate: string;
+  tarotCount: number;
 
   setLocale: (locale: Locale) => void;
   setDisplayName: (name: string) => void;
@@ -29,6 +32,7 @@ interface AppState {
   addUnlockedFeature: (feature: string) => void;
   markPersonChartViewed: (id: string) => void;
   recordCompanionMessage: () => void;
+  recordTarotReading: () => void;
   reset: () => void;
   setHasHydrated: (v: boolean) => void;
 }
@@ -39,6 +43,8 @@ export const FREE_PERSON_CHARTS = 2;
 export const FREE_INTENTIONS = 1;
 /** How many companion messages a free user can send per day. */
 export const FREE_DAILY_MESSAGES = 5;
+/** How many tarot readings a free user can draw per day. */
+export const FREE_DAILY_TAROT = 1;
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -53,6 +59,8 @@ export const useAppStore = create<AppState>()(
       viewedPersonChartIds: [],
       companionMsgDate: "",
       companionMsgCount: 0,
+      tarotDate: "",
+      tarotCount: 0,
 
       setLocale: (locale) => set({ locale }),
       setDisplayName: (displayName) => set({ displayName }),
@@ -80,6 +88,13 @@ export const useAppStore = create<AppState>()(
             ? { companionMsgCount: s.companionMsgCount + 1 }
             : { companionMsgDate: today, companionMsgCount: 1 };
         }),
+      recordTarotReading: () =>
+        set((s) => {
+          const today = new Date().toISOString().slice(0, 10);
+          return s.tarotDate === today
+            ? { tarotCount: s.tarotCount + 1 }
+            : { tarotDate: today, tarotCount: 1 };
+        }),
       reset: () =>
         set({
           hasOnboarded: false,
@@ -90,6 +105,8 @@ export const useAppStore = create<AppState>()(
           viewedPersonChartIds: [],
           companionMsgDate: "",
           companionMsgCount: 0,
+          tarotDate: "",
+          tarotCount: 0,
         }),
       setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
@@ -106,6 +123,8 @@ export const useAppStore = create<AppState>()(
         viewedPersonChartIds: state.viewedPersonChartIds,
         companionMsgDate: state.companionMsgDate,
         companionMsgCount: state.companionMsgCount,
+        tarotDate: state.tarotDate,
+        tarotCount: state.tarotCount,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

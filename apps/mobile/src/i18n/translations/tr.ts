@@ -1,4 +1,5 @@
 import { affirmationsTr } from "./affirmations.tr";
+import { tarotTr } from "./tarot.tr";
 import { glossaryTr } from "./glossary.tr";
 import { TranslationShape } from "./en";
 
@@ -120,6 +121,7 @@ export const tr: TranslationShape = {
   tabs: {
     today: "Bugün",
     you: "Sana Özel",
+    tarot: "Tarot",
     ahead: "Gelecek",
     profile: "Profil",
   },
@@ -523,4 +525,5 @@ export const tr: TranslationShape = {
   },
   glossary: glossaryTr,
   affirmations: affirmationsTr,
+  tarot: tarotTr,
 };

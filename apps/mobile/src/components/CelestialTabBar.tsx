@@ -37,6 +37,7 @@ import { StarBurst } from "../features/intentions/StarBurst";
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: "moon",
   you: "planet",
+  tarot: "albums",
   ahead: "telescope",
   profile: "person-circle",
 };
@@ -45,6 +46,7 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 const LABELS: Record<string, TranslationKey> = {
   index: "tabs.today",
   you: "tabs.you",
+  tarot: "tabs.tarot",
   ahead: "tabs.ahead",
   profile: "tabs.profile",
 };
@@ -289,6 +291,8 @@ function TabButton({
         <Animated.Text
           numberOfLines={1}
           maxFontSizeMultiplier={1.1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
           style={[typography.labelLong, styles.label, labelStyle]}
         >
           {label}
@@ -305,7 +309,8 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     alignItems: "center",
-    paddingHorizontal: spacing.xl,
+    // Five tabs: a slimmer gutter keeps every label whole on 375pt phones.
+    paddingHorizontal: spacing.lg,
   },
   pill: {
     flexDirection: "row",
@@ -344,7 +349,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 2,
-    paddingHorizontal: CAPSULE_INSET + 4,
+    // Labels stay inside the capsule (inset per side) with 1pt to spare.
+    paddingHorizontal: CAPSULE_INSET + 1,
   },
   iconWrap: {
     width: 30,
