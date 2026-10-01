@@ -60,6 +60,8 @@ enum InterpretationKind {
   YEAR_AHEAD
   TAROT_CARD
   TAROT_SYNTHESIS
+  ELECTION_CHECK
+  ELECTION_SEARCH
 }
 
 // ──── Core Models ────────────────────────────────────────────────────────────

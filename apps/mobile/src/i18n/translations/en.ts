@@ -1,5 +1,6 @@
 import { affirmationsEn } from "./affirmations.en";
 import { tarotEn } from "./tarot.en";
+import { electionEn } from "./election.en";
 import { glossaryEn } from "./glossary.en";
 export const en = {
   common: {
@@ -523,6 +524,7 @@ export const en = {
   glossary: glossaryEn,
   affirmations: affirmationsEn,
   tarot: tarotEn,
+  election: electionEn,
 };
 
 export type TranslationShape = typeof en;

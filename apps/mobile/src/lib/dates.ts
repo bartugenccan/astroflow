@@ -41,3 +41,37 @@ export function daysUntilBirthday(birthDate: string, now: Date = new Date()): nu
   if (next < today) next = new Date(today.getFullYear() + 1, +m[2] - 1, +m[3]);
   return Math.round((next.getTime() - today.getTime()) / 86400000);
 }
+
+/** Number of days in a 1-based month. */
+export function daysInMonth(month: number, year: number): number {
+  return new Date(year, month, 0).getDate();
+}
+
+/** Today as a local "YYYY-MM-DD". */
+export function todayISO(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+/** `"2026-10-30"` + n days, calendar-safe. */
+export function addDaysISO(iso: string, n: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/** `"2026-09-27"` → `"Sunday, 27 September 2026"` / `"27 Eylül 2026 Pazar"`. Non-ISO strings pass through. */
+export function formatLongDay(iso: string | undefined, locale: Locale, withWeekday = true): string {
+  if (!iso) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
+  try {
+    return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
+      ...(withWeekday ? { weekday: "long" as const } : {}),
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}

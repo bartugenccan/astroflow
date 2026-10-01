@@ -16,7 +16,7 @@ interface BestDaysGridProps {
 }
 
 /** Heat colour for a 0-100 score: rose → slate → sage. */
-function scoreColor(score: number, alpha = 0.28): string {
+export function scoreColor(score: number, alpha = 0.28): string {
   const stops =
     score < 45
       ? [colors.semantic.challenging, colors.semantic.neutral, (score - 15) / 30]

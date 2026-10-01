@@ -30,6 +30,12 @@ import {
   TarotCardReading,
   TarotSpread,
   TarotSynthesis,
+  ElectionCheck,
+  ElectionCheckQuery,
+  ElectionCheckReading,
+  ElectionSearch,
+  ElectionSearchQuery,
+  ElectionSearchReading,
   TransitData,
   TransitReport,
   TransitDetail,
@@ -62,6 +68,12 @@ import {
   mockCheckInReply,
 } from "./mock/companion";
 import { mockTarotCard, mockTarotSynthesis } from "./mock/tarot";
+import {
+  mockElectionCheck,
+  mockElectionCheckReading,
+  mockElectionSearch,
+  mockElectionSearchReading,
+} from "./mock/election";
 import { delay } from "./delay";
 import { httpAstrologyApi } from "./httpAstrologyApi";
 import { USE_HTTP } from "./config";
@@ -184,6 +196,20 @@ export interface AstrologyApi {
     spread: TarotSpread,
     locale: Locale,
   ): Promise<TarotSynthesis>;
+
+  // Election — the computed result comes back fast; the reading is the AI layer.
+  electionCheck(dto: CreateBirthProfileDto, query: ElectionCheckQuery, locale: Locale): Promise<ElectionCheck>;
+  electionCheckReading(
+    dto: CreateBirthProfileDto,
+    query: ElectionCheckQuery,
+    locale: Locale,
+  ): Promise<ElectionCheckReading>;
+  electionSearch(dto: CreateBirthProfileDto, query: ElectionSearchQuery, locale: Locale): Promise<ElectionSearch>;
+  electionSearchReading(
+    dto: CreateBirthProfileDto,
+    query: ElectionSearchQuery,
+    locale: Locale,
+  ): Promise<ElectionSearchReading>;
 }
 
 const mockAstrologyApi: AstrologyApi = {
@@ -466,6 +492,27 @@ const mockAstrologyApi: AstrologyApi = {
   async getTarotSynthesis(_dto, spread, locale) {
     await delay();
     return mockTarotSynthesis(spread, locale);
+  },
+
+  // Election
+  async electionCheck(_dto, query, locale) {
+    await delay();
+    return mockElectionCheck(query, locale);
+  },
+
+  async electionCheckReading(_dto, query, locale) {
+    await delay();
+    return mockElectionCheckReading(query, locale);
+  },
+
+  async electionSearch(_dto, query, locale) {
+    await delay();
+    return mockElectionSearch(query, locale);
+  },
+
+  async electionSearchReading(_dto, query, locale) {
+    await delay();
+    return mockElectionSearchReading(query, locale);
   },
 };
 

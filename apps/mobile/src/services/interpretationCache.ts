@@ -1,4 +1,4 @@
-import { CreateBirthProfileDto, TarotSpread } from "./types";
+import { CreateBirthProfileDto, ElectionQuery, TarotSpread } from "./types";
 import { astrologyApi } from "./astrologyApi";
 import { Locale } from "../i18n";
 
@@ -204,3 +204,21 @@ export async function prefetchForecast(
     // best-effort
   }
 }
+
+/** One election question: the event (picked or typed), the place, and the date or month range. */
+export const electionKey = (
+  kind: "result" | "reading",
+  dto: CreateBirthProfileDto,
+  q: ElectionQuery,
+  locale: Locale,
+) =>
+  [
+    `election-${kind}`,
+    dtoKey(dto),
+    q.mode,
+    q.eventId ?? "",
+    (q.eventText ?? "").trim().toLowerCase(),
+    `${q.place.latitude},${q.place.longitude}`,
+    q.mode === "check" ? q.date : `${q.from}..${q.to}`,
+    locale,
+  ].join("|");

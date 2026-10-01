@@ -69,6 +69,7 @@ export default function RootLayout() {
             <Stack.Screen name="chart" />
             <Stack.Screen name="compatibility" />
             <Stack.Screen name="intentions" />
+            <Stack.Screen name="election" />
             <Stack.Screen name="glossary" />
             <Stack.Screen
               name="companion"

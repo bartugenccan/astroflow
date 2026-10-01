@@ -4,6 +4,7 @@ import { useAppStore } from "../store/useAppStore";
 import { useAffirmationStore } from "../store/useAffirmationStore";
 import { useOnboardingDraft } from "../store/useOnboardingDraft";
 import { useTarotStore } from "../store/useTarotStore";
+import { useElectionStore } from "../store/useElectionStore";
 import { clearInterpretationCache } from "./interpretationCache";
 import { resetDeviceId } from "./deviceId";
 
@@ -33,6 +34,7 @@ export async function wipeAllLocalData(): Promise<void> {
   useOnboardingDraft.getState().clear();
   useAffirmationStore.setState({ customs: [], days: {}, recordings: {} });
   useTarotStore.getState().reset();
+  useElectionStore.getState().reset();
   useAppStore.getState().reset();
 
   // Last, so the stores' own persistence writes above can't restore anything.

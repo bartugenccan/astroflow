@@ -147,6 +147,51 @@ export class EphemerisService {
     }
   }
 
+  /**
+   * Planet and node positions (with retrograde flags) at a UTC instant, no
+   * aspect pass — ~40% cheaper than `computeAt`. For long day-by-day scans
+   * (electional search) that only read longitudes.
+   */
+  bodiesAtUtc(when: Date, latitude: number, longitude: number): RawHoroscope {
+    try {
+      return new Horoscope({
+        origin: this.originAtUtc(when, latitude, longitude),
+        houseSystem: 'placidus',
+        zodiac: 'tropical',
+        aspectPoints: [],
+        aspectWithPoints: [],
+        aspectTypes: [],
+        language: 'en',
+      }) as RawHoroscope;
+    } catch (err) {
+      throw new BadRequestException(
+        `Unable to compute positions: ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * The UTC instant of a local wall-clock time at a location ("2027-10-30",
+   * 14:00 in Istanbul → 11:00Z), with the zone + DST the library derives.
+   */
+  utcForLocal(
+    dateISO: string,
+    hour: number,
+    minute: number,
+    latitude: number,
+    longitude: number,
+  ): Date {
+    const { year, month, day } = this.parseDate(dateISO);
+    const wall = new Date(Date.UTC(year, month - 1, day, hour, minute));
+    return new Date(wall.getTime() + this.zoneOffsetMs(wall, latitude, longitude));
+  }
+
+  /** Local wall-clock "HH:mm" at a location for a UTC instant. */
+  localClock(when: Date, latitude: number, longitude: number): string {
+    const wall = new Date(when.getTime() - this.zoneOffsetMs(when, latitude, longitude));
+    return `${String(wall.getUTCHours()).padStart(2, '0')}:${String(wall.getUTCMinutes()).padStart(2, '0')}`;
+  }
+
   /** The Sun's ecliptic longitude at a UTC instant. Cheap: no aspects, no angles. */
   sunLongitudeAtUtc(when: Date, latitude: number, longitude: number): number {
     const h = new Horoscope({

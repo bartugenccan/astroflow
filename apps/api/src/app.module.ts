@@ -9,6 +9,7 @@ import { AIModule } from './modules/ai/ai.module';
 import { CompanionModule } from './modules/companion/companion.module';
 import { IntentionsModule } from './modules/intentions/intentions.module';
 import { TarotModule } from './modules/tarot/tarot.module';
+import { ElectionModule } from './modules/election/election.module';
 import { WorkersModule } from './workers/workers.module';
 
 // The streak worker + its BullMQ queue require Redis. Off by default so the API
@@ -27,6 +28,7 @@ const workerModules =
     CompanionModule,
     IntentionsModule,
     TarotModule,
+    ElectionModule,
     ...workerModules,
   ],
 })

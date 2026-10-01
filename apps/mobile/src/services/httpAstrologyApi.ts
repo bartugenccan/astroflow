@@ -29,6 +29,11 @@ import {
   SavePersonInput,
   TarotCardReading,
   TarotSynthesis,
+  ElectionCheck,
+  ElectionCheckReading,
+  ElectionQuery,
+  ElectionSearch,
+  ElectionSearchReading,
   TransitData,
   TransitReport,
   TransitDetail,
@@ -262,4 +267,23 @@ export const httpAstrologyApi: AstrologyApi = {
 
   getTarotSynthesis: (dto, spread, locale) =>
     request<TarotSynthesis>("POST", "tarot/synthesis", { ...dto, ...spread }, { locale }),
+
+  // Election
+  electionCheck: (dto, query, locale) =>
+    request<ElectionCheck>("POST", "election/check", electionBody(dto, query), { locale }),
+
+  electionCheckReading: (dto, query, locale) =>
+    request<ElectionCheckReading>("POST", "election/check/reading", electionBody(dto, query), { locale }),
+
+  electionSearch: (dto, query, locale) =>
+    request<ElectionSearch>("POST", "election/search", electionBody(dto, query), { locale }),
+
+  electionSearchReading: (dto, query, locale) =>
+    request<ElectionSearchReading>("POST", "election/search/reading", electionBody(dto, query), { locale }),
 };
+
+/** The API whitelists body fields, so the client-only `mode` stays out. */
+function electionBody(dto: CreateBirthProfileDto, query: ElectionQuery) {
+  const { mode: _mode, ...rest } = query;
+  return { ...dto, ...rest };
+}

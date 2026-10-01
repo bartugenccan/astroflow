@@ -563,3 +563,114 @@ export interface TarotSynthesis {
   guidance: string[];
   affirmation: string;
 }
+
+// ─── Election (mirrors apps/api/src/modules/election/election.types.ts) ───────
+
+export type ElectionEventId =
+  | "engagement"
+  | "wedding"
+  | "proposal"
+  | "first_date"
+  | "business_launch"
+  | "contract"
+  | "job_interview"
+  | "investment"
+  | "moving"
+  | "travel"
+  | "new_beginning";
+
+export type ElectionVerdict = "excellent" | "good" | "mixed" | "avoid";
+export type ElectionTone = "good" | "bad" | "neutral";
+
+export interface ElectionFactor {
+  key: "moon_phase" | "moon_voc" | "moon_sign" | "moon_aspect" | "retrograde" | "eclipse" | "combust" | "natal";
+  tone: ElectionTone;
+  impact: number;
+  label: string;
+}
+
+export interface ElectionHourWindow {
+  from: string;
+  to: string;
+  score: number;
+  /** Rising sign of the event chart (English, canonical). */
+  ascendant: string;
+  highlights: string[];
+}
+
+export interface ElectionPlace {
+  name: string;
+  latitude: number;
+  longitude: number;
+}
+
+export interface ElectionEventRef {
+  id: ElectionEventId;
+  label: string;
+  fromText?: string;
+}
+
+export interface ElectionDay {
+  date: string;
+  score: number;
+  verdict: ElectionVerdict;
+  factors: ElectionFactor[];
+}
+
+export interface ElectionCheck extends ElectionDay {
+  event: ElectionEventRef;
+  place: ElectionPlace;
+  hours: ElectionHourWindow[];
+  alternatives: { date: string; score: number; verdict: ElectionVerdict }[];
+}
+
+export interface ElectionPick extends ElectionDay {
+  bestHour: ElectionHourWindow | null;
+}
+
+export interface ElectionAvoid {
+  kind: "retrograde" | "eclipse";
+  from: string;
+  to: string;
+  label: string;
+}
+
+export interface ElectionSearch {
+  event: ElectionEventRef;
+  place: ElectionPlace;
+  from: string;
+  to: string;
+  days: { date: string; score: number }[];
+  top: ElectionPick[];
+  avoid: ElectionAvoid[];
+}
+
+export interface ElectionCheckReading {
+  summary: string;
+  why: string;
+  advice: string;
+  caution: string;
+}
+
+export interface ElectionSearchReading {
+  summary: string;
+  tips: string[];
+}
+
+/** What the reader is asking — one date, or the best dates in a month range. */
+export type ElectionCheckQuery = {
+  mode: "check";
+  eventId?: ElectionEventId;
+  eventText?: string;
+  place: ElectionPlace;
+  date: string;
+};
+export type ElectionSearchQuery = {
+  mode: "search";
+  eventId?: ElectionEventId;
+  eventText?: string;
+  place: ElectionPlace;
+  from: string;
+  to: string;
+};
+export type ElectionQuery = ElectionCheckQuery | ElectionSearchQuery;

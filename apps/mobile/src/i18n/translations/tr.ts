@@ -1,5 +1,6 @@
 import { affirmationsTr } from "./affirmations.tr";
 import { tarotTr } from "./tarot.tr";
+import { electionTr } from "./election.tr";
 import { glossaryTr } from "./glossary.tr";
 import { TranslationShape } from "./en";
 
@@ -526,4 +527,5 @@ export const tr: TranslationShape = {
   glossary: glossaryTr,
   affirmations: affirmationsTr,
   tarot: tarotTr,
+  election: electionTr,
 };
