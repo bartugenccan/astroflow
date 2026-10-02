@@ -1,4 +1,5 @@
 import { Locale } from '../astrology/interpretation.types';
+import { USER_DATA_RULE, userData } from '../../common/ai/prompt-safety';
 
 /**
  * The companion's persona — a warm, plain-spoken friend who happens to read the
@@ -30,7 +31,7 @@ export function companionChatPrompt(
     args.transits.slice(0, 5).join('; ') || (locale === 'tr' ? 'sakin bir gökyüzü' : 'a calm sky');
   const historyLine = args.history
     .slice(-6)
-    .map((m) => `${m.role === 'user' ? (locale === 'tr' ? 'Kişi' : 'Them') : 'Aster'}: ${m.content}`)
+    .map((m) => `${m.role === 'user' ? (locale === 'tr' ? 'Kişi' : 'Them') : 'Aster'}: ${m.role === 'user' ? userData(m.content) : m.content}`)
     .join('\n');
   const mem = args.memory
     ? locale === 'tr'
@@ -42,11 +43,11 @@ export function companionChatPrompt(
     locale === 'tr'
       ? `Kişinin haritasından: Güneş ${args.sun}, Ay ${args.moon}. Bugünkü gökyüzü: ${transitLine}.\n\n${mem}${
           historyLine ? `Önceki konuşma:\n${historyLine}\n\n` : ''
-        }Kişi şimdi diyor ki: "${args.message}"\n\n` +
+        }Kişi şimdi diyor ki: ${userData(args.message)}\n${USER_DATA_RULE.tr}\n\n` +
         `Bir arkadaş gibi, sade dille yanıt ver. JSON üret: reply (asıl yanıtın), takeaway (isteğe bağlı tek cümlelik özet), why (isteğe bağlı, bunu sezmene yol açan göksel etkinin JARGONSUZ sade açıklaması), remember (isteğe bağlı, bu kişi hakkında ileride hatırlanmaya değer tek kısa cümle).`
       : `From their chart: Sun ${args.sun}, Moon ${args.moon}. Today's sky: ${transitLine}.\n\n${mem}${
           historyLine ? `Earlier in the conversation:\n${historyLine}\n\n` : ''
-        }They now say: "${args.message}"\n\n` +
+        }They now say: ${userData(args.message)}\n${USER_DATA_RULE.en}\n\n` +
         `Reply like a friend, in plain language. Produce JSON: reply (your actual message), takeaway (optional one-sentence summary), why (optional, a JARGON-FREE plain explanation of what in the sky informs this), remember (optional, one short sentence worth remembering about this person for later).`;
 
   return {

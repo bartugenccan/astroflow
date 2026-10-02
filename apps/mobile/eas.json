@@ -9,24 +9,33 @@
       "distribution": "internal",
       "channel": "development",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:3000"
+        "EXPO_PUBLIC_API_URL": "http://localhost:3000",
+        "EXPO_PUBLIC_PREMIUM_BETA": "true"
       }
     },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
-      "ios": { "simulator": false },
-      "android": { "buildType": "apk" },
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      },
       "env": {
-        "EXPO_PUBLIC_API_URL": ""
+        "EXPO_PUBLIC_API_URL": "",
+        "EXPO_PUBLIC_PREMIUM_BETA": "true"
       }
     },
     "production": {
       "channel": "production",
       "autoIncrement": true,
-      "android": { "buildType": "app-bundle" },
+      "android": {
+        "buildType": "app-bundle"
+      },
       "env": {
-        "EXPO_PUBLIC_API_URL": ""
+        "EXPO_PUBLIC_API_URL": "",
+        "EXPO_PUBLIC_PREMIUM_BETA": "true"
       }
     }
   },

@@ -1,18 +1,20 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiHeader, ApiQuery } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DeviceId } from '../../common/device/device-id.decorator';
 import { BirthInputDto } from '../astrology/dto/birth-input.dto';
 import { Locale } from '../astrology/interpretation.types';
 import { IntentionsService } from './intentions.service';
 import { CreateIntentionDto } from './dto/create-intention.dto';
 import { CheckInDto } from './dto/checkin.dto';
+import { AiRoute } from '../../common/auth/route-tags';
 
 @ApiTags('Intentions')
-@ApiHeader({ name: 'x-device-id', description: 'Anonymous device identifier', required: false })
+@ApiBearerAuth()
 @Controller('intentions')
 export class IntentionsController {
   constructor(private readonly intentions: IntentionsService) {}
 
+  @AiRoute()
   @Post()
   @ApiOperation({ summary: 'Create an intention (generates a chart-framed affirmation)' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -30,6 +32,7 @@ export class IntentionsController {
     return this.intentions.list(deviceId);
   }
 
+  @AiRoute()
   @Post('suggestions')
   @ApiOperation({ summary: 'Transit-derived intention suggestions (what the user faces now)' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -43,15 +46,16 @@ export class IntentionsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'One intention with progress + streak' })
-  get(@Param('id') id: string, @DeviceId() deviceId: string) {
+  get(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string) {
     return this.intentions.get(deviceId, id);
   }
 
+  @AiRoute()
   @Post(':id/checkin')
   @ApiOperation({ summary: 'Submit a check-in → AI reply + conviction + streak update' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
   checkIn(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CheckInDto,
     @DeviceId() deviceId: string,
     @Query('locale') locale?: string,
@@ -61,13 +65,13 @@ export class IntentionsController {
 
   @Get(':id/history')
   @ApiOperation({ summary: 'Check-in history for an intention' })
-  history(@Param('id') id: string, @DeviceId() deviceId: string) {
+  history(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string) {
     return this.intentions.history(deviceId, id);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete an intention' })
-  remove(@Param('id') id: string, @DeviceId() deviceId: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string) {
     return this.intentions.remove(deviceId, id);
   }
 

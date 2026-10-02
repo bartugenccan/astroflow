@@ -25,7 +25,7 @@ export class UsersService {
   ) {}
 
   async register(dto: CreateUserDto): Promise<{ user: UserResponseDto; accessToken: string }> {
-    const existing = await this.usersRepository.findByEmail(dto.email);
+    const existing = await this.usersRepository.findByEmailWithHash(dto.email);
     if (existing) {
       throw new ConflictException('Email already registered');
     }
@@ -52,7 +52,7 @@ export class UsersService {
   }
 
   async login(dto: LoginDto): Promise<{ user: UserResponseDto; accessToken: string }> {
-    const user = await this.usersRepository.findByEmail(dto.email);
+    const user = await this.usersRepository.findByEmailWithHash(dto.email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
@@ -92,7 +92,8 @@ export class UsersService {
   }
 
   async deleteAccount(userId: string) {
-    return this.usersRepository.delete(userId);
+    await this.usersRepository.delete(userId);
+    return { deleted: true };
   }
 
   async setBirthProfile(userId: string, dto: CreateBirthProfileDto) {

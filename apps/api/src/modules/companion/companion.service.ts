@@ -7,6 +7,7 @@ import { MemoryService } from './memory.service';
 import { companionChatPrompt, companionSystemPrompt } from './companion.prompts';
 import { companionStub } from '../astrology/prompts/interpretation.stubs';
 import { ChatMessageDto, ChatReply } from './companion.types';
+import { safeError } from '../../common/logging/safe-error';
 
 @Injectable()
 export class CompanionService {
@@ -89,7 +90,7 @@ export class CompanionService {
         };
         if (parsed.remember) await this.memory.remember(deviceId, 'fact', parsed.remember);
       } catch (err) {
-        this.logger.warn(`companion AI failed: ${(err as Error).message}`);
+        this.logger.warn(`companion AI failed: ${safeError(err)}`);
         reply = companionStub(locale);
       }
     }

@@ -24,3 +24,7 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+
+# Store/signing credentials — never commit
+google-play-service-account.json
+*.keystore

@@ -20,18 +20,24 @@ import {
   LoginDto,
   CreateBirthProfileDto,
 } from './dto/user.dto';
+import { Public } from '../../common/auth/public.decorator';
+import { AuthRoute } from '../../common/auth/route-tags';
 
 @ApiTags('Users')
+// User accounts authenticate with their own JWT (AuthGuard('jwt')), not a device token.
+@Public()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @AuthRoute()
   @Post('register')
   @ApiOperation({ summary: 'Register a new user' })
   async register(@Body() dto: CreateUserDto) {
     return this.usersService.register(dto);
   }
 
+  @AuthRoute()
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })

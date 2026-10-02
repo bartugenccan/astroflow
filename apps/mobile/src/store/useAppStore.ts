@@ -1,8 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { Locale } from "../i18n";
 import { BirthProfileResponse } from "../services/types";
+import { PREMIUM_BETA } from "../services/config";
+import { secureStorage } from "../services/secureStorage";
+
+/** Persist key. Lives in the Keychain/Keystore: it holds birth date, time and place. */
+export const APP_STORE_KEY = "astroflow-app";
 
 interface AppState {
   locale: Locale;
@@ -54,7 +58,7 @@ export const useAppStore = create<AppState>()(
       displayName: "",
       birthProfile: null,
       _hasHydrated: false,
-      isPremium: false,
+      isPremium: PREMIUM_BETA,
       unlockedFeatures: [],
       viewedPersonChartIds: [],
       companionMsgDate: "",
@@ -100,7 +104,7 @@ export const useAppStore = create<AppState>()(
           hasOnboarded: false,
           displayName: "",
           birthProfile: null,
-          isPremium: false,
+          isPremium: PREMIUM_BETA,
           unlockedFeatures: [],
           viewedPersonChartIds: [],
           companionMsgDate: "",
@@ -111,8 +115,8 @@ export const useAppStore = create<AppState>()(
       setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
     {
-      name: "astroflow-app",
-      storage: createJSONStorage(() => AsyncStorage),
+      name: APP_STORE_KEY,
+      storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
         locale: state.locale,
         hasOnboarded: state.hasOnboarded,
@@ -127,6 +131,8 @@ export const useAppStore = create<AppState>()(
         tarotCount: state.tarotCount,
       }),
       onRehydrateStorage: () => (state) => {
+        // Beta: Premium for everyone, whatever an older build persisted.
+        if (PREMIUM_BETA && state && !state.isPremium) state.setPremium(true);
         state?.setHasHydrated(true);
       },
     },

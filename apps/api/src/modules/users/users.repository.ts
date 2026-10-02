@@ -1,20 +1,36 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto, CreateBirthProfileDto } from './dto/user.dto';
-import * as bcrypt from 'bcrypt';
+
+/**
+ * Every column a client may see. `passwordHash` is deliberately absent — any
+ * query whose result can reach a response must use this select.
+ */
+export const userPublicSelect = {
+  id: true,
+  email: true,
+  displayName: true,
+  avatarUrl: true,
+  timezone: true,
+  starPoints: true,
+  createdAt: true,
+  updatedAt: true,
+} as const;
 
 @Injectable()
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByEmail(email: string) {
+  /** Internal only (login): includes the password hash. Never return it to a client. */
+  async findByEmailWithHash(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-      include: {
+      select: {
+        ...userPublicSelect,
         birthProfile: true,
         streaks: true,
       },
@@ -29,6 +45,7 @@ export class UsersRepository {
         displayName: dto.displayName,
         timezone: dto.timezone || 'Europe/Istanbul',
       },
+      select: userPublicSelect,
     });
   }
 
@@ -36,11 +53,12 @@ export class UsersRepository {
     return this.prisma.user.update({
       where: { id },
       data: dto,
+      select: userPublicSelect,
     });
   }
 
   async delete(id: string) {
-    return this.prisma.user.delete({ where: { id } });
+    await this.prisma.user.delete({ where: { id }, select: { id: true } });
   }
 
   async createBirthProfile(userId: string, dto: CreateBirthProfileDto, chartData: any) {

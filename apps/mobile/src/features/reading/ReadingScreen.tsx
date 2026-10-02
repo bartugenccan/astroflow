@@ -16,6 +16,7 @@ import { Glyph } from "../../components/Glyph";
 import { AspectRow } from "./AspectRow";
 import { HouseRow } from "./HouseRow";
 import { ShareCardModal } from "../share/ShareCardModal";
+import { ReportCta } from "../reports/ReportCta";
 import { ShareCardData } from "../share/ShareableCard";
 import { astrologyApi } from "../../services/astrologyApi";
 import { dtoKey, prefetchHouses } from "../../services/interpretationCache";
@@ -298,6 +299,8 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
             </Section>
           </HairlineCard>
         </View>
+
+        <ReportCta kind="natal" />
       </ScrollView>
 
       <ShareCardModal

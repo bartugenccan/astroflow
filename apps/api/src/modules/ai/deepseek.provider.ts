@@ -5,6 +5,7 @@ import {
   GenerateJsonParams,
   GenerateTextParams,
 } from './ai-text-provider';
+import { noteAiFailure } from '../../common/ai/ai-call-tracker';
 
 interface DeepSeekResponse {
   choices: {
@@ -23,6 +24,19 @@ interface DeepSeekResponse {
  * the ~60s platform default the mobile client relies on.
  */
 const TOTAL_BUDGET_MS = 50_000;
+
+/** A non-2xx from DeepSeek. Carries only the status, never the response body. */
+export class DeepSeekHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`DeepSeek HTTP ${status}`);
+    this.name = 'DeepSeekHttpError';
+  }
+
+  /** 429 (rate limit) and 5xx are transient; 400/401/402 (bad request, key, balance) are not. */
+  get retryable(): boolean {
+    return this.status === 429 || this.status >= 500;
+  }
+}
 
 @Injectable()
 export class DeepSeekProvider implements AiTextProvider {
@@ -106,7 +120,9 @@ export class DeepSeekProvider implements AiTextProvider {
           signal: controller.signal,
         });
         if (!res.ok) {
-          throw new Error(`DeepSeek ${res.status}: ${await res.text()}`);
+          // The body can echo our prompt (user text) — log the status only.
+          await res.body?.cancel().catch(() => undefined);
+          throw new DeepSeekHttpError(res.status);
         }
         const data = (await res.json()) as DeepSeekResponse;
         const choice = data.choices?.[0];
@@ -125,12 +141,15 @@ export class DeepSeekProvider implements AiTextProvider {
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));
         this.logger.warn(`DeepSeek attempt ${attempt}/3 failed: ${lastError.message}`);
+        // Auth, billing and bad-request errors won't heal on retry — don't pay for two more.
+        if (err instanceof DeepSeekHttpError && !err.retryable) break;
         if (attempt < 3) await this.delay(attempt * 1000);
       } finally {
         clearTimeout(timeout);
       }
     }
-    throw new Error(`DeepSeek failed after 3 attempts: ${lastError?.message}`);
+    noteAiFailure();
+    throw new Error(`DeepSeek failed: ${lastError?.message ?? 'unknown error'}`);
   }
 
   async generateJson<T>(params: GenerateJsonParams): Promise<T> {
@@ -138,7 +157,13 @@ export class DeepSeekProvider implements AiTextProvider {
       ? `${params.user}\n\nReturn ONLY valid JSON matching: ${params.schemaHint}`
       : params.user;
     const raw = await this.generateText({ ...params, user });
-    return this.parseJson<T>(raw);
+    try {
+      return this.parseJson<T>(raw);
+    } catch (err) {
+      // Unparseable output means the caller will serve its stub — don't let it be cached.
+      noteAiFailure();
+      throw err;
+    }
   }
 
   /** Tolerant JSON extraction — strips code fences and slices to the outer braces. */

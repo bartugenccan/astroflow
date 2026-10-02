@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiHeader, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DeviceId } from '../../common/device/device-id.decorator';
 import { AstrologyAdapterService } from '../astrology/astrology-adapter.service';
 import { InterpretationService } from '../astrology/interpretation.service';
@@ -8,9 +8,11 @@ import { Locale } from '../astrology/interpretation.types';
 import { CompanionService } from './companion.service';
 import { MemoryService } from './memory.service';
 import { CompanionMessageDto } from './dto/companion-message.dto';
+import { AiRoute } from '../../common/auth/route-tags';
 
 @ApiTags('Companion')
-@ApiHeader({ name: 'x-device-id', description: 'Anonymous device identifier', required: false })
+@ApiBearerAuth()
+@AiRoute()
 @Controller('companion')
 export class CompanionController {
   constructor(

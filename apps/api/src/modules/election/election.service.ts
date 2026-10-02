@@ -23,15 +23,19 @@ import {
   electionSystemPrompt,
 } from './prompts/election.prompts';
 import { electionCheckStub, electionSearchStub } from './prompts/election.stubs';
+import { safeError } from '../../common/logging/safe-error';
+import { trackAiCalls } from '../../common/ai/ai-call-tracker';
 
 /** Bump when election prompts change so cached readings regenerate. */
-const ELECTION_CACHE_VERSION = 'e1';
+const ELECTION_CACHE_VERSION = 'e2';
 /** How far ahead a single date may be checked. */
 const MAX_YEARS_AHEAD = 3;
 /** Longest search window, in months. */
 const MAX_SEARCH_MONTHS = 12;
 /** Computed results kept in memory, so the reading call reuses the compute call's work. */
 const MEMO_LIMIT = 100;
+/** Free-text → event classifications kept in memory (oldest evicted first). */
+const CLASSIFIED_LIMIT = 500;
 
 const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
@@ -108,7 +112,7 @@ export class ElectionService {
           caution: str(p.caution, 800) || stub.caution,
         };
       } catch (err) {
-        this.logger.warn(`election check AI failed: ${(err as Error).message}`);
+        this.logger.warn(`election check AI failed: ${safeError(err)}`);
         return stub;
       }
     });
@@ -135,7 +139,7 @@ export class ElectionService {
           tips: tips.length === 3 ? tips : stub.tips,
         };
       } catch (err) {
-        this.logger.warn(`election search AI failed: ${(err as Error).message}`);
+        this.logger.warn(`election search AI failed: ${safeError(err)}`);
         return stub;
       }
     });
@@ -159,11 +163,14 @@ export class ElectionService {
         const p = await this.ai.generateJson<{ eventId?: string }>({ system: '', user, schemaHint, temperature: 0, maxTokens: 300 });
         if (p.eventId && (ELECTION_EVENT_IDS as readonly string[]).includes(p.eventId)) id = p.eventId as ElectionEventId;
       } catch (err) {
-        this.logger.warn(`election classify failed: ${(err as Error).message}`);
+        this.logger.warn(`election classify failed: ${safeError(err)}`);
       }
     }
     id = id ?? matchEventByKeywords(text) ?? 'new_beginning';
     this.classified.set(key, id);
+    if (this.classified.size > CLASSIFIED_LIMIT) {
+      this.classified.delete(this.classified.keys().next().value as string);
+    }
     return { id, label: ELECTION_PROFILES[id].name[locale], fromText: text };
   }
 
@@ -217,10 +224,14 @@ export class ElectionService {
       const hit = await this.prisma.interpretation.findUnique({ where: { cacheKey } });
       if (hit) return hit.content as T;
     } catch (err) {
-      this.logger.warn(`election cache read failed: ${(err as Error).message}`);
+      this.logger.warn(`election cache read failed: ${safeError(err)}`);
     }
 
-    const content = await build();
+    // No key: the result is templated text — serve it, never store it.
+    if (!this.ai.available) return build();
+    const { value: content, failed } = await trackAiCalls(build);
+    // An AI call failed while building, so (part of) this is stub text: serve, don't cache.
+    if (failed) return content;
 
     try {
       await this.prisma.interpretation.upsert({
@@ -230,12 +241,12 @@ export class ElectionService {
           kind,
           locale,
           content: content as object,
-          model: this.ai.available ? this.ai.model : 'stub',
+          model: this.ai.model,
         },
         update: {},
       });
     } catch (err) {
-      this.logger.warn(`election cache write failed: ${(err as Error).message}`);
+      this.logger.warn(`election cache write failed: ${safeError(err)}`);
     }
     return content;
   }

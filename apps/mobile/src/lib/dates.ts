@@ -9,6 +9,23 @@ const MONTHS_SHORT: Record<Locale, string[]> = {
   tr: ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"],
 };
 
+const MONTHS_LONG: Record<Locale, string[]> = {
+  en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  tr: ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"],
+};
+
+/** `1`-based month number to its full localized name. */
+export function monthLong(locale: Locale, month: number): string {
+  return MONTHS_LONG[locale][Math.min(11, Math.max(0, month - 1))] ?? "";
+}
+
+/** `"2026-03-14"` → `"14 March 2026"` / `"14 Mart 2026"`. Returns the input if unparseable. */
+export function formatDayMonthYearLong(locale: Locale, iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso;
+  return `${+m[3]} ${monthLong(locale, +m[2])} ${m[1]}`;
+}
+
 /** `1`-based month number to its short localized name. */
 export function monthShort(locale: Locale, month: number): string {
   return MONTHS_SHORT[locale][Math.min(11, Math.max(0, month - 1))] ?? "";

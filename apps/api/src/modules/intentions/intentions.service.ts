@@ -16,6 +16,7 @@ import { MemoryService } from '../companion/memory.service';
 import { IntentionStreakService } from './intention-streak.service';
 import { CreateIntentionDto } from './dto/create-intention.dto';
 import { CheckInDto } from './dto/checkin.dto';
+import { safeError } from '../../common/logging/safe-error';
 
 type LifeArea = 'love' | 'career' | 'money' | 'energy';
 
@@ -134,7 +135,7 @@ export class IntentionsService {
         }));
       return { suggestions: suggestions.length ? suggestions : intentionSuggestionsStub(locale).suggestions };
     } catch (err) {
-      this.logger.warn(`intention suggestions AI failed: ${(err as Error).message}`);
+      this.logger.warn(`intention suggestions AI failed: ${safeError(err)}`);
       return intentionSuggestionsStub(locale);
     }
   }
@@ -183,7 +184,7 @@ export class IntentionsService {
           strongerPhrasing: parsed.strongerPhrasing?.slice(0, 300) || undefined,
         };
       } catch (err) {
-        this.logger.warn(`check-in AI failed: ${(err as Error).message}`);
+        this.logger.warn(`check-in AI failed: ${safeError(err)}`);
         ai = checkInStub(locale, dto.conviction);
       }
     }

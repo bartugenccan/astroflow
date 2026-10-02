@@ -4,7 +4,6 @@ import {
   IsLatitude,
   IsLongitude,
   IsOptional,
-  IsString,
   Matches,
   Max,
   Min,
@@ -33,8 +32,4 @@ export class BirthInputDto {
   @IsOptional()
   @IsBoolean()
   unknownTime?: boolean;
-
-  @IsOptional()
-  @IsString()
-  deviceId?: string;
 }

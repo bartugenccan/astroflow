@@ -65,9 +65,12 @@ import {
   guidanceStub,
   affirmationStub,
 } from './prompts/interpretation.stubs';
+import { safeError } from '../../common/logging/safe-error';
+import { trackAiCalls } from '../../common/ai/ai-call-tracker';
+import { currentDeviceId } from '../../common/context/request-context';
 
 /** Bump when prompts/persona change so caches invalidate. */
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v10';
 
 type InterpretationKind =
   | 'PLACEMENT'
@@ -85,7 +88,13 @@ type InterpretationKind =
   | 'FORECAST_MONTHLY'
   | 'GUIDANCE'
   | 'INTENTION_AFFIRMATION'
-  | 'YEAR_AHEAD';
+  | 'YEAR_AHEAD'
+  | 'REPORT_NATAL_EXTRAS'
+  | 'TRANSIT_SPOTLIGHT'
+  | 'TRANSIT_QUARTER';
+
+/** Kinds another module (reports) may store through `cachedReading`. */
+export type ExternalReadingKind = 'REPORT_NATAL_EXTRAS' | 'TRANSIT_SPOTLIGHT' | 'TRANSIT_QUARTER';
 
 @Injectable()
 export class InterpretationService {
@@ -239,7 +248,7 @@ export class InterpretationService {
             summary: (parsed.summary ?? stub.summary).slice(0, 700),
           };
         } catch (err) {
-          this.logger.warn(`daily insight AI failed: ${(err as Error).message}`);
+          this.logger.warn(`daily insight AI failed: ${safeError(err)}`);
           return dailyInsightStub(locale, energyState);
         }
       },
@@ -500,7 +509,7 @@ export class InterpretationService {
             headline: headline.length > 0 ? headline.slice(0, 80) : stub.headline,
           };
         } catch (err) {
-          this.logger.warn(`compatibility AI failed: ${(err as Error).message}`);
+          this.logger.warn(`compatibility AI failed: ${safeError(err)}`);
           return compatibilityStub(locale, score.overall, score.dimensions);
         }
       },
@@ -564,7 +573,7 @@ export class InterpretationService {
             keyDates,
           };
         } catch (err) {
-          this.logger.warn(`forecast AI failed: ${(err as Error).message}`);
+          this.logger.warn(`forecast AI failed: ${safeError(err)}`);
           return forecastStub(locale, period, args.start);
         }
       },
@@ -647,7 +656,7 @@ export class InterpretationService {
             why: (parsed.why ?? stub.why).slice(0, 1200),
           };
         } catch (err) {
-          this.logger.warn(`year-ahead AI failed: ${(err as Error).message}`);
+          this.logger.warn(`year-ahead AI failed: ${safeError(err)}`);
           return yearAheadStub(locale, stubArgs);
         }
       },
@@ -690,7 +699,7 @@ export class InterpretationService {
               : stub.actions,
           };
         } catch (err) {
-          this.logger.warn(`guidance AI failed: ${(err as Error).message}`);
+          this.logger.warn(`guidance AI failed: ${safeError(err)}`);
           return guidanceStub(locale, args.topic);
         }
       },
@@ -724,7 +733,7 @@ export class InterpretationService {
           const text = (parsed.affirmation ?? '').trim();
           return { text: text.length > 0 ? text.slice(0, 300) : affirmationStub(locale, args.goalText) };
         } catch (err) {
-          this.logger.warn(`affirmation AI failed: ${(err as Error).message}`);
+          this.logger.warn(`affirmation AI failed: ${safeError(err)}`);
           return { text: affirmationStub(locale, args.goalText) };
         }
       },
@@ -745,6 +754,19 @@ export class InterpretationService {
   // ─── internals ───────────────────────────────────────────────────────────────
 
   /** Read-through cache: hit returns stored content; miss runs `build`, persists, returns. */
+  /**
+   * The same read-through cache (versioned key, stubs never stored, device-owned
+   * rows tagged) for readings built outside this service — the PDF reports.
+   */
+  cachedReading<T>(
+    kind: ExternalReadingKind,
+    locale: Locale,
+    rawKey: string,
+    build: () => Promise<T>,
+  ): Promise<T> {
+    return this.cached(kind, locale, rawKey, build);
+  }
+
   private async cached<T>(
     kind: InterpretationKind,
     locale: Locale,
@@ -756,10 +778,14 @@ export class InterpretationService {
       const hit = await this.prisma.interpretation.findUnique({ where: { cacheKey } });
       if (hit) return hit.content as T;
     } catch (err) {
-      this.logger.warn(`cache read failed: ${(err as Error).message}`);
+      this.logger.warn(`cache read failed: ${safeError(err)}`);
     }
 
-    const content = await build();
+    // No key: the result is templated text — serve it, never store it.
+    if (!this.ai.available) return build();
+    const { value: content, failed } = await trackAiCalls(build);
+    // An AI call failed while building, so (part of) this is stub text: serve, don't cache.
+    if (failed) return content;
 
     try {
       await this.prisma.interpretation.upsert({
@@ -769,12 +795,14 @@ export class InterpretationService {
           kind,
           locale,
           content: content as object,
-          model: this.ai.available ? this.ai.model : 'stub',
+          model: this.ai.model,
+          // Device-specific readings are tagged so the device's data deletion removes them.
+          deviceId: this.ownerOf(rawKey),
         },
         update: {},
       });
     } catch (err) {
-      this.logger.warn(`cache write failed: ${(err as Error).message}`);
+      this.logger.warn(`cache write failed: ${safeError(err)}`);
     }
     return content;
   }
@@ -803,7 +831,7 @@ export class InterpretationService {
       // mid-sentence.
       return text.length > 0 ? text.slice(0, 4000) : stub();
     } catch (err) {
-      this.logger.warn(`interpretation AI failed: ${(err as Error).message}`);
+      this.logger.warn(`interpretation AI failed: ${safeError(err)}`);
       return stub();
     }
   }
@@ -826,5 +854,11 @@ export class InterpretationService {
 
   private hash(input: string): string {
     return createHash('sha256').update(input).digest('hex');
+  }
+
+  /** The current device, if this cache key is specific to it. */
+  private ownerOf(rawKey: string): string | null {
+    const deviceId = currentDeviceId();
+    return deviceId && rawKey.includes(deviceId) ? deviceId : null;
   }
 }

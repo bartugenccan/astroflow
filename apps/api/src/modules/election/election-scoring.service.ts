@@ -11,6 +11,9 @@ import {
   matchAspect,
 } from '../astrology/astrology.constants';
 import { Locale } from '../astrology/interpretation.types';
+import { addDays, norm, sep, signed } from '../astrology/sky-scan';
+
+export { addDays };
 import { ElectionProfile } from './election.events';
 import {
   ElectionAlternative,
@@ -88,15 +91,8 @@ const BASE_SCORE = 60;
 const FIRST_HOUR = 7;
 const LAST_HOUR = 22;
 
-const norm = (d: number) => ((d % 360) + 360) % 360;
-const signed = (d: number) => norm(d + 180) - 180;
-const sep = (a: number, b: number) => Math.abs(signed(a - b));
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-export function addDays(iso: string, n: number): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
-}
 
 export function verdictFor(score: number): ElectionVerdict {
   if (score >= 75) return 'excellent';

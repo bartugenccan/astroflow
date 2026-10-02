@@ -62,6 +62,9 @@ enum InterpretationKind {
   TAROT_SYNTHESIS
   ELECTION_CHECK
   ELECTION_SEARCH
+  REPORT_NATAL_EXTRAS
+  TRANSIT_SPOTLIGHT
+  TRANSIT_QUARTER
 }
 
 // ──── Core Models ────────────────────────────────────────────────────────────
@@ -225,10 +228,14 @@ model Interpretation {
   locale     String
   content    Json
   model      String?
+  /// Set when the cached reading is specific to one device (tarot, daily insight,
+  /// guidance) so deleting that device's data can delete it too.
+  deviceId   String?
 
   createdAt  DateTime           @default(now())
 
   @@index([kind, locale])
+  @@index([deviceId])
   @@map("interpretations")
 }
 
@@ -362,4 +369,49 @@ model SavedPerson {
 
   @@index([deviceId, createdAt])
   @@map("saved_people")
+}
+
+// ─── Device identity & cost guards ───────────────────────────────────────────
+
+/// An anonymous install. The device id is issued (or, once, claimed) by
+/// POST /auth/device and only ever travels inside a signed device token.
+model DeviceIdentity {
+  deviceId  String    @id
+  createdAt DateTime  @default(now())
+  /// Set when the device's data is deleted — its token stops working.
+  revokedAt DateTime?
+
+  @@map("device_identities")
+}
+
+/// AI generations that missed the cache, per UTC day. `deviceId = "*"` is the
+/// system-wide counter. Backs the daily per-device and global AI budgets.
+model AiUsage {
+  day      String // "YYYY-MM-DD" (UTC)
+  deviceId String
+  count    Int    @default(0)
+
+  @@id([day, deviceId])
+  @@map("ai_usage")
+}
+
+/// A long PDF report (natal chart, or transits now → 24 months), assembled in
+/// the background. The app renders `data` into a PDF on the device.
+model Report {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String
+  kind      String // 'natal' | 'transit'
+  status    String   @default("queued") // queued | running | ready | failed
+  progress  Int      @default(0)
+  total     Int      @default(0)
+  stage     String?
+  locale    String
+  name      String
+  data      Json?
+  error     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deviceId, createdAt])
+  @@map("reports")
 }

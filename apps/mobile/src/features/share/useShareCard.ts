@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { View } from "react-native";
-import { captureRef } from "react-native-view-shot";
+import { captureRef, releaseCapture } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import * as Haptics from "expo-haptics";
 import { CARD_W, CARD_H } from "./ShareableCard";
@@ -17,6 +17,7 @@ export function useShareCard() {
 
   const share = useCallback(async () => {
     if (!ref.current) return;
+    let uri: string | null = null;
     try {
       const available = await Sharing.isAvailableAsync();
       if (!available) {
@@ -24,7 +25,7 @@ export function useShareCard() {
         return;
       }
       setStatus("capturing");
-      const uri = await captureRef(ref, {
+      uri = await captureRef(ref, {
         format: "png",
         quality: 1,
         result: "tmpfile",
@@ -41,6 +42,9 @@ export function useShareCard() {
       setStatus("idle");
     } catch {
       setStatus("error");
+    } finally {
+      // The card shows a name and chart details — don't leave the image behind in the cache.
+      if (uri) releaseCapture(uri);
     }
   }, []);
 

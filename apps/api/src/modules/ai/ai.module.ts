@@ -1,16 +1,19 @@
 import { Module } from '@nestjs/common';
-import { AIController } from './ai.controller';
-import { DeepSeekIntegrationService } from './deepseek-integration.service';
 import { DeepSeekProvider } from './deepseek.provider';
 import { AI_TEXT_PROVIDER } from './ai-text-provider';
+import { AiBudgetService } from './ai-budget.service';
+import { DeepSeekBalanceService } from './deepseek-balance.service';
+import { GuardedAiProvider } from './guarded-ai.provider';
 
 @Module({
-  controllers: [AIController],
   providers: [
-    DeepSeekIntegrationService,
-    // Active text-generation provider. Swap the class here to change vendors.
-    { provide: AI_TEXT_PROVIDER, useClass: DeepSeekProvider },
+    // Concrete vendor client. Swap this (and the GuardedAiProvider's inner) to change vendors.
+    DeepSeekProvider,
+    AiBudgetService,
+    DeepSeekBalanceService,
+    // What services inject: the vendor behind the balance + daily budget guards.
+    { provide: AI_TEXT_PROVIDER, useClass: GuardedAiProvider },
   ],
-  exports: [DeepSeekIntegrationService, AI_TEXT_PROVIDER],
+  exports: [AI_TEXT_PROVIDER, AiBudgetService, DeepSeekBalanceService],
 })
 export class AIModule {}

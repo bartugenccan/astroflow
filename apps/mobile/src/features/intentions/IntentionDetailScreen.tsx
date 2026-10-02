@@ -18,13 +18,19 @@ import { astrologyApi } from "../../services/astrologyApi";
 import { CheckInResult, Intention } from "../../services/types";
 import { useAsync } from "../../hooks/useAsync";
 import { useTranslation } from "../../i18n";
+import { isUuid } from "../../lib/ids";
 import { colors, spacing, radii } from "../../lib/design-system";
 
 export function IntentionDetailScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const loaded = useAsync(() => astrologyApi.getIntention(String(id)), [id]);
+  const params = useLocalSearchParams<{ id: string }>();
+  // Route params can come from a deep link; only a well-formed id reaches the API.
+  const id = isUuid(params.id) ? params.id : null;
+  const loaded = useAsync(
+    () => (id ? astrologyApi.getIntention(id) : Promise.reject(new Error("invalid id"))),
+    [id],
+  );
   const [local, setLocal] = useState<Intention | null>(null);
   const [checking, setChecking] = useState(false);
   // Bumped when the sheet closes after a check-in that completed the day, so

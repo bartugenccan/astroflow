@@ -34,6 +34,8 @@ import {
   ElectionQuery,
   ElectionSearch,
   ElectionSearchReading,
+  ReportData,
+  ReportMeta,
   TransitData,
   TransitReport,
   TransitDetail,
@@ -43,7 +45,7 @@ import {
 import type { AstrologyApi } from "./astrologyApi";
 import { Locale } from "../i18n";
 import { API_URL } from "./config";
-import { getDeviceId } from "./deviceId";
+import { getDeviceToken, resetDeviceToken } from "./deviceAuth";
 
 export class ApiError extends Error {
   constructor(
@@ -78,38 +80,24 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
   }
 }
 
-async function post<T>(
+/** Astrology endpoints take the birth DTO as the body and options as query params. */
+function post<T>(
   path: string,
   dto: CreateBirthProfileDto,
   locale?: Locale,
   extraQuery?: Record<string, string | number>,
 ): Promise<T> {
-  const deviceId = await getDeviceId();
-  const params = new URLSearchParams();
-  if (locale) params.set("locale", locale);
-  if (extraQuery) {
-    for (const [k, v] of Object.entries(extraQuery)) params.set(k, String(v));
-  }
-  const qs = params.toString();
-  const url = `${API_URL}/api/v1/astrology/${path}${qs ? `?${qs}` : ""}`;
-  const res = await fetchWithTimeout(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-device-id": deviceId,
-    },
-    body: JSON.stringify(dto),
+  return request<T>("POST", `astrology/${path}`, dto, {
+    ...(locale ? { locale } : {}),
+    ...extraQuery,
   });
-  if (!res.ok) {
-    throw new ApiError(`Request failed (${res.status})`, res.status);
-  }
-  return (await res.json()) as T;
 }
 
 /**
- * Generic request for endpoints whose body/method differs from the birth-dto
- * POST. `path` is relative to `/api/v1/` and includes the module prefix
- * (e.g. "astrology/compatibility", "companion/message", "intentions").
+ * Every API call. `path` is relative to `/api/v1/` and includes the module
+ * prefix (e.g. "astrology/compatibility", "companion/message", "intentions").
+ * Carries the device token; a 401 means it was revoked or expired, so the
+ * token is dropped, re-registered once, and the call retried.
  */
 async function request<T>(
   method: "GET" | "POST" | "DELETE" | "PATCH",
@@ -117,19 +105,25 @@ async function request<T>(
   body?: unknown,
   query?: Record<string, string | number>,
 ): Promise<T> {
-  const deviceId = await getDeviceId();
   const params = new URLSearchParams();
   if (query) for (const [k, v] of Object.entries(query)) params.set(k, String(v));
   const qs = params.toString();
   const url = `${API_URL}/api/v1/${path}${qs ? `?${qs}` : ""}`;
-  const res = await fetchWithTimeout(url, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "x-device-id": deviceId,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
+  const send = async () =>
+    fetchWithTimeout(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${await getDeviceToken()}`,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+
+  let res = await send();
+  if (res.status === 401) {
+    await resetDeviceToken();
+    res = await send();
+  }
   if (!res.ok) {
     throw new ApiError(`Request failed (${res.status})`, res.status);
   }
@@ -215,7 +209,7 @@ export const httpAstrologyApi: AstrologyApi = {
 
   listPeople: () => request<SavedPerson[]>("GET", "astrology/people"),
 
-  deletePerson: (id) => request<void>("DELETE", `astrology/people/${id}`),
+  deletePerson: (id) => request<void>("DELETE", `astrology/people/${encodeURIComponent(id)}`),
 
   async unlockFeature(feature) {
     await request<{ unlocked: boolean }>("POST", "astrology/unlock", undefined, { feature });
@@ -241,9 +235,9 @@ export const httpAstrologyApi: AstrologyApi = {
 
   listIntentions: () => request<Intention[]>("GET", "intentions"),
 
-  getIntention: (id) => request<Intention>("GET", `intentions/${id}`),
+  getIntention: (id) => request<Intention>("GET", `intentions/${encodeURIComponent(id)}`),
 
-  deleteIntention: (id) => request<void>("DELETE", `intentions/${id}`),
+  deleteIntention: (id) => request<void>("DELETE", `intentions/${encodeURIComponent(id)}`),
 
   async getIntentionSuggestions(dto, locale) {
     const res = await request<{ suggestions: IntentionSuggestion[] }>(
@@ -256,10 +250,10 @@ export const httpAstrologyApi: AstrologyApi = {
   },
 
   checkInIntention: (id, input, locale) =>
-    request<CheckInResult>("POST", `intentions/${id}/checkin`, input, { locale }),
+    request<CheckInResult>("POST", `intentions/${encodeURIComponent(id)}/checkin`, input, { locale }),
 
   getIntentionHistory: (id) =>
-    request<IntentionCheckInHistory[]>("GET", `intentions/${id}/history`),
+    request<IntentionCheckInHistory[]>("GET", `intentions/${encodeURIComponent(id)}/history`),
 
   // Tarot
   getTarotCard: (dto, spread, index, locale) =>
@@ -267,6 +261,20 @@ export const httpAstrologyApi: AstrologyApi = {
 
   getTarotSynthesis: (dto, spread, locale) =>
     request<TarotSynthesis>("POST", "tarot/synthesis", { ...dto, ...spread }, { locale }),
+
+  async deleteMyData() {
+    await request<unknown>("DELETE", "me/data");
+  },
+
+  createReport: (dto, input, locale) => request<ReportMeta>("POST", "reports", { ...dto, ...input }, { locale }),
+
+  listReports: () => request<ReportMeta[]>("GET", "reports"),
+
+  getReport: (id) => request<ReportMeta & { data: ReportData | null }>("GET", `reports/${encodeURIComponent(id)}`),
+
+  async deleteReport(id) {
+    await request<unknown>("DELETE", `reports/${encodeURIComponent(id)}`);
+  },
 
   // Election
   electionCheck: (dto, query, locale) =>

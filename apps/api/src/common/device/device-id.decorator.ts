@@ -1,22 +1,12 @@
-import {
-  createParamDecorator,
-  ExecutionContext,
-  BadRequestException,
-} from '@nestjs/common';
+import { createParamDecorator, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 
 /**
- * Extracts the anonymous device identifier from the `x-device-id` header
- * (falling back to a `deviceId` body field). Throws 400 when absent.
+ * The calling device, as proven by its signed device token (set on the request
+ * by the global DeviceAuthGuard). There is no header or body fallback any more:
+ * a device id the client merely asserts is never trusted.
  */
-export const DeviceId = createParamDecorator(
-  (_data: unknown, ctx: ExecutionContext): string => {
-    const req = ctx.switchToHttp().getRequest();
-    const fromHeader = req.headers['x-device-id'];
-    const header = Array.isArray(fromHeader) ? fromHeader[0] : fromHeader;
-    const deviceId = (header || req.body?.deviceId || '').toString().trim();
-    if (!deviceId) {
-      throw new BadRequestException('Missing device id (x-device-id header).');
-    }
-    return deviceId;
-  },
-);
+export const DeviceId = createParamDecorator((_data: unknown, ctx: ExecutionContext): string => {
+  const req = ctx.switchToHttp().getRequest<{ deviceId?: string }>();
+  if (!req.deviceId) throw new UnauthorizedException('Device token required');
+  return req.deviceId;
+});

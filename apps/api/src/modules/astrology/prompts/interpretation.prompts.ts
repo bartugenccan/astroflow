@@ -1,5 +1,6 @@
 import { Locale } from '../interpretation.types';
 import { SIGN_RULER, Sign } from '../astrology.constants';
+import { USER_DATA_RULE, userData } from '../../../common/ai/prompt-safety';
 
 /**
  * Prompt builders for chart interpretation. The AI writes in the requested
@@ -514,10 +515,10 @@ export function affirmationPrompt(
 ): { user: string; schemaHint: string } {
   const user =
     locale === 'tr'
-      ? `Kullanıcının hedefi: "${args.goalText}". Duygusal tonu Ay burcu ${args.moonSign} ile uyumlu olsun (ama burç adını YAZMA). ` +
+      ? `Kullanıcının hedefi: ${userData(args.goalText)}. ${USER_DATA_RULE.tr} Duygusal tonu Ay burcu ${args.moonSign} ile uyumlu olsun (ama burç adını YAZMA). ` +
         `Bu hedefi destekleyen, birinci tekil şahıs, şimdiki zaman, KISA ve İNANILIR bir olumlama (affirmation) yaz — kişinin gerçekten inanabileceği, abartısız, jargonsuz tek cümle. ` +
         `JSON üret: { "affirmation": string }.`
-      : `The user's goal: "${args.goalText}". Match the emotional tone to their Moon sign ${args.moonSign} (but do NOT name the sign). ` +
+      : `The user's goal: ${userData(args.goalText)}. ${USER_DATA_RULE.en} Match the emotional tone to their Moon sign ${args.moonSign} (but do NOT name the sign). ` +
         `Write a SHORT, BELIEVABLE affirmation supporting this goal — first person, present tense, one sentence the person can actually believe (no hype, no jargon). ` +
         `Produce JSON: { "affirmation": string }.`;
   return { user, schemaHint: '{ "affirmation": string }' };
@@ -540,19 +541,19 @@ export function checkInPrompt(
     : '';
   const said = args.userText
     ? locale === 'tr'
-      ? `Kişi şunu yazdı: "${args.userText}".`
-      : `They wrote: "${args.userText}".`
+      ? `Kişi şunu yazdı: ${userData(args.userText)}. ${USER_DATA_RULE.tr}`
+      : `They wrote: ${userData(args.userText)}. ${USER_DATA_RULE.en}`
     : locale === 'tr'
       ? 'Kişi bir not yazmadı.'
       : 'They wrote no note.';
 
   const user =
     locale === 'tr'
-      ? `Bir arkadaş gibi, kişinin "${args.goalText}" hedefindeki günlük olumlamasına ("${args.affirmation}") yaptığı check-in'e yanıt ver. ` +
+      ? `Bir arkadaş gibi, kişinin ${userData(args.goalText)} hedefindeki günlük olumlamasına ("${args.affirmation}") yaptığı check-in'e yanıt ver. ` +
         `Kişinin kendi inanç puanı: ${args.conviction}/5. ${said}\n${mem}` +
         `Kişinin YAZDIĞI dile bakarak inancını değerlendir: tereddüt, olumsuzlama, belirsizlik ("herhalde", "belki", "denerim") düşük inanç; birinci tekil, kararlı, somut ifade yüksek inanç. ` +
         `Yargılamadan, sıcak ve yapıcı ol. JSON üret: response (kısa, destekleyici yanıt), conviction (senin tahminin 1-5), followUp (kısa bir soru veya küçük öneri), strongerPhrasing (isteğe bağlı: daha inandırıcı bir olumlama önerisi).`
-      : `Like a friend, respond to the user's check-in on their daily affirmation ("${args.affirmation}") for the goal "${args.goalText}". ` +
+      : `Like a friend, respond to the user's check-in on their daily affirmation ("${args.affirmation}") for the goal ${userData(args.goalText)}. ` +
         `Their self-rated conviction: ${args.conviction}/5. ${said}\n${mem}` +
         `Judge conviction from the LANGUAGE they wrote: hedging, negation, vagueness ("I guess", "maybe", "I'll try") = low belief; first-person, decisive, concrete = high belief. ` +
         `Be warm and constructive, never judgmental. Produce JSON: response (short supportive reply), conviction (your estimate 1-5), followUp (a short question or small suggestion), strongerPhrasing (optional: a more believable rewrite of the affirmation).`;

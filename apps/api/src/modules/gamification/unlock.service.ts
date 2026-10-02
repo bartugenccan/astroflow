@@ -60,21 +60,26 @@ export class UnlockService {
         );
       }
 
-      if (user.starPoints < cost) {
+      // Atomic spend: the decrement only applies while the balance still covers the
+      // cost, so two concurrent unlocks can't both spend the same starting balance.
+      const spent = await tx.user.updateMany({
+        where: { id: userId, starPoints: { gte: cost } },
+        data: { starPoints: { decrement: cost } },
+      });
+      if (spent.count === 0) {
         throw new BadRequestException(
           `Insufficient star points. Required: ${cost}, Available: ${user.starPoints}`,
         );
       }
 
-      const newBalance = user.starPoints - cost;
-
+      // The unique (userId, featureType) index makes a duplicate unlock fail here,
+      // rolling the spend back with the transaction.
       const unlocked = await tx.unlockedFeature.create({
         data: { userId, featureType },
       });
-
-      await tx.user.update({
+      const { starPoints: newBalance } = await tx.user.findUniqueOrThrow({
         where: { id: userId },
-        data: { starPoints: newBalance },
+        select: { starPoints: true },
       });
 
       return {

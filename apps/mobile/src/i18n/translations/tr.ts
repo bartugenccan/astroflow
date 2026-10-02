@@ -1,12 +1,15 @@
 import { affirmationsTr } from "./affirmations.tr";
 import { tarotTr } from "./tarot.tr";
 import { electionTr } from "./election.tr";
+import { reportsTr } from "./reports.tr";
 import { glossaryTr } from "./glossary.tr";
 import { TranslationShape } from "./en";
 
 // Typed against en → the compiler flags any missing or misspelled key.
 export const tr: TranslationShape = {
   common: {
+    configErrorTitle: "Şu an bağlanamıyoruz",
+    configErrorBody: "Bu sürüm AstroFlow servisine bağlı değil. Lütfen uygulamayı güncelle ya da daha sonra tekrar dene.",
     continue: "Devam et",
     back: "Geri",
     skip: "Geç",
@@ -329,6 +332,7 @@ export const tr: TranslationShape = {
     unavailable: "Bu cihazda paylaşım kullanılamıyor.",
   },
   paywall: {
+    comingSoon: "Satın alma çok yakında.",
     title: "Tüm resmin kilidini aç",
     subtitle: "Daha derin rehberlik için Premium'a geç.",
     compatTitle: "Bu uyum raporunun kilidini aç",
@@ -426,12 +430,14 @@ export const tr: TranslationShape = {
     about: "Hakkında",
     version: "Sürüm",
     startOver: "Baştan başla",
-    startOverConfirm: "Haritanı sıfırlayıp yeniden başlayalım mı?",
+    startOverConfirm: "Bu telefondaki haritanı, olumlamalarını ve ses kayıtlarını siler, kurulumu yeniden başlatır. Sohbetlerin ve hedeflerin sunucuda kalır; onları da silmek için “Verilerimi sil”i kullan.",
     cancel: "İptal",
     reset: "Sıfırla",
-    devWipe: "Tüm verileri sil (geliştirici)",
-    devWipeConfirm: "Bu telefondaki her şeyi — profil, olumlamalar, ses kayıtları — siler ve uygulamayı yepyeni bir cihaz gibi başlatır. Geri alınamaz.",
-    devWipeAction: "Hepsini sil",
+    deleteData: "Verilerimi sil",
+    deleteDataConfirm: "Senin için tuttuğumuz her şeyi — Aster ile sohbetlerin, hedeflerin ve check-in'lerin, kayıtlı kişiler, okumalar — ve bu telefondaki her şeyi, ses kayıtları dahil, kalıcı olarak siler. Geri alınamaz.",
+    deleteDataAction: "Hepsini sil",
+    deleteDataFailed: "Sunucuya ulaşılamadı, hiçbir şey silinmedi. Bağlantını kontrol edip tekrar dene.",
+    deleting: "Siliniyor…",
   },
   signs: {
     Aries: "Koç", Taurus: "Boğa", Gemini: "İkizler", Cancer: "Yengeç",
@@ -528,4 +534,5 @@ export const tr: TranslationShape = {
   affirmations: affirmationsTr,
   tarot: tarotTr,
   election: electionTr,
+  reports: reportsTr,
 };

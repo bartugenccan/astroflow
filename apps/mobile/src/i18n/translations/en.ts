@@ -1,9 +1,12 @@
 import { affirmationsEn } from "./affirmations.en";
 import { tarotEn } from "./tarot.en";
 import { electionEn } from "./election.en";
+import { reportsEn } from "./reports.en";
 import { glossaryEn } from "./glossary.en";
 export const en = {
   common: {
+    configErrorTitle: "Can't connect right now",
+    configErrorBody: "This build is not connected to the AstroFlow service. Please update the app or try again later.",
     continue: "Continue",
     back: "Back",
     skip: "Skip",
@@ -326,6 +329,7 @@ export const en = {
     unavailable: "Sharing isn't available on this device.",
   },
   paywall: {
+    comingSoon: "Purchases are coming soon.",
     title: "Unlock the full picture",
     subtitle: "Go Premium for deeper guidance.",
     compatTitle: "Unlock this compatibility report",
@@ -423,12 +427,14 @@ export const en = {
     about: "About",
     version: "Version",
     startOver: "Start over",
-    startOverConfirm: "Reset your chart and begin again?",
+    startOverConfirm: "Clears your chart, affirmations and voice recordings on this phone and starts onboarding again. Your conversations and goals stay on the server — use “Delete my data” to remove those too.",
     cancel: "Cancel",
     reset: "Reset",
-    devWipe: "Delete all data (developer)",
-    devWipeConfirm: "Wipes everything on this phone — profile, affirmations, recordings — and starts as a brand-new device. This can't be undone.",
-    devWipeAction: "Delete everything",
+    deleteData: "Delete my data",
+    deleteDataConfirm: "Permanently deletes everything we hold for you — conversations with Aster, goals and check-ins, saved people, readings — and everything on this phone, including voice recordings. This can't be undone.",
+    deleteDataAction: "Delete everything",
+    deleteDataFailed: "We couldn't reach the server, so nothing was deleted. Check your connection and try again.",
+    deleting: "Deleting…",
   },
   signs: {
     Aries: "Aries", Taurus: "Taurus", Gemini: "Gemini", Cancer: "Cancer",
@@ -525,6 +531,7 @@ export const en = {
   affirmations: affirmationsEn,
   tarot: tarotEn,
   election: electionEn,
+  reports: reportsEn,
 };
 
 export type TranslationShape = typeof en;

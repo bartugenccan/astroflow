@@ -14,7 +14,7 @@ import { astrologyApi } from "../../services/astrologyApi";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
-import { wipeAllLocalData } from "../../services/devReset";
+import { deleteMyData, wipeAllLocalData } from "../../services/dataWipe";
 import { colors, spacing } from "../../lib/design-system";
 
 export function ProfileScreen() {
@@ -25,7 +25,6 @@ export function ProfileScreen() {
   const isPremium = useAppStore((s) => s.isPremium);
   const setLocale = useAppStore((s) => s.setLocale);
   const setBirthProfile = useAppStore((s) => s.setBirthProfile);
-  const reset = useAppStore((s) => s.reset);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -51,21 +50,33 @@ export function ProfileScreen() {
     }
   };
 
+  // Start over: clear this phone, keep the device identity (server data stays).
   const confirmReset = () => {
     Alert.alert(t("profile.startOver"), t("profile.startOverConfirm"), [
       { text: t("profile.cancel"), style: "cancel" },
-      { text: t("profile.reset"), style: "destructive", onPress: reset },
+      {
+        text: t("profile.reset"),
+        style: "destructive",
+        onPress: () => {
+          wipeAllLocalData({ keepIdentity: true }).catch(() => {});
+        },
+      },
     ]);
   };
 
-  const confirmWipe = () => {
-    Alert.alert(t("profile.devWipe"), t("profile.devWipeConfirm"), [
+  // Delete my data: server first, then this phone; nothing local goes if the server call fails.
+  const [deleting, setDeleting] = useState(false);
+  const confirmDelete = () => {
+    Alert.alert(t("profile.deleteData"), t("profile.deleteDataConfirm"), [
       { text: t("profile.cancel"), style: "cancel" },
       {
-        text: t("profile.devWipeAction"),
+        text: t("profile.deleteDataAction"),
         style: "destructive",
         onPress: () => {
-          wipeAllLocalData().catch(() => {});
+          setDeleting(true);
+          deleteMyData()
+            .catch(() => Alert.alert(t("profile.deleteData"), t("profile.deleteDataFailed")))
+            .finally(() => setDeleting(false));
         },
       },
     ]);
@@ -114,6 +125,12 @@ export function ProfileScreen() {
             title={t("glossary.ui.openGlossary")}
             subtitle={t("glossary.ui.openGlossarySub")}
             onPress={() => router.push("/glossary" as Href)}
+          />
+          <NavCard
+            icon="document-text-outline"
+            title={t("reports.title")}
+            subtitle={t("reports.navSub")}
+            onPress={() => router.push("/reports" as Href)}
           />
         </EnterView>
 
@@ -230,23 +247,21 @@ export function ProfileScreen() {
           </PressableScale>
         </EnterView>
 
-        {/* Developer builds only: behave like a fresh install (new device ID,
-            no local data). Never shipped to users. */}
-        {__DEV__ ? (
-          <EnterView index={7}>
-            <PressableScale
-              onPress={confirmWipe}
-              scaleTo={0.96}
-              style={styles.startOver}
-              accessibilityRole="button"
-            >
-              <Ionicons name="trash-outline" size={18} color={colors.semantic.error} />
-              <AppText variant="body" color={colors.semantic.error} style={styles.shrink}>
-                {t("profile.devWipe")}
-              </AppText>
-            </PressableScale>
-          </EnterView>
-        ) : null}
+        {/* Delete my data — server and phone. Required by both stores, so always shown. */}
+        <EnterView index={7}>
+          <PressableScale
+            onPress={confirmDelete}
+            disabled={deleting}
+            scaleTo={0.96}
+            style={styles.startOver}
+            accessibilityRole="button"
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.semantic.error} />
+            <AppText variant="body" color={colors.semantic.error} style={styles.shrink}>
+              {deleting ? t("profile.deleting") : t("profile.deleteData")}
+            </AppText>
+          </PressableScale>
+        </EnterView>
       </ScrollView>
 
       {profile ? (

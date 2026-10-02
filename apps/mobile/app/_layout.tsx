@@ -19,6 +19,8 @@ import {
 import { useAppStore } from "../src/store/useAppStore";
 import { colors } from "../src/lib/design-system";
 import { TermSheet } from "../src/features/glossary/TermSheet";
+import { ConfigErrorScreen } from "../src/components/ConfigErrorScreen";
+import { API_CONFIG_ERROR } from "../src/services/config";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,6 +45,7 @@ export default function RootLayout() {
   }, [ready]);
 
   if (!ready) return null;
+  if (API_CONFIG_ERROR) return <ConfigErrorScreen />;
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -71,6 +74,7 @@ export default function RootLayout() {
             <Stack.Screen name="intentions" />
             <Stack.Screen name="election" />
             <Stack.Screen name="glossary" />
+            <Stack.Screen name="reports" />
             <Stack.Screen
               name="companion"
               options={{ animation: "slide_from_bottom", fullScreenGestureEnabled: false }}

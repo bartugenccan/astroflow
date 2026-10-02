@@ -16,6 +16,16 @@ WORKDIR /app
 COPY . .
 RUN npx prisma generate --schema apps/api/prisma/schema.prisma
 RUN npm run build --workspace apps/api
+
+# ---- migrate: prisma CLI is a dev dependency, so migrations run from here ---
+# Deploy step (before starting a new runtime):
+#   docker build -f apps/api/Dockerfile --target migrate -t astroflow-api-migrate .
+#   docker run --rm -e DATABASE_URL=... astroflow-api-migrate
+FROM build AS migrate
+CMD ["npx", "prisma", "migrate", "deploy", "--schema", "apps/api/prisma/schema.prisma"]
+
+# ---- prod-deps: runtime node_modules without dev tooling --------------------
+FROM build AS prod-deps
 RUN npm prune --omit=dev --workspaces --include-workspace-root
 
 # ---- runtime --------------------------------------------------------------
@@ -27,18 +37,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
   && groupadd --system --gid 1001 app \
   && useradd --system --uid 1001 --gid app app
 
-COPY --from=build --chown=app:app /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
 COPY --from=build --chown=app:app /app/apps/api/dist ./apps/api/dist
-COPY --from=build --chown=app:app /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=prod-deps --chown=app:app /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build --chown=app:app /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build --chown=app:app /app/package.json ./package.json
 
 USER app
 EXPOSE 3000
 
-# Konteyner saglik kontrolu; Railway/Render healthcheck'i de /health'e bakar.
+# Konteyner saglik kontrolu; Railway/Render healthcheck'i de /api/v1/health'e bakar.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-# Migration'lar deploy aninda uygulanir, imaj build'inde degil.
-CMD ["sh", "-c", "npx prisma migrate deploy --schema apps/api/prisma/schema.prisma && node apps/api/dist/main.js"]
+# Migration'lar ayri 'migrate' hedefiyle uygulanir (yukari bak); bu imaj sadece API'yi calistirir.
+# nest build ciktisi dist/src/ altindadir (generated/ prisma istemcisi de derlendigi icin).
+CMD ["node", "apps/api/dist/src/main.js"]

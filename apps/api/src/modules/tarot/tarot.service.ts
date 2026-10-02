@@ -16,9 +16,12 @@ import {
 } from './prompts/tarot.prompts';
 import { tarotCardStub, tarotSynthesisStub } from './prompts/tarot.stubs';
 import { TarotCardReading, TarotContext, TarotSynthesis } from './tarot.types';
+import { safeError } from '../../common/logging/safe-error';
+import { trackAiCalls } from '../../common/ai/ai-call-tracker';
+import { currentDeviceId } from '../../common/context/request-context';
 
 /** Bump when tarot prompts change so cached readings regenerate. */
-const TAROT_CACHE_VERSION = 't1';
+const TAROT_CACHE_VERSION = 't2';
 
 const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 
@@ -65,7 +68,7 @@ export class TarotService {
           advice: str(p.advice, 900) || stub.advice,
         };
       } catch (err) {
-        this.logger.warn(`tarot card AI failed: ${(err as Error).message}`);
+        this.logger.warn(`tarot card AI failed: ${safeError(err)}`);
         return stub;
       }
     });
@@ -106,7 +109,7 @@ export class TarotService {
           affirmation: str(p.affirmation, 220) || stub.affirmation,
         };
       } catch (err) {
-        this.logger.warn(`tarot synthesis AI failed: ${(err as Error).message}`);
+        this.logger.warn(`tarot synthesis AI failed: ${safeError(err)}`);
         return stub;
       }
     });
@@ -135,7 +138,7 @@ export class TarotService {
         .flatMap((m) => m.aspects.slice(0, 1).map((a) => `${m.planet} ${a.aspect} natal ${a.natalPlanet}`))
         .slice(0, 2);
     } catch (err) {
-      this.logger.warn(`tarot transit context failed: ${(err as Error).message}`);
+      this.logger.warn(`tarot transit context failed: ${safeError(err)}`);
     }
     return {
       sun: chart.summary.sunSign,
@@ -169,10 +172,14 @@ export class TarotService {
       const hit = await this.prisma.interpretation.findUnique({ where: { cacheKey } });
       if (hit) return hit.content as T;
     } catch (err) {
-      this.logger.warn(`tarot cache read failed: ${(err as Error).message}`);
+      this.logger.warn(`tarot cache read failed: ${safeError(err)}`);
     }
 
-    const content = await build();
+    // No key: the result is templated text — serve it, never store it.
+    if (!this.ai.available) return build();
+    const { value: content, failed } = await trackAiCalls(build);
+    // An AI call failed while building, so (part of) this is stub text: serve, don't cache.
+    if (failed) return content;
 
     try {
       await this.prisma.interpretation.upsert({
@@ -182,13 +189,21 @@ export class TarotService {
           kind,
           locale,
           content: content as object,
-          model: this.ai.available ? this.ai.model : 'stub',
+          model: this.ai.model,
+          // Device-specific readings are tagged so the device's data deletion removes them.
+          deviceId: this.ownerOf(rawKey),
         },
         update: {},
       });
     } catch (err) {
-      this.logger.warn(`tarot cache write failed: ${(err as Error).message}`);
+      this.logger.warn(`tarot cache write failed: ${safeError(err)}`);
     }
     return content;
+  }
+
+  /** The current device, if this cache key is specific to it. */
+  private ownerOf(rawKey: string): string | null {
+    const deviceId = currentDeviceId();
+    return deviceId && rawKey.includes(deviceId) ? deviceId : null;
   }
 }

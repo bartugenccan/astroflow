@@ -25,6 +25,7 @@ import { ShimmerLines } from "../../components/ui/Shimmer";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { TransitWheel } from "../../components/TransitWheel";
 import { TransitMovementRow, rowLayoutTransition } from "./TransitMovementRow";
+import { ReportCta } from "../reports/ReportCta";
 import { astrologyApi } from "../../services/astrologyApi";
 import {
   dtoKey,
@@ -240,6 +241,9 @@ export function TransitsContent({
           </Loader>
         </HairlineCard>
       </EnterView>
+
+      {/* Reports are cast from the user's own birth data, never a saved person's. */}
+      {isOwn ? <ReportCta kind="transit" /> : null}
     </View>
   );
 }

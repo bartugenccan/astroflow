@@ -57,7 +57,11 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
 
   const cta = variant === "compat" ? t("paywall.unlock") : t("paywall.unlockPremium");
 
+  // No real payments yet: only dev builds can flip the stub. Release builds say "coming soon".
+  const canStubUnlock = __DEV__;
+
   const unlock = async () => {
+    if (!canStubUnlock) return;
     setBusy(true);
     try {
       if (variant === "compat") {
@@ -100,7 +104,13 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
       </View>
 
       <EnterView index={perks.length + 1}>
-        <GoldButton label={cta} onPress={unlock} loading={busy} style={{ marginTop: spacing.lg }} />
+        {canStubUnlock ? (
+          <GoldButton label={cta} onPress={unlock} loading={busy} style={{ marginTop: spacing.lg }} />
+        ) : (
+          <AppText variant="body" center color={colors.gold[200]} style={{ marginTop: spacing.lg }}>
+            {t("paywall.comingSoon")}
+          </AppText>
+        )}
       </EnterView>
       <PressableScale
         onPress={onClose}

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeatureType } from '../../../generated/prisma/client';
 
@@ -10,12 +11,21 @@ import { FeatureType } from '../../../generated/prisma/client';
  */
 @Injectable()
 export class DeviceEntitlementService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
+
+  /** Beta: everything Premium is open to everyone until real payments ship. */
+  get premiumBeta(): boolean {
+    return this.config.get<boolean>('PREMIUM_BETA') === true;
+  }
 
   async isFeatureUnlocked(
     deviceId: string,
     featureType: FeatureType,
   ): Promise<boolean> {
+    if (this.premiumBeta) return true;
     try {
       const hit = await this.prisma.deviceUnlockedFeature.findUnique({
         where: { deviceId_featureType: { deviceId, featureType } },
@@ -35,6 +45,7 @@ export class DeviceEntitlementService {
   }
 
   async listUnlocked(deviceId: string): Promise<FeatureType[]> {
+    if (this.premiumBeta) return Object.values(FeatureType);
     const rows = await this.prisma.deviceUnlockedFeature.findMany({
       where: { deviceId },
       select: { featureType: true },

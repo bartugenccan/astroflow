@@ -11,6 +11,7 @@ import { useElectionStore } from "../../store/useElectionStore";
 import { useTranslation } from "../../i18n";
 import { colors, radii, spacing } from "../../lib/design-system";
 import { CheckResult } from "./CheckResult";
+import { isIsoDay } from "../../lib/ids";
 import { SearchResult } from "./SearchResult";
 
 /** The answer to the current Election question — a date check or a date search. */
@@ -51,7 +52,9 @@ export function ElectionDayScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const dto = useBirthDto();
-  const { date } = useLocalSearchParams<{ date: string }>();
+  const params = useLocalSearchParams<{ date: string }>();
+  // Route params can come from a deep link; only a real calendar day is used.
+  const date = isIsoDay(params.date) ? params.date : null;
   const search = useElectionStore((s) => s.current);
   const scroll = useRef<ScrollView>(null);
 

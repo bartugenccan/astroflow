@@ -7,6 +7,7 @@ import {
   GuidanceAnswer,
   YearAhead,
 } from '../interpretation.types';
+import { signName } from '../../election/election.labels';
 
 /**
  * Deterministic, non-AI fallback copy so the app is fully functional with no
@@ -64,6 +65,9 @@ export function aspectStub(
     : `The ${aspect} between ${p1} and ${p2} blends these two energies in a defining way within your chart.`;
 }
 
+const ELEMENT_TR: Record<string, string> = { Fire: 'Ateş', Earth: 'Toprak', Air: 'Hava', Water: 'Su' };
+const MODALITY_TR: Record<string, string> = { Cardinal: 'öncü', Fixed: 'sabit', Mutable: 'değişken' };
+
 export function overviewStub(
   locale: Locale,
   sun: string,
@@ -71,7 +75,7 @@ export function overviewStub(
   dominantModality: string,
 ): string {
   return locale === 'tr'
-    ? `Haritanda ${dominantElement} elementi ve ${dominantModality} niteliği baskın. ${sun} Güneşin, bu dengeye kişisel bir yön ve amaç katıyor.`
+    ? `Haritanda ${ELEMENT_TR[dominantElement] ?? dominantElement} elementi ve ${MODALITY_TR[dominantModality] ?? dominantModality} niteliği baskın. ${signName(sun, locale)} Güneşin, bu dengeye kişisel bir yön ve amaç katıyor.`
     : `Your chart leans toward the ${dominantElement} element and a ${dominantModality} modality. Your ${sun} Sun gives this balance a personal direction and purpose.`;
 }
 

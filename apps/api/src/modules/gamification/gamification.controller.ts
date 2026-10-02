@@ -11,20 +11,35 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { GamificationService } from './gamification.service';
+import { Public } from '../../common/auth/public.decorator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { RitualType, FeatureType } from '../../../generated/prisma/client';
 
 class CompleteRitualDto {
+  @IsEnum(RitualType)
   ritualType: RitualType;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(240)
   durationMinutes?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   notes?: string;
 }
 
 class UnlockFeatureDto {
+  @IsEnum(FeatureType)
   featureType: FeatureType;
 }
 
 @ApiTags('Gamification')
 @ApiBearerAuth()
+// User JWT, not a device token.
+@Public()
 @Controller('gamification')
 @UseGuards(AuthGuard('jwt'))
 export class GamificationController {

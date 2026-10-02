@@ -1,12 +1,14 @@
 import { Body, Controller, Post, Query } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { DeviceId } from '../../common/device/device-id.decorator';
 import { Locale } from '../astrology/interpretation.types';
 import { TarotCardDto, TarotSpreadDto } from './dto/tarot-spread.dto';
 import { TarotService } from './tarot.service';
+import { AiRoute } from '../../common/auth/route-tags';
 
 @ApiTags('Tarot')
-@ApiHeader({ name: 'x-device-id', description: 'Anonymous device identifier', required: false })
+@ApiBearerAuth()
+@AiRoute()
 @Controller('tarot')
 export class TarotController {
   constructor(private readonly tarot: TarotService) {}

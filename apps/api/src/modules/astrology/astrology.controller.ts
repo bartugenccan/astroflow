@@ -5,11 +5,14 @@ import {
   ForbiddenException,
   Get,
   Param,
+  ParseUUIDPipe,
   Post,
   Query,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { ParseOptionalIsoDatePipe } from '../../common/validation/iso-date.pipe';
 import { createHash } from 'crypto';
-import { ApiTags, ApiOperation, ApiHeader, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import {
   AstrologyAdapterService,
   BirthInput,
@@ -30,6 +33,7 @@ import { SavePersonDto } from './dto/save-person.dto';
 import { bestDayReason } from './best-days.reasons';
 import { LifeArea } from './astrology.constants';
 import { Locale } from './interpretation.types';
+import { AiRoute } from '../../common/auth/route-tags';
 
 /**
  * Plain-language stand-ins for the houses, used to ground the year-ahead prompt
@@ -51,7 +55,7 @@ const HOUSE_THEME_HINT: Record<number, string> = {
 };
 
 @ApiTags('Astrology')
-@ApiHeader({ name: 'x-device-id', description: 'Anonymous device identifier', required: false })
+@ApiBearerAuth()
 @Controller('astrology')
 export class AstrologyController {
   constructor(
@@ -61,6 +65,7 @@ export class AstrologyController {
     private readonly solarReturn: SolarReturnService,
     private readonly entitlement: DeviceEntitlementService,
     private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
   ) {}
 
   @Post('natal')
@@ -91,6 +96,7 @@ export class AstrologyController {
     return this.buildReport(dto);
   }
 
+  @AiRoute()
   @Post('interpretation/transit')
   @ApiOperation({ summary: 'AI reading of one transiting planet on the natal chart' })
   @ApiQuery({ name: 'planet', example: 'Jupiter', required: true })
@@ -108,6 +114,7 @@ export class AstrologyController {
     return this.interpretation.getTransitDetail(movement, report.date, this.locale(locale));
   }
 
+  @AiRoute()
   @Post('interpretation/transit-overview')
   @ApiOperation({ summary: "AI overview of today's sky (opportunities + cautions)" })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -115,6 +122,7 @@ export class AstrologyController {
     return this.interpretation.getTransitOverview(this.buildReport(dto), this.locale(locale));
   }
 
+  @AiRoute()
   @Post('interpretation/placements')
   @ApiOperation({ summary: 'AI interpretation of every placement (planets + Ascendant)' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -122,6 +130,7 @@ export class AstrologyController {
     return this.interpretation.getPlacements(this.compute(dto), this.locale(locale));
   }
 
+  @AiRoute()
   @Post('interpretation/big-three')
   @ApiOperation({ summary: 'AI reading of the Sun/Moon/Rising trio' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -129,6 +138,7 @@ export class AstrologyController {
     return this.interpretation.getBigThree(this.compute(dto), this.locale(locale));
   }
 
+  @AiRoute()
   @Post('interpretation/aspects')
   @ApiOperation({ summary: 'AI interpretation of the tightest key aspects' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -136,6 +146,7 @@ export class AstrologyController {
     return this.interpretation.getAspects(this.compute(dto), this.locale(locale));
   }
 
+  @AiRoute()
   @Post('interpretation/overview')
   @ApiOperation({ summary: 'AI synthesis of the whole chart' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -143,6 +154,7 @@ export class AstrologyController {
     return this.interpretation.getOverview(this.compute(dto), this.locale(locale));
   }
 
+  @AiRoute()
   @Post('interpretation/house')
   @ApiOperation({ summary: 'AI interpretation of a single house (1-12)' })
   @ApiQuery({ name: 'house', example: 7, required: true })
@@ -156,6 +168,7 @@ export class AstrologyController {
     return this.interpretation.getHouse(this.compute(dto), n, this.locale(locale));
   }
 
+  @AiRoute()
   @Post('interpretation/nodes')
   @ApiOperation({ summary: 'AI analysis of the North & South lunar nodes' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -163,6 +176,7 @@ export class AstrologyController {
     return this.interpretation.getNodes(this.compute(dto), this.locale(locale));
   }
 
+  @AiRoute()
   @Post('interpretation/chart-context')
   @ApiOperation({ summary: 'Day/night sect + Saturn return analysis' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -170,6 +184,7 @@ export class AstrologyController {
     return this.interpretation.getChartContext(this.compute(dto), this.locale(locale));
   }
 
+  @AiRoute()
   @Post('insight')
   @ApiOperation({ summary: 'Daily insight for the device, cached per day' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -199,7 +214,7 @@ export class AstrologyController {
   async getBestDays(
     @Body() dto: BirthInputDto,
     @Query('days') days?: string,
-    @Query('start') start?: string,
+    @Query('start', ParseOptionalIsoDatePipe) start?: string,
     @Query('locale') locale?: string,
   ) {
     const n = Math.min(31, Math.max(1, parseInt(days ?? '30', 10) || 30));
@@ -215,30 +230,33 @@ export class AstrologyController {
     return this.withReasons(report, this.locale(locale));
   }
 
+  @AiRoute()
   @Post('forecast/weekly')
   @ApiOperation({ summary: 'AI weekly forecast grounded in the week\'s transits' })
   @ApiQuery({ name: 'start', example: '2026-07-27', required: false })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
   async getWeeklyForecast(
     @Body() dto: BirthInputDto,
-    @Query('start') start?: string,
+    @Query('start', ParseOptionalIsoDatePipe) start?: string,
     @Query('locale') locale?: string,
   ) {
     return this.buildForecast(dto, 'weekly', start, this.locale(locale));
   }
 
+  @AiRoute()
   @Post('forecast/monthly')
   @ApiOperation({ summary: 'AI monthly forecast grounded in the month\'s transits' })
   @ApiQuery({ name: 'start', example: '2026-07-01', required: false })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
   async getMonthlyForecast(
     @Body() dto: BirthInputDto,
-    @Query('start') start?: string,
+    @Query('start', ParseOptionalIsoDatePipe) start?: string,
     @Query('locale') locale?: string,
   ) {
     return this.buildForecast(dto, 'monthly', start, this.locale(locale));
   }
 
+  @AiRoute()
   @Post('year-ahead')
   @ApiOperation({
     summary:
@@ -253,7 +271,7 @@ export class AstrologyController {
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
   async getYearAhead(
     @Body() dto: BirthInputDto,
-    @Query('on') on?: string,
+    @Query('on', ParseOptionalIsoDatePipe) on?: string,
     @Query('locale') locale?: string,
   ) {
     const loc = this.locale(locale);
@@ -307,6 +325,7 @@ export class AstrologyController {
     };
   }
 
+  @AiRoute()
   @Post('compatibility/interpretation')
   @ApiOperation({ summary: 'AI synastry reading (gated: requires COMPATIBILITY unlock)' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
@@ -351,6 +370,11 @@ export class AstrologyController {
     @DeviceId() deviceId: string,
     @Query('feature') feature?: string,
   ) {
+    // No payment proof is checked here, so it must never grant anything in production.
+    // During the beta everyone is Premium anyway (PREMIUM_BETA); real IAP replaces this.
+    if (this.config.get<string>('NODE_ENV') === 'production') {
+      throw new ForbiddenException('Purchases are not available yet');
+    }
     const ft = (Object.values(FeatureType) as string[]).includes(feature ?? '')
       ? (feature as FeatureType)
       : FeatureType.COMPATIBILITY;
@@ -398,7 +422,7 @@ export class AstrologyController {
 
   @Delete('people/:id')
   @ApiOperation({ summary: 'Delete a saved person' })
-  async deletePerson(@Param('id') id: string, @DeviceId() deviceId: string) {
+  async deletePerson(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string) {
     await this.prisma.savedPerson.deleteMany({ where: { id, deviceId } });
     return { deleted: true };
   }

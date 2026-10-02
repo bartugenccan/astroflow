@@ -1,11 +1,13 @@
 import { Body, Controller, Post, Query } from '@nestjs/common';
-import { ApiHeader, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Locale } from '../astrology/interpretation.types';
 import { ElectionCheckDto, ElectionSearchDto } from './dto/election.dto';
 import { ElectionService } from './election.service';
+import { AiRoute } from '../../common/auth/route-tags';
 
 @ApiTags('Election')
-@ApiHeader({ name: 'x-device-id', description: 'Anonymous device identifier', required: false })
+@ApiBearerAuth()
+@AiRoute()
 @Controller('election')
 export class ElectionController {
   constructor(private readonly election: ElectionService) {}

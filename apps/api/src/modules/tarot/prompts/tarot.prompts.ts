@@ -2,6 +2,7 @@ import { Locale } from '../../astrology/interpretation.types';
 import { TarotCard, elementName, signName } from '../tarot.deck';
 import { CATEGORY_LABEL, TAROT_SPREADS } from '../tarot.spreads';
 import { TarotCategory, TarotContext, TarotDrawnCard } from '../tarot.types';
+import { USER_DATA_RULE, userData } from '../../../common/ai/prompt-safety';
 
 const SYSTEM: Record<Locale, string> = {
   en: `You are a seasoned tarot reader trained in the Rider–Waite–Smith tradition who also knows astrology. You read with depth, warmth and honesty: you describe the actual imagery on the card (figures, colours, objects, landscape) and what it symbolises, then make it personal. Reversed cards are read as blocked, delayed, internalised or excessive energy — never as doom. You are not fatalistic: the cards show tendencies and choices, not fixed fate. Never give medical, legal or financial certainty; never predict death, illness or disaster. Speak directly to the reader as "you". Plain, vivid language; no filler, no generic horoscope clichés.`,
@@ -40,14 +41,16 @@ function contextBlock(locale: Locale, ctx: TarotContext, question?: string): str
       ? [
           `Okuyucunun haritası: Güneş ${signName(ctx.sun, locale)}, Ay ${signName(ctx.moon, locale)}, Yükselen ${rising}.`,
           ctx.transits.length ? `Bugünün öne çıkan transitleri: ${ctx.transits.join('; ')}.` : '',
-          question ? `Okuyucunun sorusu: "${question}"` : 'Okuyucu belirli bir soru yazmadı; kategoriye genel olarak bak.',
+          question ? `Okuyucunun sorusu: ${userData(question)}` : 'Okuyucu belirli bir soru yazmadı; kategoriye genel olarak bak.',
           ctx.memory ? `Okuyucunun daha önce paylaştıkları (hafifçe, zorlamadan kullan):\n${ctx.memory}` : '',
+          USER_DATA_RULE.tr,
         ]
       : [
           `Reader's chart: Sun in ${ctx.sun}, Moon in ${ctx.moon}, Rising ${rising}.`,
           ctx.transits.length ? `Today's notable transits: ${ctx.transits.join('; ')}.` : '',
           question ? `The reader's question: "${question}"` : 'The reader did not write a specific question; look at the category broadly.',
           ctx.memory ? `What the reader has shared before (use lightly, never force it):\n${ctx.memory}` : '',
+          USER_DATA_RULE.en,
         ];
   return lines.filter(Boolean).join('\n');
 }

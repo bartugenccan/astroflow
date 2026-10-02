@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { safeError } from '../../common/logging/safe-error';
+import { sanitizeMemory, userData } from '../../common/ai/prompt-safety';
 
 export type MemoryKind = 'chat' | 'checkin' | 'topic' | 'goal' | 'fact';
 
@@ -16,12 +18,14 @@ export class MemoryService {
 
   /** Persist one thing worth remembering. Best-effort — never throws upward. */
   async remember(deviceId: string, kind: MemoryKind, text: string): Promise<void> {
-    const clean = (text ?? '').trim().slice(0, 400);
+    // Model-written "facts" are shorter and get the same scrubbing as user text:
+    // everything stored here is fed back into future prompts.
+    const clean = sanitizeMemory(text, kind === 'fact' ? 160 : 400);
     if (!clean) return;
     try {
       await this.prisma.memoryEntry.create({ data: { deviceId, kind, text: clean } });
     } catch (err) {
-      this.logger.warn(`memory write failed: ${(err as Error).message}`);
+      this.logger.warn(`memory write failed: ${safeError(err)}`);
     }
   }
 
@@ -47,19 +51,19 @@ export class MemoryService {
 
       const lines: string[] = [];
       if (intentions.length) {
-        lines.push(`Active goals: ${intentions.map((i) => i.goalText).join('; ')}.`);
+        lines.push(`Active goals: ${intentions.map((i) => userData(i.goalText)).join('; ')}.`);
       }
       if (entries.length) {
         // Oldest→newest reads more naturally as a recap.
         lines.push(
           ...entries
             .reverse()
-            .map((e) => `- (${e.kind}) ${e.text}`),
+            .map((e) => `- (${e.kind}) ${userData(e.text)}`),
         );
       }
       return lines.join('\n');
     } catch (err) {
-      this.logger.warn(`memory read failed: ${(err as Error).message}`);
+      this.logger.warn(`memory read failed: ${safeError(err)}`);
       return '';
     }
   }

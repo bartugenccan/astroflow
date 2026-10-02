@@ -2,6 +2,7 @@ import { Locale } from '../../astrology/interpretation.types';
 import { ELECTION_PROFILES } from '../election.events';
 import { shortDate, signName } from '../election.labels';
 import { ElectionCheck, ElectionSearch } from '../election.types';
+import { USER_DATA_RULE, userData } from '../../../common/ai/prompt-safety';
 
 const SYSTEM: Record<Locale, string> = {
   en: `You are a seasoned electional astrologer who explains timing in plain, warm language. You are given factors that were already COMPUTED from an ephemeris — use only those; never invent planetary positions, dates or hours that are not in the input. You are not fatalistic: a weak day means friction, not doom, and the reader always decides. Never promise legal, financial or relationship outcomes. Speak directly to the reader as "you". Avoid jargon; when you name a factor, say in a few words what it means for them.`,
@@ -21,8 +22,8 @@ function eventLine(r: ElectionCheck | ElectionSearch, locale: Locale): string {
   const name = ELECTION_PROFILES[r.event.id].name[locale];
   if (!r.event.fromText) return name;
   return locale === 'tr'
-    ? `${name} (okuyucunun kendi ifadesi: "${r.event.fromText}")`
-    : `${name} (in the reader's words: "${r.event.fromText}")`;
+    ? `${name} (okuyucunun kendi ifadesi: ${userData(r.event.fromText)}; ${USER_DATA_RULE.tr})`
+    : `${name} (in the reader's words: ${userData(r.event.fromText)}; ${USER_DATA_RULE.en})`;
 }
 
 export function electionCheckPrompt(locale: Locale, r: ElectionCheck): { user: string; schemaHint: string } {
@@ -126,7 +127,7 @@ export function electionClassifyPrompt(text: string): { user: string; schemaHint
     .map((p) => `- ${p.id}: ${p.name.en}`)
     .join('\n');
   return {
-    user: `Map the event below to the closest id from this list. If nothing fits, use "new_beginning".\n${list}\n\nEvent: "${text}"`,
+    user: `Map the event below to the closest id from this list. If nothing fits, use "new_beginning".\n${list}\n\nEvent: ${userData(text)}\n${USER_DATA_RULE.en}`,
     schemaHint: '{ "eventId": string }',
   };
 }

@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { safeError } from '../../common/logging/safe-error';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { Origin, Horoscope } = require('circular-natal-horoscope-js');
 
@@ -53,6 +54,8 @@ const SUN_DEG_PER_DAY = 0.9856473;
  */
 @Injectable()
 export class EphemerisService {
+  private readonly logger = new Logger(EphemerisService.name);
+
   /**
    * Zone offset (ms to add to a local wall-clock to get UTC) for a location on a
    * given day. Memoised per location+day: the offset only moves at DST
@@ -86,9 +89,9 @@ export class EphemerisService {
         language: 'en',
       }) as RawHoroscope;
     } catch (err) {
-      throw new BadRequestException(
-        `Unable to compute chart: ${(err as Error).message}`,
-      );
+      // The library's message stays in the log; the client gets a generic one.
+      this.logger.warn(`compute chart failed: ${safeError(err)}`);
+      throw new BadRequestException('Unable to compute chart for these inputs');
     }
   }
 
@@ -114,9 +117,9 @@ export class EphemerisService {
         language: 'en',
       }) as RawHoroscope;
     } catch (err) {
-      throw new BadRequestException(
-        `Unable to compute transits: ${(err as Error).message}`,
-      );
+      // The library's message stays in the log; the client gets a generic one.
+      this.logger.warn(`compute transits failed: ${safeError(err)}`);
+      throw new BadRequestException('Unable to compute transits for these inputs');
     }
   }
 
@@ -141,9 +144,9 @@ export class EphemerisService {
         language: 'en',
       }) as RawHoroscope;
     } catch (err) {
-      throw new BadRequestException(
-        `Unable to compute return chart: ${(err as Error).message}`,
-      );
+      // The library's message stays in the log; the client gets a generic one.
+      this.logger.warn(`compute return chart failed: ${safeError(err)}`);
+      throw new BadRequestException('Unable to compute return chart for these inputs');
     }
   }
 
@@ -164,9 +167,9 @@ export class EphemerisService {
         language: 'en',
       }) as RawHoroscope;
     } catch (err) {
-      throw new BadRequestException(
-        `Unable to compute positions: ${(err as Error).message}`,
-      );
+      // The library's message stays in the log; the client gets a generic one.
+      this.logger.warn(`compute positions failed: ${safeError(err)}`);
+      throw new BadRequestException('Unable to compute positions for these inputs');
     }
   }
 
@@ -282,13 +285,13 @@ export class EphemerisService {
 
   private parseDate(s: string): { year: number; month: number; day: number } {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-    if (!m) throw new BadRequestException(`Invalid birthDate: ${s}`);
+    if (!m) throw new BadRequestException('Invalid date (expected YYYY-MM-DD)');
     return { year: +m[1], month: +m[2], day: +m[3] };
   }
 
   private parseTime(s: string): { hour: number; minute: number } {
     const m = /^(\d{2}):(\d{2})$/.exec(s);
-    if (!m) throw new BadRequestException(`Invalid birthTime: ${s}`);
+    if (!m) throw new BadRequestException('Invalid time (expected HH:mm)');
     return { hour: +m[1], minute: +m[2] };
   }
 }

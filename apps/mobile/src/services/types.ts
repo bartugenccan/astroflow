@@ -674,3 +674,118 @@ export type ElectionSearchQuery = {
   to: string;
 };
 export type ElectionQuery = ElectionCheckQuery | ElectionSearchQuery;
+
+// ─── PDF reports (mirrors apps/api/src/modules/reports/reports.types.ts) ──────
+
+export type ReportKind = "natal" | "transit";
+export type ReportStatus = "queued" | "running" | "ready" | "failed";
+
+export interface ReportMeta {
+  id: string;
+  kind: ReportKind;
+  status: ReportStatus;
+  progress: number;
+  total: number;
+  stage: string | null;
+  name: string;
+  locale: string;
+  createdAt: string;
+  error: string | null;
+}
+
+export interface ReportBirth {
+  birthDate: string;
+  birthTime: string;
+  unknownTime: boolean;
+  latitude: number;
+  longitude: number;
+  placeName?: string;
+}
+
+export interface NatalBalance {
+  elements: Record<"Fire" | "Earth" | "Air" | "Water", number>;
+  modalities: Record<"Cardinal" | "Fixed" | "Mutable", number>;
+  dominantElement: string;
+  dominantModality: string;
+  chartRuler: { planet: string; sign: string; house: number } | null;
+}
+
+export interface NatalExtras {
+  balance: string;
+  chartRuler: string;
+  themes: { love: string; career: string; money: string; growth: string };
+  closing: string;
+}
+
+export interface NatalReportData {
+  kind: "natal";
+  name: string;
+  birth: ReportBirth;
+  generatedAt: string;
+  chart: NatalChartData;
+  bigThree: BigThreeReading;
+  overview: ChartOverview;
+  context: ChartContext;
+  placements: PlacementInterpretation[];
+  houses: HouseInterpretation[];
+  aspects: AspectInterpretation[];
+  nodes: NodeAnalysis;
+  balance: NatalBalance;
+  extras: NatalExtras;
+}
+
+export type TimelineEventKind = "aspect" | "house_ingress" | "sign_ingress" | "station" | "eclipse";
+
+export interface TimelineEvent {
+  id: string;
+  kind: TimelineEventKind;
+  planet: string;
+  target?: string;
+  aspect?: string;
+  nature?: "harmonic" | "challenging" | "neutral";
+  house?: number;
+  sign?: string;
+  direction?: "retrograde" | "direct";
+  eclipse?: "solar" | "lunar";
+  start: string;
+  end: string;
+  exact: string[];
+  weight: number;
+  label?: string;
+}
+
+export interface TransitSpotlight {
+  eventId: string;
+  title: string;
+  text: string;
+  howToUse: string;
+}
+
+export interface TransitQuarter {
+  from: string;
+  to: string;
+  title: string;
+  text: string;
+  focus: string[];
+}
+
+export interface TransitReportData {
+  kind: "transit";
+  name: string;
+  birth: ReportBirth;
+  generatedAt: string;
+  chart: NatalChartData;
+  today: { report: TransitReport; overview: TransitOverview; details: TransitDetail[] };
+  timeline: { from: string; to: string; events: TimelineEvent[] };
+  spotlights: TransitSpotlight[];
+  quarters: TransitQuarter[];
+}
+
+export type ReportData = NatalReportData | TransitReportData;
+
+export interface CreateReportInput {
+  kind: ReportKind;
+  name: string;
+  placeName?: string;
+  unknownTime?: boolean;
+}

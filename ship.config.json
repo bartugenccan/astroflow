@@ -10,17 +10,22 @@
   "compliance": {
     "accountDeletion": {
       "inApp": true,
-      "route": "DELETE /users/account (users.controller.ts:58)"
+      "route": "DELETE /api/v1/me/data (privacy.controller.ts) — Profil > Verilerimi sil; kullanici hesabi icin DELETE /api/v1/users/account",
+      "scope": "Sohbet, hafiza notlari, niyetler ve check-in'ler, kayitli kisiler, cihaz haritasi, kilitler, AI sayaclari, cihaza ozel onbellekli okumalar; ardindan cihaz token'i iptal edilir. Cihazdaki tum veriler (ses kayitlari dahil) de silinir."
     },
     "ai": {
       "used": true,
-      "providers": ["DeepSeek"],
+      "providers": [
+        "DeepSeek"
+      ],
       "dataShared": [
         "Dogum haritasindan turetilen yerlesimler (gunes, ay, yukselen, gezegen/burc/ev, acilar)",
         "Gunun transit ozeti",
         "Kullanicinin companion sohbetinde yazdigi serbest metin",
         "Kullanicinin yazdigi olumlama metni (rezonans skoru icin)",
-        "Kullanici hakkinda saklanan hafiza notlari (MemoryEntry)"
+        "Kullanici hakkinda saklanan hafiza notlari (MemoryEntry)",
+        "Tarot sorusu (kullanici yazarsa)",
+        "Eleksiyon icin kullanicinin yazdigi olay metni"
       ],
       "notShared": [
         "Ham dogum tarihi/saati/yeri - harita sunucuda hesaplanir, saglayiciya gonderilmez"
@@ -57,22 +62,59 @@
         "purpose": "Dil ve saat dilimi",
         "dataSent": "yok",
         "privacyManifest": "gerekli"
+      },
+      {
+        "name": "Open-Meteo Geocoding API",
+        "purpose": "Dogum yeri / etkinlik yeri sehir aramasi",
+        "dataSent": "Yazilan sehir arama metni, dil kodu ve cihaz IP adresi (HTTPS, anahtarsiz, cihaz kimligi yok)",
+        "privacyManifest": "n/a (dogrudan HTTPS cagrisi, SDK degil)"
+      },
+      {
+        "name": "expo-secure-store",
+        "purpose": "Cihaz token'i ve dogum verisinin Keychain/Keystore'da saklanmasi",
+        "dataSent": "yok - yerel",
+        "privacyManifest": "gerekli"
       }
     ],
     "dataSafetySubmitted": false,
-    "$note": "Sentry, PostHog ve odeme SDK'si kurulunca bu envantere EKLENMELIDIR."
+    "$note": "Sentry, PostHog ve odeme SDK'si kurulunca bu envantere EKLENMELIDIR.",
+    "localDataProtection": {
+      "keychain": "Cihaz token'i ve useAppStore (dogum tarihi/saati/yeri) expo-secure-store ile, AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY",
+      "asyncStorage": "Tarot, eleksiyon ve olumlama gecmisi (sifresiz, uygulama sandbox'i)",
+      "files": "Olumlama ses kayitlari Documents/affirmations (iOS Data Protection varsayilani; sunucuya gonderilmez)",
+      "backup": "Android allowBackup=false"
+    }
   },
   "testing": {
     "criticalModules": [
-      { "label": "Efemeris / harita hesabi", "pattern": "(ephemeris|astrology-engine|synastry)" },
-      { "label": "Yorum uretimi (AI)", "pattern": "(interpretation|companion|deepseek)" },
-      { "label": "Yetkilendirme / premium kilit", "pattern": "(entitlement|unlock|paywall)" },
-      { "label": "Kimlik dogrulama", "pattern": "(users|jwt|auth)" },
-      { "label": "Streak ve niyet durum makinesi", "pattern": "(streak|intention|score)" }
+      {
+        "label": "Efemeris / harita hesabi",
+        "pattern": "(ephemeris|astrology-engine|synastry)"
+      },
+      {
+        "label": "Yorum uretimi (AI)",
+        "pattern": "(interpretation|companion|deepseek)"
+      },
+      {
+        "label": "Yetkilendirme / premium kilit",
+        "pattern": "(entitlement|unlock|paywall)"
+      },
+      {
+        "label": "Kimlik dogrulama",
+        "pattern": "(users|jwt|auth)"
+      },
+      {
+        "label": "Streak ve niyet durum makinesi",
+        "pattern": "(streak|intention|score)"
+      }
     ]
   },
   "release": {
-    "ios": { "enabled": true },
-    "android": { "enabled": true }
+    "ios": {
+      "enabled": true
+    },
+    "android": {
+      "enabled": true
+    }
   }
 }

@@ -36,6 +36,9 @@ import {
   ElectionSearch,
   ElectionSearchQuery,
   ElectionSearchReading,
+  CreateReportInput,
+  ReportData,
+  ReportMeta,
   TransitData,
   TransitReport,
   TransitDetail,
@@ -196,6 +199,15 @@ export interface AstrologyApi {
     spread: TarotSpread,
     locale: Locale,
   ): Promise<TarotSynthesis>;
+
+  /** Delete everything the server holds for this device (and revoke its token). */
+  deleteMyData(): Promise<void>;
+
+  // PDF reports — a background job; poll getReport until status is "ready".
+  createReport(dto: CreateBirthProfileDto, input: CreateReportInput, locale: Locale): Promise<ReportMeta>;
+  listReports(): Promise<ReportMeta[]>;
+  getReport(id: string): Promise<ReportMeta & { data: ReportData | null }>;
+  deleteReport(id: string): Promise<void>;
 
   // Election — the computed result comes back fast; the reading is the AI layer.
   electionCheck(dto: CreateBirthProfileDto, query: ElectionCheckQuery, locale: Locale): Promise<ElectionCheck>;
@@ -492,6 +504,44 @@ const mockAstrologyApi: AstrologyApi = {
   async getTarotSynthesis(_dto, spread, locale) {
     await delay();
     return mockTarotSynthesis(spread, locale);
+  },
+
+  // Reports need the real backend (dozens of AI sections); the mock says so.
+  async createReport(_dto, input) {
+    await delay();
+    return {
+      id: `${Date.now()}`,
+      kind: input.kind,
+      status: "failed",
+      progress: 0,
+      total: 0,
+      stage: null,
+      name: input.name,
+      locale: "en",
+      createdAt: new Date().toISOString(),
+      error: "offline",
+    };
+  },
+
+  async listReports() {
+    await delay();
+    return [];
+  },
+
+  async getReport() {
+    throw new Error("Reports need the API (EXPO_PUBLIC_API_URL)");
+  },
+
+  async deleteReport() {
+    await delay();
+  },
+
+  async deleteMyData() {
+    await delay();
+    mockPeople.splice(0);
+    mockChat.splice(0);
+    mockIntentions.splice(0);
+    mockUnlocked.clear();
   },
 
   // Election
