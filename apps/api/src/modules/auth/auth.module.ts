@@ -9,16 +9,20 @@ import { AppleVerifier } from './providers/apple.verifier';
 import { GoogleVerifier } from './providers/google.verifier';
 import { EmailOtpService } from './providers/email-otp.service';
 import { ResendMailer } from './providers/resend.mailer';
+import { VaultController } from './vault/vault.controller';
+import { VaultService } from './vault/vault.service';
+import { MascotModule } from '../mascot/mascot.module';
 
 /**
  * Identity: anonymous installs (device tokens: issue, verify, revoke) and the
- * optional accounts on top of them (Apple / Google / email code).
+ * optional accounts on top of them (Apple / Google / email code), and the
+ * signed-in user's encrypted notes backup (vault).
  */
 @Global()
 @Module({
   // Secrets are passed per call (device tokens use JWT_DEVICE_SECRET).
-  imports: [JwtModule.register({})],
-  controllers: [DeviceAuthController, AccountController],
+  imports: [JwtModule.register({}), MascotModule],
+  controllers: [DeviceAuthController, AccountController, VaultController],
   providers: [
     DeviceAuthService,
     AccountService,
@@ -27,6 +31,7 @@ import { ResendMailer } from './providers/resend.mailer';
     GoogleVerifier,
     EmailOtpService,
     ResendMailer,
+    VaultService,
   ],
   exports: [DeviceAuthService, AccountService],
 })

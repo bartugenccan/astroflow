@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AI_TEXT_PROVIDER, AiTextProvider } from '../ai/ai-text-provider';
 import { AstrologyAdapterService } from '../astrology/astrology-adapter.service';
@@ -15,7 +15,11 @@ import {
 import { MemoryService } from '../companion/memory.service';
 import { IntentionStreakService, StreakView } from './intention-streak.service';
 import { MascotDelta, MascotService } from '../mascot/mascot.service';
-import { CreateIntentionDto } from './dto/create-intention.dto';
+import { AffirmationPreviewDto, CreateIntentionDto } from './dto/create-intention.dto';
+import { DeviceSkyService } from '../plan/device-sky.service';
+import { nextLunarPeak } from '../mascot/mascot-rules';
+import { LIFE_AREA_HOUSES, starState, visiblePowerDays } from './intention-rules';
+import type { NatalChartData } from '../astrology/astrology-adapter.service';
 import { CheckInDto } from './dto/checkin.dto';
 import { safeError } from '../../common/logging/safe-error';
 import { localToday } from '../../common/context/request-context';
@@ -42,6 +46,7 @@ export class IntentionsService {
     private readonly memory: MemoryService,
     private readonly streaks: IntentionStreakService,
     private readonly mascot: MascotService,
+    private readonly sky: DeviceSkyService,
   ) {}
 
   private area(category: string, provided?: LifeArea): LifeArea {
@@ -54,18 +59,9 @@ export class IntentionsService {
   }
 
   async create(deviceId: string, dto: CreateIntentionDto, locale: Locale) {
-    const time = dto.unknownTime ? '12:00' : dto.birthTime;
-    const chart = this.adapter.getNatalChart(dto.birthDate, time, dto.latitude, dto.longitude);
     const lifeArea = this.area(dto.category, dto.lifeArea);
-    const affirmation = await this.interpretation.getAffirmation(
-      {
-        goalText: dto.goalText,
-        lifeArea,
-        moonSign: chart.summary.moonSign,
-        sunSign: chart.summary.sunSign,
-      },
-      locale,
-    );
+    const affirmation =
+      dto.affirmation?.trim() || (await this.affirmationFor(dto, dto.goalText, lifeArea, locale));
 
     const intention = await this.prisma.intention.create({
       data: {
@@ -75,6 +71,8 @@ export class IntentionsService {
         lifeArea,
         affirmation,
         dailyTarget: dto.dailyTarget,
+        natalHouse: LIFE_AREA_HOUSES[lifeArea].main,
+        plantedMoon: dto.plant === 'newMoon' ? nextLunarPeak(new Date(), 'new') : null,
       },
     });
     await this.memory.remember(deviceId, 'goal', dto.goalText);
@@ -83,12 +81,77 @@ export class IntentionsService {
     return { ...(await this.withProgress(intention, deviceId)), mascot };
   }
 
-  async list(deviceId: string) {
+  async list(deviceId: string, status: 'active' | 'manifested' = 'active') {
     const rows = await this.prisma.intention.findMany({
-      where: { deviceId, status: 'active' },
-      orderBy: { createdAt: 'desc' },
+      where: { deviceId, status },
+      orderBy: status === 'manifested' ? { manifestedAt: 'desc' } : { createdAt: 'desc' },
     });
     return Promise.all(rows.map((r) => this.withProgress(r, deviceId)));
+  }
+
+  /** The chart-framed affirmation for a wish, before it is planted (wizard step). */
+  async previewAffirmation(dto: AffirmationPreviewDto, locale: Locale) {
+    return { affirmation: await this.affirmationFor(dto, dto.goalText, dto.lifeArea, locale) };
+  }
+
+  /**
+   * Where each life area lives in the user's natal chart: its house, the cusp
+   * sign, the ruler and the planets inside. Read from the stored chart; when
+   * the birth time is unknown the houses are only approximate.
+   */
+  async areas(deviceId: string) {
+    const natal = await this.sky.natal(deviceId);
+    if (!natal) throw new NotFoundException('No chart for this device yet');
+    const areas = (Object.keys(LIFE_AREA_HOUSES) as LifeArea[]).map((area) =>
+      areaContext(natal.chart, area, natal.unknownTime),
+    );
+    return { areas };
+  }
+
+  /** A wish came true: it moves to the "manifested" shelf and Aster celebrates. */
+  async manifest(deviceId: string, id: string) {
+    const res = await this.prisma.intention.updateMany({
+      where: { id, deviceId, status: 'active' },
+      data: { status: 'manifested', manifestedAt: new Date() },
+    });
+    if (res.count === 0) throw new ConflictException('Only an active wish can be manifested');
+    const mascot = await this.mascot.awardSafely(deviceId, 'MANIFESTED', id);
+    return { ...(await this.get(deviceId, id)), mascot };
+  }
+
+  /**
+   * The wish's power days: the next `days` days scored for its life area from
+   * the user's transits, each with the transit that drives it. Before Glimmer
+   * only the first few are visible — Aster's growth unlocks the rest.
+   */
+  async powerDays(deviceId: string, id: string, days = 14) {
+    const intention = await this.prisma.intention.findFirst({ where: { id, deviceId } });
+    if (!intention) throw new NotFoundException('Intention not found');
+    const area = intention.lifeArea as LifeArea;
+    const birth = await this.sky.requireBirth(deviceId);
+    const n = Math.max(1, Math.min(31, days));
+    const best = this.sky.bestDays(birth, n, this.today());
+    const stage = (await this.mascot.getState(deviceId)).stage;
+    const visible = visiblePowerDays(stage, best.scores.length);
+    const reasons = new Map(best.daily[area].map((d) => [d.date, d]));
+    return {
+      area,
+      stage,
+      visible,
+      days: best.scores.map((s, i) => {
+        const locked = i >= visible;
+        const r = reasons.get(s.date);
+        return {
+          date: s.date,
+          locked,
+          score: locked ? null : s[area],
+          reason:
+            locked || !r
+              ? null
+              : { transitPlanet: r.transitPlanet, natalPlanet: r.natalPlanet, aspect: r.aspect, nature: r.nature },
+        };
+      }),
+    };
   }
 
   async get(deviceId: string, id: string) {
@@ -225,6 +288,7 @@ export class IntentionsService {
         currentStreak: res.currentStreak,
         longestStreak: res.longestStreak,
         shieldsUsed: streak.shieldsUsed + res.shieldsUsed,
+        lastActiveDate: res.lastActiveDate,
       };
       milestoneName = res.milestoneName;
       dayCompleted = true;
@@ -267,19 +331,49 @@ export class IntentionsService {
 
   // ─── helpers ───────────────────────────────────────────────────────────────
 
+  /** Generate the chart-framed affirmation from the birth data in the request. */
+  private async affirmationFor(
+    birth: { birthDate: string; birthTime: string; latitude: number; longitude: number; unknownTime?: boolean },
+    goalText: string,
+    lifeArea: LifeArea,
+    locale: Locale,
+  ): Promise<string> {
+    const time = birth.unknownTime ? '12:00' : birth.birthTime;
+    const chart = this.adapter.getNatalChart(birth.birthDate, time, birth.latitude, birth.longitude);
+    return this.interpretation.getAffirmation(
+      { goalText, lifeArea, moonSign: chart.summary.moonSign, sunSign: chart.summary.sunSign },
+      locale,
+    );
+  }
+
   private async withProgress(
-    intention: { id: string; dailyTarget: number } & Record<string, unknown>,
+    intention: { id: string; dailyTarget: number; plantedMoon?: string | null } & Record<string, unknown>,
     deviceId: string,
   ) {
     const today = this.today();
-    const [count, streak] = await Promise.all([
+    const [count, streak, conviction] = await Promise.all([
       this.prisma.intentionCheckIn.count({ where: { intentionId: intention.id, date: today } }),
       this.streaks.read(deviceId, intention.id, today),
+      this.prisma.intentionCheckIn.aggregate({
+        where: { intentionId: intention.id },
+        _avg: { conviction: true },
+        _count: { _all: true },
+      }),
     ]);
+    const star = starState(
+      {
+        totalCheckIns: conviction._count._all,
+        avgConviction: conviction._avg.conviction,
+        lastActiveDate: streak.lastActiveDate,
+        plantedMoon: intention.plantedMoon ?? null,
+      },
+      today,
+    );
     return {
       ...intention,
       progress: { count, target: intention.dailyTarget },
       streak,
+      star,
     };
   }
 }
@@ -310,4 +404,21 @@ function mergeDeltas(deltas: (MascotDelta | null)[]): MascotDelta | null {
 function clampConviction(n?: number): number | null {
   if (typeof n !== 'number' || Number.isNaN(n)) return null;
   return Math.max(1, Math.min(5, Math.round(n)));
+}
+
+/** One life area's place in the natal chart (house, cusp, ruler, planets inside). */
+function areaContext(chart: NatalChartData, area: LifeArea, unknownTime: boolean) {
+  const { main } = LIFE_AREA_HOUSES[area];
+  const h = chart.houses.find((x) => x.house === main);
+  return {
+    area,
+    house: main,
+    sign: h?.sign ?? null,
+    ruler: h?.ruler ?? null,
+    rulerSign: h?.rulerSign ?? null,
+    rulerHouse: h?.rulerHouse ?? null,
+    planets: h?.planetsInHouse ?? [],
+    /** Houses need the birth time; without it this is only a sketch. */
+    approximate: unknownTime,
+  };
 }

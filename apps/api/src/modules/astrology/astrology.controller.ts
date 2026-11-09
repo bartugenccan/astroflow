@@ -1,3 +1,4 @@
+import { localToday } from '../../common/context/request-context';
 import {
   Body,
   ConflictException,
@@ -206,7 +207,8 @@ export class AstrologyController {
       dto.latitude,
       dto.longitude,
     );
-    const date = new Date().toISOString().slice(0, 10);
+    // The user's local day, so the cached insight and the SKY_READ award agree.
+    const date = localToday();
     const insight = await this.interpretation.getDailyInsight(chart, transits, deviceId, this.locale(locale), date);
     // Reading today's sky feeds Aster (once per local day; never blocks the reading).
     await this.mascot.awardSafely(deviceId, 'SKY_READ');

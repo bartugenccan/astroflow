@@ -6,6 +6,7 @@ import { AppleVerifier } from '../providers/apple.verifier';
 import { EmailOtpService } from '../providers/email-otp.service';
 import type { VerifiedIdentity } from '../providers/verified-identity';
 import { SubjectMergeService } from './subject-merge.service';
+import { MascotDelta, MascotService } from '../../mascot/mascot.service';
 
 /** What the app sees about the account behind its subject. */
 export interface AccountView {
@@ -21,6 +22,8 @@ export interface LinkResult {
   token: string | null;
   /** true = signed in to an existing account; false = linked to this install's data. */
   signedIn: boolean;
+  /** The one-time stardust thank-you for protecting Aster (null when already given). */
+  mascot: MascotDelta | null;
 }
 
 const lower = (p: AuthProvider) => p.toLowerCase() as Lowercase<AuthProvider>;
@@ -44,7 +47,13 @@ export class AccountService {
     private readonly merge: SubjectMergeService,
     private readonly apple: AppleVerifier,
     private readonly emailOtp: EmailOtpService,
+    private readonly mascot: MascotService,
   ) {}
+
+  /** Protecting Aster with an account earns stardust, once per subject. */
+  private reward(subjectId: string): Promise<MascotDelta | null> {
+    return this.mascot.awardSafely(subjectId, 'ACCOUNT_LINKED', 'account');
+  }
 
   async linkOrSignIn(principal: DevicePrincipal, id: VerifiedIdentity): Promise<LinkResult> {
     const existing = await this.prisma.authIdentity.findUnique({
@@ -61,7 +70,7 @@ export class AccountService {
         });
       }
       if (existing.account.subjectId === principal.subjectId) {
-        return { account: await this.view(existing.accountId), token: null, signedIn: false };
+        return { account: await this.view(existing.accountId), token: null, signedIn: false, mascot: null };
       }
       if (current) {
         throw new ConflictException({
@@ -71,7 +80,8 @@ export class AccountService {
       }
       await this.merge.merge(principal.subjectId, existing.account.subjectId);
       const token = await this.deviceAuth.issueFor(principal.installId, existing.account.subjectId);
-      return { account: await this.view(existing.accountId), token, signedIn: true };
+      const mascot = await this.reward(existing.account.subjectId);
+      return { account: await this.view(existing.accountId), token, signedIn: true, mascot };
     }
 
     const account =
@@ -100,7 +110,8 @@ export class AccountService {
       }
       throw err;
     }
-    return { account: await this.view(account.id), token: null, signedIn: false };
+    const mascot = await this.reward(principal.subjectId);
+    return { account: await this.view(account.id), token: null, signedIn: false, mascot };
   }
 
   async forSubject(subjectId: string): Promise<AccountView | null> {

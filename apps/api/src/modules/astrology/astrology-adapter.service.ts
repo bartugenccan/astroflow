@@ -166,6 +166,8 @@ export interface BestDaysResponse {
   days: number;
   scores: BestDayScore[];
   top: Record<LifeArea, BestDayTop[]>;
+  /** Every day's driving transit per area, in date order (power days, plan reasons). */
+  daily: Record<LifeArea, BestDayTop[]>;
 }
 
 // Characteristic geocentric daily motion (deg/day) — the planet's *pace*, used
@@ -564,6 +566,7 @@ export class AstrologyAdapterService {
       days,
       scores,
       top,
+      daily: perArea,
     };
   }
 

@@ -13,6 +13,7 @@ import { AIModule } from './modules/ai/ai.module';
 import { CompanionModule } from './modules/companion/companion.module';
 import { IntentionsModule } from './modules/intentions/intentions.module';
 import { MascotModule } from './modules/mascot/mascot.module';
+import { PlanModule } from './modules/plan/plan.module';
 import { TarotModule } from './modules/tarot/tarot.module';
 import { ElectionModule } from './modules/election/election.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
@@ -53,6 +54,7 @@ const MINUTE = 60_000;
     CompanionModule,
     IntentionsModule,
     MascotModule,
+    PlanModule,
     TarotModule,
     ElectionModule,
     PrivacyModule,

@@ -1,8 +1,8 @@
-import { BadRequestException, Body, Controller, Get, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DeviceId } from '../../common/device/device-id.decorator';
 import { MascotService } from './mascot.service';
-import { MascotEquipDto, MascotEventDto, MascotPurchaseDto } from './dto/mascot.dto';
+import { MascotEclipseDto, MascotEquipDto, MascotEventDto, MascotPurchaseDto } from './dto/mascot.dto';
 import { lunarWindow } from './mascot-rules';
 
 @ApiTags('Mascot')
@@ -41,5 +41,23 @@ export class MascotController {
   @ApiOperation({ summary: 'Set the accessories Aster wears (one per slot)' })
   equip(@Body() dto: MascotEquipDto, @DeviceId() deviceId: string) {
     return this.mascot.equip(deviceId, dto.itemIds);
+  }
+
+  @Post('eclipse')
+  @ApiOperation({ summary: 'Start an eclipse: a chosen rest that pauses streaks and nudges' })
+  startEclipse(@Body() dto: MascotEclipseDto, @DeviceId() deviceId: string) {
+    return this.mascot.startEclipse(deviceId, dto.days);
+  }
+
+  @Delete('eclipse')
+  @ApiOperation({ summary: 'Wake from an eclipse early' })
+  endEclipse(@DeviceId() deviceId: string) {
+    return this.mascot.endEclipse(deviceId);
+  }
+
+  @Get('constellations')
+  @ApiOperation({ summary: 'The constellation album: every key, found or not' })
+  constellations(@DeviceId() deviceId: string) {
+    return this.mascot.constellations(deviceId);
   }
 }

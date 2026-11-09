@@ -8,6 +8,7 @@ import { companionChatPrompt, companionSystemPrompt } from './companion.prompts'
 import { companionStub } from '../astrology/prompts/interpretation.stubs';
 import { ChatMessageDto, ChatReply } from './companion.types';
 import { safeError } from '../../common/logging/safe-error';
+import { localToday } from '../../common/context/request-context';
 
 /** Stored chat turns per subject; older ones are deleted as new ones arrive. */
 const CHAT_HISTORY_KEEP = 200;
@@ -55,13 +56,26 @@ export class CompanionService {
     });
 
     const chart = this.adapter.getNatalChart(birth.birthDate, birth.birthTime, birth.latitude, birth.longitude);
-    const [digest, recent] = await Promise.all([
+    const today = localToday();
+    const [digest, recent, moods, plan] = await Promise.all([
       this.memory.getDigest(deviceId),
       this.prisma.chatMessage.findMany({
         where: { deviceId },
         orderBy: { createdAt: 'desc' },
         take: 8,
         select: { role: true, content: true },
+      }),
+      // Labels only — the check-in never stores free text.
+      this.prisma.moodCheckIn.findMany({
+        where: { deviceId },
+        orderBy: { localDate: 'desc' },
+        take: 7,
+        select: { localDate: true, sky: true },
+      }),
+      // Only an already-built plan; chatting never triggers the transit maths.
+      this.prisma.dailyPlan.findUnique({
+        where: { deviceId_localDate: { deviceId, localDate: today } },
+        select: { payload: true },
       }),
     ]);
     const history = recent.reverse();
@@ -75,7 +89,10 @@ export class CompanionService {
         const { user, schemaHint } = companionChatPrompt(locale, {
           sun: chart.summary.sunSign,
           moon: chart.summary.moonSign,
+          rising: chart.summary.risingSign,
           transits,
+          moods: moods.map((m) => `${m.localDate}: ${m.sky.toLowerCase()}`),
+          focusArea: (plan?.payload as { focusArea?: string } | null)?.focusArea ?? null,
           memory: digest,
           history,
           message: clean,

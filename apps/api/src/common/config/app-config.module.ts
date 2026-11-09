@@ -39,6 +39,8 @@ import * as Joi from 'joi';
         // Beta switch: true = everyone Premium. Defaults to false so a production
         // deploy that forgets the variable never gives Premium away.
         PREMIUM_BETA: Joi.boolean().default(false),
+        // Dev/test only: shortens Aster's journey (minutes). Ignored in production.
+        JOURNEY_MINUTES: Joi.number().integer().min(1).max(600).optional(),
         // Error reporting (read early by src/instrument.ts; validated here).
         SENTRY_DSN: Joi.string().uri().allow('').optional(),
         SENTRY_ENVIRONMENT: Joi.string().allow('').optional(),

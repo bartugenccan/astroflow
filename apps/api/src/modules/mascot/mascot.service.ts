@@ -4,17 +4,29 @@ import { localToday } from '../../common/context/request-context';
 import { safeError } from '../../common/logging/safe-error';
 import {
   ABILITIES,
+  ECLIPSE_MAX_DAYS,
   EVENT_RULES,
+  JOURNEY_MIN_ENERGY,
+  JourneyStatus,
   MAX_SHIELDS,
   MascotEventKind,
+  SHIELD_EVERY_JOURNEYS,
   SHIELD_MIN_STAGE,
   STAGES,
+  advanceOrbit,
+  eclipseActive,
+  eclipseDays,
   energyFor,
   isoWeek,
+  journeyStatus,
   moodFor,
+  shiftDays,
   stageBounds,
   stageFor,
+  stardustFor,
+  viewOrbit,
 } from './mascot-rules';
+import { ALL_CONSTELLATIONS } from './constellations';
 import { CATALOG, CatalogItem, catalogItem } from './mascot-catalog';
 
 /** What one award did — the app turns this into a celebration. */
@@ -48,8 +60,38 @@ export interface MascotView {
   owned: string[];
   /** Awards earned today, by kind — drives the "Today's quests" ticks. */
   today: Partial<Record<MascotEventKind, number>>;
+  /** The device-wide "I showed up" streak. */
+  orbit: { streak: number; best: number; countedToday: boolean; atRisk: boolean };
+  /** A chosen rest: streaks pause, quests and nudges go quiet. */
+  eclipse: { active: boolean; start: string | null; end: string | null; maxDays: number };
+  journey: {
+    status: JourneyStatus;
+    minEnergy: number;
+    returnsAt: string | null;
+    /** Only once Aster is back — no peeking while it's away. */
+    discovery: JourneyDiscovery | null;
+    constellationKey: string | null;
+    completed: number;
+    shieldEvery: number;
+  };
+  /** Today's sky check-in, if done. */
+  skyCheckIn: { sky: string; energy: number } | null;
+  constellations: { found: number; total: number };
   abilities: { key: string; minStage: number; unlocked: boolean; available: boolean }[];
   catalog: (CatalogItem & { owned: boolean; locked: boolean })[];
+}
+
+export interface JourneyDiscovery {
+  transitPlanet: string;
+  aspect: string;
+  natalPoint: string;
+  nature: string;
+  orb: number;
+  sign: string;
+  title: string;
+  body: string;
+  /** Deep link inside the app ("Haritanda gör"). */
+  link: string;
 }
 
 type StateRow = {
@@ -62,6 +104,12 @@ type StateRow = {
   shields: number;
   lastFreeShieldWeek: string | null;
   hatchedAt: Date | null;
+  orbitStreak: number;
+  orbitBest: number;
+  orbitLastDate: string | null;
+  journeysCompleted: number;
+  eclipseStart: string | null;
+  eclipseEnd: string | null;
 };
 
 function ids(json: unknown): string[] {
@@ -126,26 +174,29 @@ export class MascotService {
       }
     }
 
-    let xpGained = 0;
+    let awarded = false;
     if (slotKey !== null) {
       try {
         await this.prisma.mascotEvent.create({
           data: { deviceId, kind, localDate: today, refKey: slotKey, xp: rule.xp },
         });
-        xpGained = rule.xp;
+        awarded = true;
       } catch (err) {
         if (!isUniqueViolation(err)) throw err;
       }
     }
+    const xpGained = awarded ? rule.xp : 0;
+    const stardustGained = awarded ? stardustFor(kind) : 0;
 
     const hatchNow = !!opts.hatch && !before.hatchedAt;
     let after: StateRow = before;
-    if (xpGained > 0 || hatchNow) {
+    if (awarded) after = await this.advanceOrbitFor(before, kind, today);
+    if (awarded || hatchNow) {
       after = await this.prisma.mascotState.update({
         where: { deviceId },
         data: {
           xp: { increment: xpGained },
-          stardust: { increment: xpGained },
+          stardust: { increment: stardustGained },
           ...(hatchNow ? { hatchedAt: new Date() } : {}),
         },
       });
@@ -159,7 +210,7 @@ export class MascotService {
     return {
       kind,
       xpGained,
-      stardustGained: xpGained,
+      stardustGained,
       xp: after.xp,
       stardust: after.stardust,
       stage: after.stage,
@@ -185,10 +236,44 @@ export class MascotService {
     }
   }
 
+  /**
+   * The first award of a local day moves the orbit on (bridging missed days
+   * with shields, skipping eclipse days). Linking an account is not "showing
+   * up", so it never counts.
+   */
+  private async advanceOrbitFor(state: StateRow, kind: MascotEventKind, today: string): Promise<StateRow> {
+    if (kind === 'ACCOUNT_LINKED' || state.orbitLastDate === today) return state;
+    const next = advanceOrbit(
+      { streak: state.orbitStreak, best: state.orbitBest, lastDate: state.orbitLastDate },
+      today,
+      state.shields,
+      eclipseDays({ start: state.eclipseStart, end: state.eclipseEnd }),
+    );
+    if (!next.changed) return state;
+    // Guarded on the day we read, so two awards racing can't both advance it.
+    await this.prisma.mascotState.updateMany({
+      where: { deviceId: state.deviceId, orbitLastDate: state.orbitLastDate },
+      data: {
+        orbitStreak: next.streak,
+        orbitBest: next.best,
+        orbitLastDate: next.lastDate,
+        ...(next.shieldsUsed > 0 ? { shields: { decrement: Math.min(next.shieldsUsed, state.shields) } } : {}),
+      },
+    });
+    return this.ensure(state.deviceId);
+  }
+
   async getState(deviceId: string): Promise<MascotView> {
     const today = localToday();
     let state = await this.ensure(deviceId);
     state = await this.grantWeeklyShield(state, today);
+    const eclipse = { start: state.eclipseStart, end: state.eclipseEnd };
+    const resting = eclipseActive(eclipse, today);
+    const [journey, checkIn, found] = await Promise.all([
+      this.prisma.mascotJourney.findUnique({ where: { deviceId_localDate: { deviceId, localDate: today } } }),
+      this.prisma.moodCheckIn.findUnique({ where: { deviceId_localDate: { deviceId, localDate: today } } }),
+      this.prisma.mascotConstellation.count({ where: { deviceId } }),
+    ]);
 
     const events = await this.prisma.mascotEvent.findMany({
       where: { deviceId, localDate: today },
@@ -200,6 +285,8 @@ export class MascotService {
     const energy = energyFor(kinds);
     const owned = ids(state.owned);
     const { floor, next } = stageBounds(state.stage);
+    const status = journeyStatus(journey, energy, resting, new Date());
+    const back = status === 'returned' || status === 'claimed';
 
     return {
       xp: state.xp,
@@ -216,6 +303,24 @@ export class MascotService {
       equipped: ids(state.equipped),
       owned,
       today: counts,
+      orbit: viewOrbit(
+        { streak: state.orbitStreak, best: state.orbitBest, lastDate: state.orbitLastDate },
+        today,
+        state.shields,
+        eclipseDays(eclipse),
+      ),
+      eclipse: { active: resting, start: state.eclipseStart, end: state.eclipseEnd, maxDays: ECLIPSE_MAX_DAYS },
+      journey: {
+        status,
+        minEnergy: JOURNEY_MIN_ENERGY,
+        returnsAt: journey?.returnsAt.toISOString() ?? null,
+        discovery: back ? (journey?.discovery as unknown as JourneyDiscovery) : null,
+        constellationKey: back ? (journey?.constellationKey ?? null) : null,
+        completed: state.journeysCompleted,
+        shieldEvery: SHIELD_EVERY_JOURNEYS,
+      },
+      skyCheckIn: checkIn ? { sky: checkIn.sky, energy: checkIn.energy } : null,
+      constellations: { found, total: ALL_CONSTELLATIONS.length },
       abilities: ABILITIES.map((a) => ({
         key: a.key,
         minStage: a.minStage,
@@ -303,6 +408,60 @@ export class MascotService {
       data: { equipped: [...bySlot.values()] },
     });
     return this.getState(deviceId);
+  }
+
+  /** Rest for `days` local days starting today; replaces any earlier eclipse. */
+  async startEclipse(deviceId: string, days: number): Promise<MascotView> {
+    const n = Math.max(1, Math.min(ECLIPSE_MAX_DAYS, Math.round(days)));
+    const today = localToday();
+    await this.ensure(deviceId);
+    await this.prisma.mascotState.update({
+      where: { deviceId },
+      data: { eclipseStart: today, eclipseEnd: shiftDays(today, n - 1) },
+    });
+    return this.getState(deviceId);
+  }
+
+  /** Wake from an eclipse early. Days already rested stay rested (end = yesterday). */
+  async endEclipse(deviceId: string): Promise<MascotView> {
+    const today = localToday();
+    const state = await this.ensure(deviceId);
+    if (state.eclipseStart && state.eclipseEnd) {
+      const end = shiftDays(today, -1);
+      await this.prisma.mascotState.update({
+        where: { deviceId },
+        data: end < state.eclipseStart ? { eclipseStart: null, eclipseEnd: null } : { eclipseEnd: end },
+      });
+    }
+    return this.getState(deviceId);
+  }
+
+  /** Every constellation key, with the ones found (count, first find). */
+  async constellations(deviceId: string) {
+    const rows = await this.prisma.mascotConstellation.findMany({ where: { deviceId } });
+    const byKey = new Map(rows.map((r) => [r.key, r]));
+    return ALL_CONSTELLATIONS.map((key) => {
+      const r = byKey.get(key);
+      return { key, found: !!r, count: r?.count ?? 0, firstFoundAt: r?.firstFoundAt.toISOString() ?? null };
+    });
+  }
+
+  /** One more shield, if there's room in stock. */
+  async grantShield(deviceId: string): Promise<boolean> {
+    const res = await this.prisma.mascotState.updateMany({
+      where: { deviceId, shields: { lt: MAX_SHIELDS } },
+      data: { shields: { increment: 1 } },
+    });
+    return res.count > 0;
+  }
+
+  /** The subject's eclipse days — streaks skip them instead of breaking. */
+  async restDays(deviceId: string): Promise<Set<string>> {
+    const s = await this.prisma.mascotState.findUnique({
+      where: { deviceId },
+      select: { eclipseStart: true, eclipseEnd: true },
+    });
+    return s ? eclipseDays({ start: s.eclipseStart, end: s.eclipseEnd }) : new Set();
   }
 
   async shieldCount(deviceId: string): Promise<number> {

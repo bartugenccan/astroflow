@@ -11,7 +11,7 @@
   "accountDeletion": {
    "inApp": true,
    "route": "DELETE /api/v1/me/data (privacy.controller.ts) — Profil > Verilerimi sil (hesap varsa hesabi da siler; ayri bir hesap silme ucu yok)",
-   "scope": "Sohbet, hafiza notlari, niyetler ve check-in'ler, kayitli kisiler, cihaz haritasi, kilitler, AI sayaclari ve gunluk kotalar, Aster maskot durumu ve olay gecmisi (mascot_states, mascot_events), TUM onbellekli okumalar (her okuma sahibine bagli), raporlar; ardindan cihaz token'i iptal edilir. Cihazdaki tum veriler (ses kayitlari dahil) de silinir. Hesap varsa: hesap, tum giris yontemleri (Apple/Google/e-posta), e-posta giris kodlari silinir; Sign in with Apple refresh token Apple uzerinden iptal edilir; hesaba bagli TUM cihazlarin token'i iptal edilir."
+   "scope": "Sohbet, hafiza notlari, niyetler ve check-in'ler, kayitli kisiler, cihaz haritasi, kilitler, AI sayaclari ve gunluk kotalar, Aster maskot durumu ve olay gecmisi (mascot_states, mascot_events), Aster yolculuklari ve takimyildiz albumu (mascot_journeys, mascot_constellations), gokyuzu check-in etiketleri (mood_checkins), gunluk kisisel planlar (daily_plans), sifreli not yedegi (user_vaults), TUM onbellekli okumalar (her okuma sahibine bagli), raporlar; ardindan cihaz token'i iptal edilir. Cihazdaki tum veriler (ses kayitlari dahil) de silinir. Hesap varsa: hesap, tum giris yontemleri (Apple/Google/e-posta), e-posta giris kodlari silinir; Sign in with Apple refresh token Apple uzerinden iptal edilir; hesaba bagli TUM cihazlarin token'i iptal edilir."
   },
   "ai": {
    "used": true,
@@ -26,10 +26,14 @@
     "Kullanicinin yazdigi olumlama metni (rezonans skoru icin)",
     "Kullanici hakkinda saklanan hafiza notlari (MemoryEntry)",
     "Tarot sorusu (kullanici yazarsa)",
-    "Eleksiyon icin kullanicinin yazdigi olay metni ve secilen yer adi"
+    "Eleksiyon icin kullanicinin yazdigi olay metni ve secilen yer adi",
+    "Niyet (dilek) metni ve check-in notu (olumlama ve check-in yaniti icin)",
+    "Gokyuzu check-in etiketleri - yalnizca secilen etiket ve gun (or. 'cloudy'), serbest metin yok (companion baglami)",
+    "Bugunku transitlerin natal haritaya acilari (Aster yolculugu bulgusu ve companion icin); kisisel planin odak alani"
    ],
    "notShared": [
-    "Ham dogum tarihi/saati/yeri - harita sunucuda hesaplanir, saglayiciya gonderilmez"
+    "Ham dogum tarihi/saati/yeri - harita sunucuda hesaplanir, saglayiciya gonderilmez",
+    "Sifreli not yedegi (yansima, olumlama, tarot ve eleksiyon notlari) - AI'ya hic gonderilmez"
    ],
    "declaredInAppPrivacy": true,
    "inAppDisclosure": "Onboarding'de dogum verisi girilmeden once tek seferlik AI bildirimi + onay (features/consent/AiConsentScreen; hesapla girenler ve eski kurulumlar icin root layout'ta). Profil > Yardim ve yasal > AI yorumlari hakkinda; Aster ekraninda 'AI ile yazildi' dipnotu."
@@ -121,10 +125,10 @@
    }
   ],
   "dataSafetySubmitted": false,
-  "$note": "PostHog, RevenueCat ve AdMob kurulunca bu envantere EKLENMELIDIR. App Privacy: Contact Info > Email Address ve Identifiers > User ID (linked, App Functionality), Name (linked, App Functionality) eklenmeli. Aster: Usage Data > Product Interaction (linked, App Functionality) - yalnizca olay turu ve gun (or. CHECKIN, AFFIRMATION), kullanici metni yok.",
+  "$note": "PostHog, RevenueCat ve AdMob kurulunca bu envantere EKLENMELIDIR. App Privacy: Contact Info > Email Address ve Identifiers > User ID (linked, App Functionality), Name (linked, App Functionality) eklenmeli. Aster: Usage Data > Product Interaction (linked, App Functionality) - yalnizca olay turu ve gun (or. CHECKIN, AFFIRMATION), kullanici metni yok. Gokyuzu check-in: Health & Fitness degil, User Content > Other User Content olarak (linked, App Functionality) - yalnizca 5 etiketten biri + 1-5 enerji. Not yedegi (yalnizca hesapli): User Content > Other User Content (linked, App Functionality), sunucuda sifreli.",
   "localDataProtection": {
    "keychain": "Cihaz token'i ve useAppStore (dogum tarihi/saati/yeri) expo-secure-store ile, AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY",
-   "secureStoreOther": "Tarot okumasi, eleksiyon sorulari, olumlamalar, Gun Kapanisi ve Ay Rituali notlari da Keychain/Keystore'da (bu notlar sunucuya gitmez; yalnizca 'yapildi' olayi Aster'a raporlanir) (eski AsyncStorage kopyasi ilk acilista tasinip silinir)",
+   "secureStoreOther": "Tarot okumasi, eleksiyon sorulari, olumlamalar, Gun Kapanisi ve Ay Rituali notlari Keychain/Keystore'da. Hesapsiz kullanicida bu notlar sunucuya gitmez (yalnizca 'yapildi' olayi Aster'a raporlanir). Hesapla giris yapmis kullanicida ayni notlar sifreli yedek olarak sunucuya da yazilir (user_vaults, AES-256-GCM, sunucu anahtari - uctan uca degil; AI'ya gonderilmez; DELETE /me/data ile silinir). (eski AsyncStorage kopyasi ilk acilista tasinip silinir)",
    "asyncStorage": "Yalnizca rapor listesi meta verisi (sifresiz, uygulama sandbox'i)",
    "files": "Olumlama ses kayitlari Documents/affirmations (kullanici icerigi, iOS Data Protection; sunucuya gonderilmez). PDF raporlar Caches/reports (yedege girmez, sunucudan yeniden uretilir)",
    "backup": "Android allowBackup=false"

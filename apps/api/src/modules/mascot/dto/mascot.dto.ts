@@ -1,5 +1,5 @@
-import { ArrayMaxSize, IsArray, IsIn, IsString, MaxLength } from 'class-validator';
-import { CLIENT_EVENT_KINDS, MascotEventKind } from '../mascot-rules';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsString, Max, MaxLength, Min } from 'class-validator';
+import { CLIENT_EVENT_KINDS, ECLIPSE_MAX_DAYS, MascotEventKind } from '../mascot-rules';
 
 /** An action that happened on the device (affirmation, tarot, ritual…). */
 export class MascotEventDto {
@@ -19,4 +19,12 @@ export class MascotEquipDto {
   @IsString({ each: true })
   @MaxLength(40, { each: true })
   itemIds: string[];
+}
+
+/** Rest for this many local days, starting today. */
+export class MascotEclipseDto {
+  @IsInt()
+  @Min(1)
+  @Max(ECLIPSE_MAX_DAYS)
+  days: number;
 }

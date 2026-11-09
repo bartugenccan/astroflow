@@ -4,7 +4,7 @@ import { DeviceId } from '../../common/device/device-id.decorator';
 import { BirthInputDto } from '../astrology/dto/birth-input.dto';
 import { Locale } from '../astrology/interpretation.types';
 import { IntentionsService } from './intentions.service';
-import { CreateIntentionDto } from './dto/create-intention.dto';
+import { AffirmationPreviewDto, CreateIntentionDto } from './dto/create-intention.dto';
 import { CheckInDto } from './dto/checkin.dto';
 import { AiRoute } from '../../common/auth/route-tags';
 
@@ -27,9 +27,24 @@ export class IntentionsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List active intentions with progress + streak' })
-  list(@DeviceId() deviceId: string) {
-    return this.intentions.list(deviceId);
+  @ApiOperation({ summary: 'List wishes (active by default, or the manifested shelf) with progress, streak and star' })
+  @ApiQuery({ name: 'status', enum: ['active', 'manifested'], required: false })
+  list(@DeviceId() deviceId: string, @Query('status') status?: string) {
+    return this.intentions.list(deviceId, status === 'manifested' ? 'manifested' : 'active');
+  }
+
+  @Get('areas')
+  @ApiOperation({ summary: "Where each life area lives in the user's natal chart (house, cusp, ruler, planets)" })
+  areas(@DeviceId() deviceId: string) {
+    return this.intentions.areas(deviceId);
+  }
+
+  @AiRoute()
+  @Post('affirmation-preview')
+  @ApiOperation({ summary: 'Generate the chart-framed affirmation for a wish before planting it' })
+  @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
+  previewAffirmation(@Body() dto: AffirmationPreviewDto, @Query('locale') locale?: string) {
+    return this.intentions.previewAffirmation(dto, this.locale(locale));
   }
 
   @AiRoute()
@@ -61,6 +76,25 @@ export class IntentionsController {
     @Query('locale') locale?: string,
   ) {
     return this.intentions.checkIn(deviceId, id, dto, this.locale(locale));
+  }
+
+  @Post(':id/manifest')
+  @ApiOperation({ summary: 'Mark a wish as manifested → the shelf + a celebration' })
+  manifest(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string) {
+    return this.intentions.manifest(deviceId, id);
+  }
+
+  @Post(':id/archive')
+  @ApiOperation({ summary: 'Let a wish go (kept, but no longer active)' })
+  archive(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string) {
+    return this.intentions.archive(deviceId, id);
+  }
+
+  @Get(':id/power-days')
+  @ApiOperation({ summary: "The wish's power days from the user's transits (locked past 3 until Glimmer)" })
+  @ApiQuery({ name: 'days', required: false })
+  powerDays(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string, @Query('days') days?: string) {
+    return this.intentions.powerDays(deviceId, id, parseInt(days ?? '14', 10) || 14);
   }
 
   @Get(':id/history')

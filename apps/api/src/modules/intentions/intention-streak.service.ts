@@ -8,6 +8,8 @@ export interface StreakView {
   longestStreak: number;
   /** Shields Aster spent just now to keep this streak alive (0 when none). */
   shieldsUsed: number;
+  /** Last day the target was met (YYYY-MM-DD), or null. */
+  lastActiveDate: string | null;
 }
 
 export interface StreakResult extends StreakView {
@@ -58,11 +60,15 @@ export class IntentionStreakService {
   /** The streak as it stands today, spending shields to bridge missed days. */
   async read(deviceId: string, intentionId: string, today: string): Promise<StreakView> {
     const row = await this.prisma.intentionStreak.findUnique({ where: { intentionId } });
-    if (!row) return { currentStreak: 0, longestStreak: 0, shieldsUsed: 0 };
+    if (!row) return { currentStreak: 0, longestStreak: 0, shieldsUsed: 0, lastActiveDate: null };
 
-    const shields = await this.mascot.shieldCount(deviceId);
-    const plan = planStreak(row, today, shields);
-    if (plan.bridgeDays.length > 0 && (await this.mascot.consumeShields(deviceId, plan.bridgeDays.length))) {
+    const [shields, rest] = await Promise.all([this.mascot.shieldCount(deviceId), this.mascot.restDays(deviceId)]);
+    const plan = planStreak(row, today, shields, rest);
+    // A gap the run survives — shielded days and/or eclipse days — is closed
+    // up to yesterday, so today's completion continues the run.
+    const gap = row.lastActiveDate !== null && row.lastActiveDate < shiftDays(today, -1);
+    const survives = gap && !plan.broken && plan.effectiveStreak > 0;
+    if (survives && (await this.mascot.consumeShields(deviceId, plan.bridgeDays.length))) {
       await this.prisma.intentionStreak.update({
         where: { intentionId },
         data: {
@@ -74,13 +80,15 @@ export class IntentionStreakService {
         currentStreak: row.currentStreak,
         longestStreak: row.longestStreak,
         shieldsUsed: plan.bridgeDays.length,
+        lastActiveDate: row.lastActiveDate,
       };
     }
-    const alive = plan.bridgeDays.length === 0 && !plan.broken;
+    const alive = !gap && !plan.broken;
     return {
       currentStreak: alive ? plan.effectiveStreak : 0,
       longestStreak: row.longestStreak,
       shieldsUsed: 0,
+      lastActiveDate: row.lastActiveDate,
     };
   }
 
@@ -101,6 +109,7 @@ export class IntentionStreakService {
         totalCheckIns: existing.totalCheckIns,
         shieldsUsed: view.shieldsUsed,
         milestoneName: null,
+        lastActiveDate: existing.lastActiveDate,
       };
     }
 
@@ -131,6 +140,7 @@ export class IntentionStreakService {
       totalCheckIns: updated.totalCheckIns,
       shieldsUsed: view.shieldsUsed,
       milestoneName: this.getMilestoneName(newStreak, prevStreak),
+      lastActiveDate: updated.lastActiveDate,
     };
   }
 
