@@ -1,5 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../../../generated/prisma/client';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import {
+  MergeableMascot,
+  mergeMascotState,
+  partitionMergeEvents,
+  stageFor,
+} from '../../mascot/mascot-rules';
 
 /**
  * Moves everything one subject owns onto another, in one transaction. Used
@@ -55,6 +62,60 @@ export class SubjectMergeService {
       await tx.savedPerson.updateMany({ where, data: move });
       await tx.interpretation.updateMany({ where, data: move });
       await tx.report.updateMany({ where, data: move });
+
+      await this.mergeMascot(tx, from, into);
     });
   }
+
+  /**
+   * Aster: events join the account unless they would double-count (same
+   * unique key, or a once-ever award already earned), and the state rows
+   * fold into one with exactly the moved Işık added.
+   */
+  private async mergeMascot(tx: Tx, from: string, into: string): Promise<void> {
+    const pick = { id: true, kind: true, localDate: true, refKey: true, xp: true } as const;
+    const [fromEvents, intoEvents] = await Promise.all([
+      tx.mascotEvent.findMany({ where: { deviceId: from }, select: pick }),
+      tx.mascotEvent.findMany({ where: { deviceId: into }, select: pick }),
+    ]);
+    const { moveIds, dropIds, movedXp } = partitionMergeEvents(fromEvents, intoEvents);
+    if (dropIds.length) await tx.mascotEvent.deleteMany({ where: { id: { in: dropIds } } });
+    if (moveIds.length) await tx.mascotEvent.updateMany({ where: { id: { in: moveIds } }, data: { deviceId: into } });
+
+    const [fromState, intoState] = await Promise.all([
+      tx.mascotState.findUnique({ where: { deviceId: from } }),
+      tx.mascotState.findUnique({ where: { deviceId: into } }),
+    ]);
+    if (!fromState) return;
+    const merged = mergeMascotState(intoState ? asMergeable(intoState) : null, asMergeable(fromState), movedXp);
+    const data = { ...merged, stage: stageFor(merged.xp, !!merged.hatchedAt) };
+    await tx.mascotState.delete({ where: { deviceId: from } });
+    await tx.mascotState.upsert({ where: { deviceId: into }, create: { deviceId: into, ...data }, update: data });
+  }
+}
+
+type Tx = Prisma.TransactionClient;
+
+function ids(json: unknown): string[] {
+  return Array.isArray(json) ? json.filter((v): v is string => typeof v === 'string') : [];
+}
+
+function asMergeable(row: {
+  xp: number;
+  stardust: number;
+  shields: number;
+  equipped: unknown;
+  owned: unknown;
+  lastFreeShieldWeek: string | null;
+  hatchedAt: Date | null;
+}): MergeableMascot {
+  return {
+    xp: row.xp,
+    stardust: row.stardust,
+    shields: row.shields,
+    equipped: ids(row.equipped),
+    owned: ids(row.owned),
+    lastFreeShieldWeek: row.lastFreeShieldWeek,
+    hatchedAt: row.hatchedAt,
+  };
 }

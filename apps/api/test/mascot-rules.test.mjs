@@ -14,6 +14,9 @@ import {
   lunarWindow,
   EVENT_RULES,
   CLIENT_EVENT_KINDS,
+  partitionMergeEvents,
+  mergeMascotState,
+  MAX_SHIELDS,
 } from '../src/modules/mascot/mascot-rules.ts';
 
 test('the egg stays an egg until it hatches, whatever the Işık', () => {
@@ -108,4 +111,53 @@ test('lunar window: inside around the mean new moon, outside at the quarter', ()
   const full = lunarWindow(new Date(nthNew.getTime() + synodicMs / 2 - 3600000));
   assert.equal(full?.phase, 'full');
   assert.equal(lunarWindow(new Date(nthNew.getTime() + synodicMs / 4)), null);
+});
+
+// ─── Merging an anonymous install into an existing account ───────────────────
+
+const ev = (id, kind, localDate, refKey, xp) => ({ id, kind, localDate, refKey, xp });
+
+test('merge moves events that do not clash and counts their Işık', () => {
+  const from = [ev('a', 'CHECKIN', '2026-11-01', '1', 10), ev('b', 'TAROT', '2026-11-02', '1', 10)];
+  const into = [ev('x', 'CHECKIN', '2026-11-03', '1', 10)];
+  assert.deepEqual(partitionMergeEvents(from, into), { moveIds: ['a', 'b'], dropIds: [], movedXp: 20 });
+});
+
+test('merge drops events with the same unique key', () => {
+  const from = [ev('a', 'CHECKIN', '2026-11-01', '1', 10), ev('b', 'CHECKIN', '2026-11-01', '2', 10)];
+  const into = [ev('x', 'CHECKIN', '2026-11-01', '1', 10)];
+  assert.deepEqual(partitionMergeEvents(from, into), { moveIds: ['b'], dropIds: ['a'], movedXp: 10 });
+});
+
+test('merge never double-counts a once-ever award earned on different days', () => {
+  const from = [ev('a', 'MOON_RITUAL', '2026-11-05', '2026-11-05', 50)];
+  const into = [ev('x', 'MOON_RITUAL', '2026-11-06', '2026-11-05', 50)];
+  assert.deepEqual(partitionMergeEvents(from, into), { moveIds: [], dropIds: ['a'], movedXp: 0 });
+});
+
+const mascot = (o = {}) => ({
+  xp: 0, stardust: 0, shields: 0, equipped: [], owned: [], lastFreeShieldWeek: null, hatchedAt: null, ...o,
+});
+
+test('merging into nothing keeps the anonymous Aster as is', () => {
+  const from = mascot({ xp: 200, stardust: 120, hatchedAt: new Date('2026-11-01') });
+  assert.deepEqual(mergeMascotState(null, from, 200), from);
+});
+
+test('merged Aster adds moved Işık, caps stardust at what was left, unites purchases', () => {
+  const into = mascot({ xp: 500, stardust: 300, shields: 1, equipped: ['hat'], owned: ['hat'], hatchedAt: new Date('2026-10-01') });
+  const from = mascot({ xp: 180, stardust: 40, shields: 3, equipped: ['scarf'], owned: ['scarf'], hatchedAt: new Date('2026-09-01') });
+  const m = mergeMascotState(into, from, 150);
+  assert.equal(m.xp, 650);
+  assert.equal(m.stardust, 340); // only 40 was unspent
+  assert.equal(m.shields, MAX_SHIELDS);
+  assert.deepEqual(m.equipped, ['hat']);
+  assert.deepEqual(m.owned.sort(), ['hat', 'scarf']);
+  assert.equal(m.hatchedAt.toISOString().slice(0, 10), '2026-09-01');
+});
+
+test('an unhatched account inherits the hatch from the device', () => {
+  const m = mergeMascotState(mascot({ xp: 0 }), mascot({ xp: 40, stardust: 40, hatchedAt: new Date('2026-11-02') }), 40);
+  assert.ok(m.hatchedAt);
+  assert.equal(m.xp, 40);
 });

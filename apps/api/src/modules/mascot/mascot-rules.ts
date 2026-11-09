@@ -179,6 +179,82 @@ export function planStreak(
   return { effectiveStreak: 0, bridgeDays: [], broken: true };
 }
 
+// ─── Merging two subjects (sign-in on an existing account) ──────────────────
+
+export interface MergeEvent {
+  id: string;
+  kind: string;
+  localDate: string;
+  refKey: string;
+  xp: number;
+}
+
+/**
+ * Which of `from`'s events can join `into` without breaking the ledger. A row
+ * is dropped when `into` already holds the same (kind, localDate, refKey) —
+ * the unique key — or, for once-ever kinds (moon rituals, milestones), the
+ * same (kind, refKey) on any day. `movedXp` is the Işık the moved rows carry.
+ */
+export function partitionMergeEvents(
+  from: MergeEvent[],
+  into: MergeEvent[],
+): { moveIds: string[]; dropIds: string[]; movedXp: number } {
+  const exact = new Set(into.map((e) => `${e.kind}|${e.localDate}|${e.refKey}`));
+  const onceKeys = new Set(
+    into.filter((e) => EVENT_RULES[e.kind as MascotEventKind]?.mode === 'once').map((e) => `${e.kind}|${e.refKey}`),
+  );
+  const moveIds: string[] = [];
+  const dropIds: string[] = [];
+  let movedXp = 0;
+  for (const e of from) {
+    const once = EVENT_RULES[e.kind as MascotEventKind]?.mode === 'once';
+    const clash = exact.has(`${e.kind}|${e.localDate}|${e.refKey}`) || (once && onceKeys.has(`${e.kind}|${e.refKey}`));
+    if (clash) {
+      dropIds.push(e.id);
+    } else {
+      moveIds.push(e.id);
+      movedXp += e.xp;
+      if (once) onceKeys.add(`${e.kind}|${e.refKey}`);
+    }
+  }
+  return { moveIds, dropIds, movedXp };
+}
+
+export interface MergeableMascot {
+  xp: number;
+  stardust: number;
+  shields: number;
+  equipped: string[];
+  owned: string[];
+  lastFreeShieldWeek: string | null;
+  hatchedAt: Date | null;
+}
+
+/**
+ * The account's Aster after an anonymous install's Aster joins it. Işık grows
+ * by exactly what the moved events carry (so nothing is counted twice);
+ * stardust grows by the same amount but never by more than `from` had left
+ * unspent. Purchases are united, the account keeps what it is wearing, and
+ * the earliest hatch wins. The caller recomputes the stage with `stageFor`.
+ */
+export function mergeMascotState(
+  into: MergeableMascot | null,
+  from: MergeableMascot,
+  movedXp: number,
+): MergeableMascot {
+  if (!into) return { ...from };
+  const hatches = [into.hatchedAt, from.hatchedAt].filter((d): d is Date => !!d);
+  return {
+    xp: into.xp + movedXp,
+    stardust: into.stardust + Math.max(0, Math.min(movedXp, from.stardust)),
+    shields: Math.min(MAX_SHIELDS, Math.max(into.shields, from.shields)),
+    equipped: into.equipped.length > 0 ? into.equipped : from.equipped,
+    owned: [...new Set([...into.owned, ...from.owned])],
+    lastFreeShieldWeek: into.lastFreeShieldWeek ?? from.lastFreeShieldWeek,
+    hatchedAt: hatches.length ? new Date(Math.min(...hatches.map((d) => d.getTime()))) : null,
+  };
+}
+
 // ─── Moon ritual window ──────────────────────────────────────────────────────
 
 const SYNODIC = 29.53058867;
