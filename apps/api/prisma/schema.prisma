@@ -142,7 +142,12 @@ model Intention {
   lifeArea    String   // 'love' | 'career' | 'money' | 'energy'
   affirmation String
   dailyTarget Int      @default(1)
-  status      String   @default("active") // 'active' | 'archived'
+  status      String   @default("active") // 'active' | 'archived' | 'manifested'
+  manifestedAt DateTime?
+  /// Lunar refKey (peak date) of the new moon the wish waits for; null = planted now.
+  plantedMoon String?
+  /// Natal house the wish's life area lives in (love 7, career 10, money 2, energy 1).
+  natalHouse  Int?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -211,6 +216,15 @@ model MascotState {
   lastFreeShieldWeek String?                  // ISO week of the last free shield, "2026-W45"
   hatchedAt          DateTime?
 
+  // Orbit: the device-wide "I showed up" streak (any award counts the day).
+  orbitStreak        Int       @default(0)
+  orbitBest          Int       @default(0)
+  orbitLastDate      String?                  // YYYY-MM-DD, local
+  journeysCompleted  Int       @default(0)
+  // Eclipse: a chosen rest. Days inside [start, end] never break a streak.
+  eclipseStart       String?                  // YYYY-MM-DD, local
+  eclipseEnd         String?                  // YYYY-MM-DD, local, inclusive
+
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -233,6 +247,89 @@ model MascotEvent {
   @@index([deviceId, localDate])
   @@index([deviceId, kind, refKey])
   @@map("mascot_events")
+}
+
+// Aster's cosmic journey: launched once a day when energy is high, back a few
+// hours later with one transit discovery and a constellation. Resolved on read.
+model MascotJourney {
+  id               String    @id @default(uuid()) @db.Uuid
+  deviceId         String
+  localDate        String
+  startedAt        DateTime  @default(now())
+  returnsAt        DateTime
+  claimedAt        DateTime?
+  /// { transitPlanet, aspect, natalPoint, orb, sign, title, body, link }
+  discovery        Json
+  constellationKey String
+  duplicate        Boolean   @default(false)
+  bonusStardust    Int       @default(0)
+
+  @@unique([deviceId, localDate])
+  @@index([deviceId])
+  @@map("mascot_journeys")
+}
+
+model MascotConstellation {
+  id           String   @id @default(uuid()) @db.Uuid
+  deviceId     String
+  key          String
+  count        Int      @default(1)
+  firstFoundAt DateTime @default(now())
+
+  @@unique([deviceId, key])
+  @@map("mascot_constellations")
+}
+
+// The morning "how is your sky?" check-in. Labels only — free text never
+// leaves the device.
+enum MoodSky {
+  RADIANT
+  CLEAR
+  PARTLY
+  CLOUDY
+  STORMY
+}
+
+model MoodCheckIn {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String
+  localDate String
+  sky       MoodSky
+  energy    Int      // 1–5
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([deviceId, localDate])
+  @@map("mood_checkins")
+}
+
+// The personal sky plan for one local day, built from the natal chart and
+// today's transits. Rebuilt when the day's mood changes.
+model DailyPlan {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String
+  localDate String
+  payload   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([deviceId, localDate])
+  @@map("daily_plans")
+}
+
+// Encrypted backup of what the app otherwise keeps on the device
+// (reflections, affirmations, tarot and election notes). Signed-in subjects
+// only; sealed with a server key (encryption at rest), never sent to the AI.
+model UserVault {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String
+  namespace String   // 'reflections' | 'affirmations' | 'tarot' | 'election'
+  sealed    String
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+
+  @@unique([deviceId, namespace])
+  @@map("user_vaults")
 }
 
 // A second person a device has entered for compatibility checks. Big-three is

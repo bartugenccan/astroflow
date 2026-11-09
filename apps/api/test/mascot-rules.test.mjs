@@ -161,3 +161,117 @@ test('an unhatched account inherits the hatch from the device', () => {
   assert.ok(m.hatchedAt);
   assert.equal(m.xp, 40);
 });
+
+// ─── Rewards, orbit, eclipse, journeys, constellations ───────────────────────
+import {
+  stardustFor,
+  advanceOrbit,
+  viewOrbit,
+  eclipseDays,
+  eclipseActive,
+  journeyStatus,
+  journeyEarnsShield,
+  JOURNEY_MIN_ENERGY,
+  ABILITIES,
+} from '../src/modules/mascot/mascot-rules.ts';
+import { pickConstellation, ALL_CONSTELLATIONS } from '../src/modules/mascot/constellations.ts';
+
+test('stardust follows Işık unless a rule says otherwise', () => {
+  assert.equal(stardustFor('CHECKIN'), EVENT_RULES.CHECKIN.xp);
+  assert.equal(stardustFor('ACCOUNT_LINKED'), 50);
+  assert.equal(EVENT_RULES.ACCOUNT_LINKED.xp, 0);
+});
+
+test('server-only kinds can never be self-reported', () => {
+  for (const k of ['SKY_CHECKIN', 'JOURNEY_RETURN', 'MANIFESTED', 'ACCOUNT_LINKED']) {
+    assert.ok(!CLIENT_EVENT_KINDS.includes(k), k);
+  }
+});
+
+test('power days is now a live ability', () => {
+  assert.equal(ABILITIES.find((a) => a.key === 'powerDays').available, true);
+});
+
+test('planStreak skips eclipse days instead of spending shields on them', () => {
+  const paused = new Set(['2026-11-02', '2026-11-03']);
+  const plan = planStreak({ currentStreak: 5, lastActiveDate: '2026-11-01' }, '2026-11-04', 0, paused);
+  assert.deepEqual(plan, { effectiveStreak: 5, bridgeDays: [], broken: false });
+  const partly = planStreak({ currentStreak: 5, lastActiveDate: '2026-11-01' }, '2026-11-05', 1, paused);
+  assert.deepEqual(partly.bridgeDays, ['2026-11-04']);
+});
+
+test('orbit: first award of the day extends, second does nothing', () => {
+  const a = advanceOrbit({ streak: 2, best: 4, lastDate: '2026-11-09' }, '2026-11-10', 0);
+  assert.deepEqual(a, { streak: 3, best: 4, lastDate: '2026-11-10', shieldsUsed: 0, changed: true });
+  const b = advanceOrbit({ streak: 3, best: 4, lastDate: '2026-11-10' }, '2026-11-10', 0);
+  assert.equal(b.changed, false);
+});
+
+test('orbit: a missed day is bridged by a shield, otherwise the run restarts at 1', () => {
+  const bridged = advanceOrbit({ streak: 6, best: 6, lastDate: '2026-11-08' }, '2026-11-10', 1);
+  assert.equal(bridged.streak, 7);
+  assert.equal(bridged.best, 7);
+  assert.equal(bridged.shieldsUsed, 1);
+  const broken = advanceOrbit({ streak: 6, best: 6, lastDate: '2026-11-07' }, '2026-11-10', 1);
+  assert.equal(broken.streak, 1);
+  assert.equal(broken.best, 6);
+  assert.equal(broken.shieldsUsed, 0);
+});
+
+test('orbit view never spends and flags an uncounted live run as at risk', () => {
+  assert.deepEqual(viewOrbit({ streak: 4, best: 9, lastDate: '2026-11-09' }, '2026-11-10', 0), {
+    streak: 4, best: 9, countedToday: false, atRisk: true,
+  });
+  assert.equal(viewOrbit({ streak: 4, best: 9, lastDate: '2026-11-10' }, '2026-11-10', 0).atRisk, false);
+  assert.equal(viewOrbit({ streak: 4, best: 9, lastDate: '2026-11-05' }, '2026-11-10', 0).streak, 0);
+});
+
+test('eclipse covers its days inclusively', () => {
+  const e = { start: '2026-11-10', end: '2026-11-12' };
+  assert.deepEqual([...eclipseDays(e)], ['2026-11-10', '2026-11-11', '2026-11-12']);
+  assert.ok(eclipseActive(e, '2026-11-12'));
+  assert.ok(!eclipseActive(e, '2026-11-13'));
+  assert.ok(!eclipseActive({ start: null, end: null }, '2026-11-10'));
+});
+
+test('journey status resolves on read', () => {
+  const now = new Date('2026-11-10T12:00:00Z');
+  assert.equal(journeyStatus(null, JOURNEY_MIN_ENERGY - 1, false, now), 'locked');
+  assert.equal(journeyStatus(null, JOURNEY_MIN_ENERGY, false, now), 'ready');
+  assert.equal(journeyStatus(null, 100, true, now), 'locked');
+  const away = { returnsAt: new Date('2026-11-10T13:00:00Z'), claimedAt: null };
+  assert.equal(journeyStatus(away, 0, false, now), 'away');
+  assert.equal(journeyStatus({ ...away, returnsAt: new Date('2026-11-10T11:00:00Z') }, 0, false, now), 'returned');
+  assert.equal(journeyStatus({ ...away, claimedAt: now }, 0, false, now), 'claimed');
+});
+
+test('every third journey earns a shield', () => {
+  assert.deepEqual([1, 2, 3, 4, 5, 6].map(journeyEarnsShield), [false, false, true, false, false, true]);
+});
+
+test('the first constellation is always the natal Sun sign', () => {
+  assert.equal(pickConstellation({ sunSign: 'Scorpio', discoverySign: 'Leo', owned: [], rolls: [0.99, 0.5] }), 'scorpius');
+});
+
+test('later journeys mostly bring the discovery sign, else an unfound sky figure', () => {
+  const owned = ['scorpius'];
+  assert.equal(pickConstellation({ sunSign: 'Scorpio', discoverySign: 'Leo', owned, rolls: [0.1, 0] }), 'leo');
+  assert.equal(pickConstellation({ sunSign: 'Scorpio', discoverySign: 'Leo', owned: [...owned, 'orion'], rolls: [0.9, 0] }), 'ursaMajor');
+  const k = pickConstellation({ sunSign: 'Scorpio', discoverySign: null, owned, rolls: [0, 0.999] });
+  assert.ok(ALL_CONSTELLATIONS.includes(k));
+});
+
+const fullMascot = (o = {}) => ({
+  xp: 0, stardust: 0, shields: 0, equipped: [], owned: [], lastFreeShieldWeek: null, hatchedAt: null,
+  orbitStreak: 0, orbitBest: 0, orbitLastDate: null, journeysCompleted: 0, eclipseStart: null, eclipseEnd: null, ...o,
+});
+
+test('merge keeps the most recent orbit, the best best, and adds journeys', () => {
+  const into = fullMascot({ orbitStreak: 9, orbitBest: 20, orbitLastDate: '2026-11-01', journeysCompleted: 4 });
+  const from = fullMascot({ orbitStreak: 3, orbitBest: 3, orbitLastDate: '2026-11-10', journeysCompleted: 2 });
+  const m = mergeMascotState(into, from, 0);
+  assert.equal(m.orbitStreak, 3);
+  assert.equal(m.orbitLastDate, '2026-11-10');
+  assert.equal(m.orbitBest, 20);
+  assert.equal(m.journeysCompleted, 6);
+});

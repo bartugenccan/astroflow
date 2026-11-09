@@ -64,7 +64,52 @@ export class SubjectMergeService {
       await tx.report.updateMany({ where, data: move });
 
       await this.mergeMascot(tx, from, into);
+
+      // One row per (subject, local day): the account's day wins.
+      await this.moveDaily(tx, 'mascotJourney', from, into);
+      await this.moveDaily(tx, 'dailyPlan', from, into);
+      await this.moveDaily(tx, 'moodCheckIn', from, into);
+
+      // Constellations: counts add up, the earliest find is kept.
+      const found = await tx.mascotConstellation.findMany({ where });
+      for (const c of found) {
+        const mine = await tx.mascotConstellation.findUnique({ where: { deviceId_key: { deviceId: into, key: c.key } } });
+        if (mine) {
+          await tx.mascotConstellation.update({
+            where: { id: mine.id },
+            data: {
+              count: mine.count + c.count,
+              firstFoundAt: c.firstFoundAt < mine.firstFoundAt ? c.firstFoundAt : mine.firstFoundAt,
+            },
+          });
+          await tx.mascotConstellation.delete({ where: { id: c.id } });
+        } else {
+          await tx.mascotConstellation.update({ where: { id: c.id }, data: move });
+        }
+      }
+
+      // Vault: the account's copy stays; the device re-merges its local notes and pushes.
+      const vaultNs = await tx.userVault.findMany({ where: { deviceId: into }, select: { namespace: true } });
+      await tx.userVault.deleteMany({ where: { deviceId: from, namespace: { in: vaultNs.map((v) => v.namespace) } } });
+      await tx.userVault.updateMany({ where, data: move });
     });
+  }
+
+  private async moveDaily(
+    tx: Tx,
+    table: 'mascotJourney' | 'dailyPlan' | 'moodCheckIn',
+    from: string,
+    into: string,
+  ): Promise<void> {
+    // Prisma's delegates share these method shapes for the three day-keyed tables.
+    const delegate = tx[table] as unknown as {
+      findMany(args: object): Promise<{ localDate: string }[]>;
+      deleteMany(args: object): Promise<unknown>;
+      updateMany(args: object): Promise<unknown>;
+    };
+    const taken = await delegate.findMany({ where: { deviceId: into }, select: { localDate: true } });
+    await delegate.deleteMany({ where: { deviceId: from, localDate: { in: taken.map((r) => r.localDate) } } });
+    await delegate.updateMany({ where: { deviceId: from }, data: { deviceId: into } });
   }
 
   /**
@@ -108,6 +153,12 @@ function asMergeable(row: {
   owned: unknown;
   lastFreeShieldWeek: string | null;
   hatchedAt: Date | null;
+  orbitStreak: number;
+  orbitBest: number;
+  orbitLastDate: string | null;
+  journeysCompleted: number;
+  eclipseStart: string | null;
+  eclipseEnd: string | null;
 }): MergeableMascot {
   return {
     xp: row.xp,
@@ -117,5 +168,11 @@ function asMergeable(row: {
     owned: ids(row.owned),
     lastFreeShieldWeek: row.lastFreeShieldWeek,
     hatchedAt: row.hatchedAt,
+    orbitStreak: row.orbitStreak,
+    orbitBest: row.orbitBest,
+    orbitLastDate: row.orbitLastDate,
+    journeysCompleted: row.journeysCompleted,
+    eclipseStart: row.eclipseStart,
+    eclipseEnd: row.eclipseEnd,
   };
 }

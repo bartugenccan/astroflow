@@ -21,6 +21,10 @@ export const MASCOT_EVENT_KINDS = [
   'MOON_RITUAL',
   'EVENING_REFLECTION',
   'BREATH',
+  'SKY_CHECKIN',
+  'JOURNEY_RETURN',
+  'MANIFESTED',
+  'ACCOUNT_LINKED',
 ] as const;
 
 export type MascotEventKind = (typeof MASCOT_EVENT_KINDS)[number];
@@ -37,6 +41,8 @@ export const CLIENT_EVENT_KINDS: readonly MascotEventKind[] = [
 interface EventRule {
   /** Işık per award. */
   xp: number;
+  /** Yıldız Tozu per award; defaults to `xp`. */
+  stardust?: number;
   /** Max awards per local day (across refKeys). */
   dailyCap: number;
   /** Contribution to today's energy bar (0–100 total). */
@@ -60,7 +66,17 @@ export const EVENT_RULES: Record<MascotEventKind, EventRule> = {
   MOON_RITUAL: { xp: 50, dailyCap: 1, energy: 30, mode: 'once' },
   EVENING_REFLECTION: { xp: 15, dailyCap: 1, energy: 20, mode: 'slot' },
   BREATH: { xp: 10, dailyCap: 1, energy: 15, mode: 'slot' },
+  SKY_CHECKIN: { xp: 10, dailyCap: 1, energy: 25, mode: 'slot' },
+  JOURNEY_RETURN: { xp: 30, dailyCap: 1, energy: 0, mode: 'ref' },
+  MANIFESTED: { xp: 75, dailyCap: 3, energy: 20, mode: 'once' },
+  ACCOUNT_LINKED: { xp: 0, stardust: 50, dailyCap: 1, energy: 0, mode: 'once' },
 };
+
+/** Yıldız Tozu one award of `kind` drops. */
+export function stardustFor(kind: MascotEventKind): number {
+  const rule = EVENT_RULES[kind];
+  return rule.stardust ?? rule.xp;
+}
 
 // ─── Stages ──────────────────────────────────────────────────────────────────
 
@@ -98,7 +114,7 @@ export function stageBounds(stage: number): { floor: number; next: number | null
 export const ABILITIES = [
   { key: 'skyWhisper', minStage: 1, available: true },
   { key: 'streakShield', minStage: 2, available: true },
-  { key: 'powerDays', minStage: 3, available: false },
+  { key: 'powerDays', minStage: 3, available: true },
   { key: 'weeklyLetter', minStage: 4, available: false },
   { key: 'novaTheme', minStage: 5, available: false },
 ] as const;
@@ -165,18 +181,130 @@ export function planStreak(
   stored: { currentStreak: number; lastActiveDate: string | null },
   today: string,
   shieldsAvailable: number,
+  pausedDays: ReadonlySet<string> = new Set(),
 ): StreakPlan {
   if (!stored.lastActiveDate || stored.currentStreak <= 0) {
     return { effectiveStreak: 0, bridgeDays: [], broken: false };
   }
   const gap = daysBetween(stored.lastActiveDate, today);
   if (gap <= 1) return { effectiveStreak: stored.currentStreak, bridgeDays: [], broken: false };
-  const missed = gap - 1;
-  if (missed <= shieldsAvailable) {
-    const bridgeDays = Array.from({ length: missed }, (_, i) => shiftDays(stored.lastActiveDate as string, i + 1));
-    return { effectiveStreak: stored.currentStreak, bridgeDays, broken: false };
+  // Eclipse (rest) days are neither missed nor bridged — they simply don't count.
+  const missedDays = Array.from({ length: gap - 1 }, (_, i) => shiftDays(stored.lastActiveDate as string, i + 1)).filter(
+    (d) => !pausedDays.has(d),
+  );
+  if (missedDays.length <= shieldsAvailable) {
+    return { effectiveStreak: stored.currentStreak, bridgeDays: missedDays, broken: false };
   }
   return { effectiveStreak: 0, bridgeDays: [], broken: true };
+}
+
+// ─── Eclipse: a chosen rest ──────────────────────────────────────────────────
+
+export const ECLIPSE_MAX_DAYS = 14;
+
+export interface Eclipse {
+  start: string | null;
+  end: string | null;
+}
+
+/** Every local day of the eclipse, inclusive. */
+export function eclipseDays(e: Eclipse): Set<string> {
+  if (!e.start || !e.end) return new Set();
+  const n = daysBetween(e.start, e.end);
+  if (n < 0) return new Set();
+  return new Set(Array.from({ length: n + 1 }, (_, i) => shiftDays(e.start as string, i)));
+}
+
+export function eclipseActive(e: Eclipse, today: string): boolean {
+  return !!e.start && !!e.end && daysBetween(e.start, today) >= 0 && daysBetween(today, e.end) >= 0;
+}
+
+// ─── Orbit: the device-wide "I showed up" streak ─────────────────────────────
+
+export interface OrbitStored {
+  streak: number;
+  best: number;
+  lastDate: string | null;
+}
+
+/**
+ * The orbit after an award lands today. The first award of a day extends the
+ * run (bridging missed days with shields, skipping eclipse days); a broken run
+ * starts again at 1. `shieldsUsed` is what the caller must spend.
+ */
+export function advanceOrbit(
+  stored: OrbitStored,
+  today: string,
+  shields: number,
+  pausedDays: ReadonlySet<string> = new Set(),
+): OrbitStored & { shieldsUsed: number; changed: boolean } {
+  if (stored.lastDate === today) return { ...stored, shieldsUsed: 0, changed: false };
+  const plan = planStreak({ currentStreak: stored.streak, lastActiveDate: stored.lastDate }, today, shields, pausedDays);
+  const streak = plan.broken || plan.effectiveStreak === 0 ? 1 : plan.effectiveStreak + 1;
+  return {
+    streak,
+    best: Math.max(stored.best, streak),
+    lastDate: today,
+    shieldsUsed: plan.broken ? 0 : plan.bridgeDays.length,
+    changed: true,
+  };
+}
+
+/**
+ * What the orbit looks like on read — never spends anything. `atRisk` means
+ * the run is alive but today has not been counted yet.
+ */
+export function viewOrbit(
+  stored: OrbitStored,
+  today: string,
+  shields: number,
+  pausedDays: ReadonlySet<string> = new Set(),
+): { streak: number; best: number; countedToday: boolean; atRisk: boolean } {
+  const countedToday = stored.lastDate === today;
+  const plan = planStreak({ currentStreak: stored.streak, lastActiveDate: stored.lastDate }, today, shields, pausedDays);
+  const streak = countedToday ? stored.streak : plan.effectiveStreak;
+  return { streak, best: stored.best, countedToday, atRisk: !countedToday && streak > 0 };
+}
+
+// ─── Cosmic journey ──────────────────────────────────────────────────────────
+
+/** Energy Aster needs before it can set off. */
+export const JOURNEY_MIN_ENERGY = 60;
+/** How long Aster is away. */
+export const JOURNEY_HOURS = 3;
+/** A free streak shield every N completed journeys (Finch's repair saver). */
+export const SHIELD_EVERY_JOURNEYS = 3;
+/** Stardust a duplicate constellation turns into. */
+export const DUPLICATE_STARDUST = 25;
+
+export type JourneyStatus = 'locked' | 'ready' | 'away' | 'returned' | 'claimed';
+
+export interface JourneyRow {
+  returnsAt: Date;
+  claimedAt: Date | null;
+}
+
+/**
+ * Where today's journey stands, resolved on read. `locked` = not enough energy
+ * yet (or resting in an eclipse), `ready` = can set off now.
+ */
+export function journeyStatus(
+  journey: JourneyRow | null,
+  energy: number,
+  resting: boolean,
+  now: Date,
+): JourneyStatus {
+  if (journey) {
+    if (journey.claimedAt) return 'claimed';
+    return now.getTime() >= journey.returnsAt.getTime() ? 'returned' : 'away';
+  }
+  if (resting || energy < JOURNEY_MIN_ENERGY) return 'locked';
+  return 'ready';
+}
+
+/** Does finishing journey number `completed` (1-based) earn a free shield? */
+export function journeyEarnsShield(completed: number): boolean {
+  return completed > 0 && completed % SHIELD_EVERY_JOURNEYS === 0;
 }
 
 // ─── Merging two subjects (sign-in on an existing account) ──────────────────
@@ -228,6 +356,12 @@ export interface MergeableMascot {
   owned: string[];
   lastFreeShieldWeek: string | null;
   hatchedAt: Date | null;
+  orbitStreak: number;
+  orbitBest: number;
+  orbitLastDate: string | null;
+  journeysCompleted: number;
+  eclipseStart: string | null;
+  eclipseEnd: string | null;
 }
 
 /**
@@ -235,7 +369,9 @@ export interface MergeableMascot {
  * by exactly what the moved events carry (so nothing is counted twice);
  * stardust grows by the same amount but never by more than `from` had left
  * unspent. Purchases are united, the account keeps what it is wearing, and
- * the earliest hatch wins. The caller recomputes the stage with `stageFor`.
+ * the earliest hatch wins. The orbit whose last counted day is most recent
+ * carries on (ties: the longer run); journeys add up; the account's eclipse
+ * stays. The caller recomputes the stage with `stageFor`.
  */
 export function mergeMascotState(
   into: MergeableMascot | null,
@@ -252,7 +388,20 @@ export function mergeMascotState(
     owned: [...new Set([...into.owned, ...from.owned])],
     lastFreeShieldWeek: into.lastFreeShieldWeek ?? from.lastFreeShieldWeek,
     hatchedAt: hatches.length ? new Date(Math.min(...hatches.map((d) => d.getTime()))) : null,
+    ...newerOrbit(into, from),
+    orbitBest: Math.max(into.orbitBest, from.orbitBest),
+    journeysCompleted: into.journeysCompleted + from.journeysCompleted,
+    eclipseStart: into.eclipseStart,
+    eclipseEnd: into.eclipseEnd,
   };
+}
+
+function newerOrbit(a: MergeableMascot, b: MergeableMascot): { orbitStreak: number; orbitLastDate: string | null } {
+  const pick = (m: MergeableMascot) => ({ orbitStreak: m.orbitStreak, orbitLastDate: m.orbitLastDate });
+  if (!b.orbitLastDate) return pick(a);
+  if (!a.orbitLastDate) return pick(b);
+  if (a.orbitLastDate === b.orbitLastDate) return a.orbitStreak >= b.orbitStreak ? pick(a) : pick(b);
+  return a.orbitLastDate > b.orbitLastDate ? pick(a) : pick(b);
 }
 
 // ─── Moon ritual window ──────────────────────────────────────────────────────
@@ -288,4 +437,24 @@ export function lunarWindow(now: Date): LunarWindow | null {
     }
   }
   return null;
+}
+
+/**
+ * The next exact (mean) new or full moon at or after `now`, as a UTC date —
+ * the refKey a wish planted "for the next new moon" waits for.
+ */
+export function nextLunarPeak(now: Date, phase: 'new' | 'full'): string {
+  const days = now.getTime() / 86400000;
+  const age = (((days - KNOWN_NEW_MOON_DAYS) % SYNODIC) + SYNODIC) % SYNODIC;
+  const target = phase === 'new' ? 0 : SYNODIC / 2;
+  let offset = target - age;
+  if (offset < 0) offset += SYNODIC;
+  return new Date((days + offset) * 86400000).toISOString().slice(0, 10);
+}
+
+/** Where the Moon is in its cycle, 0 (new) → 0.5 (full) → 1 (next new). */
+export function lunarProgress(now: Date): number {
+  const days = now.getTime() / 86400000;
+  const age = (((days - KNOWN_NEW_MOON_DAYS) % SYNODIC) + SYNODIC) % SYNODIC;
+  return age / SYNODIC;
 }

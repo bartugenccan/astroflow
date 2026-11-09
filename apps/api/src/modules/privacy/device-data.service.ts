@@ -36,6 +36,11 @@ export class DeviceDataService {
       reports,
       mascotEvents,
       mascotStates,
+      journeys,
+      constellations,
+      moods,
+      plans,
+      vaults,
     ] = await this.prisma.$transaction([
       this.prisma.chatMessage.deleteMany({ where }),
       this.prisma.memoryEntry.deleteMany({ where }),
@@ -51,6 +56,11 @@ export class DeviceDataService {
       this.prisma.report.deleteMany({ where }),
       this.prisma.mascotEvent.deleteMany({ where }),
       this.prisma.mascotState.deleteMany({ where }),
+      this.prisma.mascotJourney.deleteMany({ where }),
+      this.prisma.mascotConstellation.deleteMany({ where }),
+      this.prisma.moodCheckIn.deleteMany({ where }),
+      this.prisma.dailyPlan.deleteMany({ where }),
+      this.prisma.userVault.deleteMany({ where }),
     ]);
     const account = await this.accounts.deleteForSubject(deviceId);
     await this.auth.revokeSubject(deviceId);
@@ -70,6 +80,11 @@ export class DeviceDataService {
       reports: reports.count,
       mascotEvents: mascotEvents.count,
       mascotStates: mascotStates.count,
+      journeys: journeys.count,
+      constellations: constellations.count,
+      moods: moods.count,
+      plans: plans.count,
+      vaults: vaults.count,
     };
   }
 }
