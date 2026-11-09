@@ -49,6 +49,8 @@ function shiftDay(key: string, delta: number): string {
  */
 interface AffirmationState {
   customs: Affirmation[];
+  /** Ids of deleted custom affirmations, so a backup restore never brings them back. */
+  removedIds: string[];
   days: Record<string, AffirmationDay>;
   recordings: Record<string, string>;
 
@@ -75,6 +77,7 @@ export const useAffirmationStore = create<AffirmationState>()(
   persist(
     (set, get) => ({
       customs: [],
+      removedIds: [],
       days: {},
       recordings: {},
 
@@ -94,7 +97,11 @@ export const useAffirmationStore = create<AffirmationState>()(
         set((s) => {
           const recordings = { ...s.recordings };
           delete recordings[id];
-          return { customs: s.customs.filter((c) => c.id !== id), recordings };
+          return {
+            customs: s.customs.filter((c) => c.id !== id),
+            removedIds: [id, ...s.removedIds.filter((x) => x !== id)].slice(0, 200),
+            recordings,
+          };
         }),
 
       repeat: (id) =>

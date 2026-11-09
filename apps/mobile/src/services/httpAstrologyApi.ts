@@ -20,6 +20,9 @@ import {
   GuidanceTopic,
   HouseInterpretation,
   Intention,
+  DailyPlan,
+  LifeAreaContext,
+  PowerDays,
   IntentionCheckInHistory,
   IntentionSuggestion,
   NatalChartData,
@@ -53,6 +56,8 @@ export class ApiError extends Error {
     readonly status: number,
     /** Machine-readable reason the API put in the body (e.g. "ACCOUNT_CONFLICT"). */
     readonly code?: string,
+    /** The parsed JSON error body, when there was one (e.g. a vault conflict's server copy). */
+    readonly body?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -139,13 +144,15 @@ export async function request<T>(
   }
   if (!res.ok) {
     let code: string | undefined;
+    let errorBody: unknown;
     try {
-      const body = (await res.json()) as { code?: unknown };
-      if (typeof body.code === "string") code = body.code;
+      errorBody = await res.json();
+      const c = (errorBody as { code?: unknown })?.code;
+      if (typeof c === "string") code = c;
     } catch {
       // Non-JSON error body.
     }
-    throw new ApiError(`Request failed (${res.status})`, res.status, code);
+    throw new ApiError(`Request failed (${res.status})`, res.status, code, errorBody);
   }
   // DELETE / unlock may return empty-ish bodies; tolerate non-JSON.
   const text = await res.text();
@@ -253,7 +260,32 @@ export const httpAstrologyApi: AstrologyApi = {
   createIntention: (dto, input, locale) =>
     request<Intention>("POST", "intentions", { ...dto, ...input }, { locale }),
 
-  listIntentions: () => request<Intention[]>("GET", "intentions"),
+  listIntentions: (status = "active") => request<Intention[]>("GET", "intentions", undefined, { status }),
+
+  manifestIntention: (id) => request<Intention>("POST", `intentions/${encodeURIComponent(id)}/manifest`),
+
+  async archiveIntention(id) {
+    await request<unknown>("POST", `intentions/${encodeURIComponent(id)}/archive`);
+  },
+
+  getPowerDays: (id) => request<PowerDays>("GET", `intentions/${encodeURIComponent(id)}/power-days`),
+
+  async getLifeAreas() {
+    const res = await request<{ areas: LifeAreaContext[] }>("GET", "intentions/areas");
+    return res?.areas ?? [];
+  },
+
+  async previewAffirmation(dto, goalText, lifeArea, locale) {
+    const res = await request<{ affirmation: string }>(
+      "POST",
+      "intentions/affirmation-preview",
+      { ...dto, goalText, lifeArea },
+      { locale },
+    );
+    return res.affirmation;
+  },
+
+  getTodayPlan: () => request<DailyPlan>("GET", "plan/today"),
 
   getIntention: (id) => request<Intention>("GET", `intentions/${encodeURIComponent(id)}`),
 

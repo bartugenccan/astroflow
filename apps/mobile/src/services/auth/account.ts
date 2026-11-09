@@ -9,6 +9,9 @@ import { request } from "../httpAstrologyApi";
 import { setDeviceToken } from "../deviceAuth";
 import { clearInterpretationCache } from "../interpretationCache";
 import { wipeAllLocalData } from "../dataWipe";
+import { startVaultSync, syncVaultNow } from "../vaultSync";
+import { useMascotStore } from "../../store/useMascotStore";
+import { usePlanStore } from "../../store/usePlanStore";
 import type { AccountInfo, AuthProviderId, BirthProfileResponse, LinkResult, SavedProfile } from "../types";
 
 /**
@@ -153,5 +156,13 @@ async function finish(result: LinkResult): Promise<LinkResult> {
     await syncProfileMeta();
   }
   store.setAccount(result.account);
+  // The account now holds Aster, the plan and (from here on) the notes backup.
+  usePlanStore.getState().reset();
+  const mascot = useMascotStore.getState();
+  void mascot.refresh();
+  if (result.mascot && result.mascot.stardustGained > 0) {
+    mascot.celebrate({ type: "accountLinked", delta: result.mascot });
+  }
+  void startVaultSync().then(syncVaultNow);
   return result;
 }

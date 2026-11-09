@@ -8,11 +8,14 @@ import { useElectionStore } from "../store/useElectionStore";
 import { useReportsStore } from "../store/useReportsStore";
 import { useMascotStore } from "../store/useMascotStore";
 import { useReflectionStore } from "../store/useReflectionStore";
+import { usePlanStore } from "../store/usePlanStore";
+import { useAccountPromptStore } from "../store/useAccountPromptStore";
 import { astrologyApi } from "./astrologyApi";
 import { clearInterpretationCache } from "./interpretationCache";
 import { resetDeviceToken } from "./deviceAuth";
 import { secureStorage } from "./secureStorage";
 import { cancelAllReminders } from "./notifications";
+import { resetVaultSync } from "./vaultSync";
 
 /** Other persisted stores that live in the Keychain/Keystore (see each store's `name`). */
 const SECURE_STORE_KEYS = [
@@ -59,17 +62,21 @@ export async function wipeAllLocalData({ keepIdentity }: { keepIdentity: boolean
     }
   }
 
+  // First: an emptied phone must never be pushed over the account's backup.
+  await resetVaultSync();
   clearInterpretationCache();
   await cancelAllReminders();
   if (!keepIdentity) await resetDeviceToken();
 
   useOnboardingDraft.getState().clear();
-  useAffirmationStore.setState({ customs: [], days: {}, recordings: {} });
+  useAffirmationStore.setState({ customs: [], removedIds: [], days: {}, recordings: {} });
   useTarotStore.getState().reset();
   useElectionStore.getState().reset();
   useReportsStore.getState().reset();
   useMascotStore.getState().reset();
   useReflectionStore.getState().reset();
+  usePlanStore.getState().reset();
+  useAccountPromptStore.getState().reset();
   useAppStore.getState().reset();
 
   // Last, so the stores' own persistence writes above can't restore anything.

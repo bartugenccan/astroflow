@@ -150,6 +150,8 @@ export interface LinkResult {
   account: AccountInfo;
   token: string | null;
   signedIn: boolean;
+  /** The one-time stardust thank-you for protecting Aster (null when already given). */
+  mascot?: MascotDelta | null;
 }
 
 /** GET /me/profile — the saved chart plus display fields. */
@@ -477,8 +479,51 @@ export interface Intention {
   updatedAt: string;
   progress: { count: number; target: number };
   streak: IntentionStreakInfo;
+  /** How the wish star shines — from care, not from days. */
+  star?: WishStar;
+  manifestedAt?: string | null;
+  /** The new moon (UTC date) the wish waits for, when planted for it. */
+  plantedMoon?: string | null;
+  natalHouse?: number | null;
   /** Present on create: what setting it did for Aster (first one hatches the egg). */
   mascot?: MascotDelta | null;
+}
+
+export type StarState = "seed" | "spark" | "glowing" | "radiant";
+
+export interface WishStar {
+  state: StarState;
+  /** Quiet for a few days — shown softly, never dimmed. */
+  resting: boolean;
+  /** Planted for a new moon that hasn't come yet. */
+  waiting: boolean;
+}
+
+/** Where a life area lives in the natal chart. */
+export interface LifeAreaContext {
+  area: LifeArea;
+  house: number;
+  sign: string | null;
+  ruler: string | null;
+  rulerSign: string | null;
+  rulerHouse: number | null;
+  planets: string[];
+  /** Birth time unknown → houses are only a sketch. */
+  approximate: boolean;
+}
+
+export interface PowerDay {
+  date: string;
+  locked: boolean;
+  score: number | null;
+  reason: { transitPlanet: string; natalPlanet: string; aspect: string; nature: AspectNature } | null;
+}
+
+export interface PowerDays {
+  area: LifeArea;
+  stage: number;
+  visible: number;
+  days: PowerDay[];
 }
 
 export interface IntentionStreakInfo {
@@ -486,6 +531,7 @@ export interface IntentionStreakInfo {
   longestStreak: number;
   /** Shields Aster spent on this read to keep the streak alive. */
   shieldsUsed?: number;
+  lastActiveDate?: string | null;
 }
 
 export interface IntentionSuggestion {
@@ -499,6 +545,10 @@ export interface CreateIntentionInput {
   category: string;
   lifeArea?: LifeArea;
   dailyTarget: number;
+  /** The affirmation kept or edited in the wizard; generated when absent. */
+  affirmation?: string;
+  /** Plant now, or wait for the next new moon. */
+  plant?: "now" | "newMoon";
 }
 
 export interface CheckInInput {
@@ -834,7 +884,11 @@ export type MascotEventKind =
   | "TAROT"
   | "MOON_RITUAL"
   | "EVENING_REFLECTION"
-  | "BREATH";
+  | "BREATH"
+  | "SKY_CHECKIN"
+  | "JOURNEY_RETURN"
+  | "MANIFESTED"
+  | "ACCOUNT_LINKED";
 
 export type MascotMood = "sleepy" | "happy" | "glowing";
 export type AccessorySlot = "head" | "neck" | "hand" | "aura";
@@ -887,6 +941,126 @@ export interface MascotState {
   today: Partial<Record<MascotEventKind, number>>;
   abilities: MascotAbility[];
   catalog: MascotCatalogItem[];
+  /** The device-wide "I showed up" streak. */
+  orbit: OrbitView;
+  /** A chosen rest: streaks pause, quests and nudges go quiet. */
+  eclipse: EclipseView;
+  journey: JourneyView;
+  /** Today's sky check-in, if done. */
+  skyCheckIn: { sky: MoodSky; energy: number } | null;
+  constellations: { found: number; total: number };
+}
+
+export interface OrbitView {
+  streak: number;
+  best: number;
+  countedToday: boolean;
+  /** Alive, but today isn't counted yet. */
+  atRisk: boolean;
+}
+
+export interface EclipseView {
+  active: boolean;
+  start: string | null;
+  end: string | null;
+  maxDays: number;
+}
+
+export type JourneyStatus = "locked" | "ready" | "away" | "returned" | "claimed";
+
+export interface JourneyDiscovery {
+  transitPlanet: string;
+  aspect: string;
+  natalPoint: string;
+  nature: AspectNature;
+  orb: number;
+  sign: string;
+  title: string;
+  body: string;
+  /** In-app deep link ("See it in your chart"). */
+  link: string;
+}
+
+export interface JourneyView {
+  status: JourneyStatus;
+  minEnergy: number;
+  returnsAt: string | null;
+  /** Only once Aster is back. */
+  discovery: JourneyDiscovery | null;
+  constellationKey: string | null;
+  completed: number;
+  shieldEvery: number;
+}
+
+export interface JourneyClaim {
+  delta: MascotDelta;
+  discovery: JourneyDiscovery;
+  constellationKey: string;
+  duplicate: boolean;
+  bonusStardust: number;
+  shieldGranted: boolean;
+  state: MascotState;
+}
+
+export interface ConstellationEntry {
+  key: string;
+  found: boolean;
+  count: number;
+  firstFoundAt: string | null;
+}
+
+export type MoodSky = "RADIANT" | "CLEAR" | "PARTLY" | "CLOUDY" | "STORMY";
+
+export interface MoodReply {
+  /** i18n key: mood.reply.<SKY>. */
+  replyKey: string;
+  moon: { sign: string; natalHouse: number } | null;
+  suggestBreath: boolean;
+}
+
+export interface MoodCheckInResult {
+  delta: MascotDelta;
+  reply: MoodReply;
+  state: MascotState;
+}
+
+// ─── Personal sky plan ───────────────────────────────────────────────────────
+
+export type AspectNature = "harmonic" | "challenging" | "neutral";
+
+export interface PlanWhy {
+  transitPlanet: string;
+  aspect: string;
+  natalPoint: string;
+  nature: AspectNature;
+}
+
+export interface PlanPrefill {
+  category?: AffirmationCategory;
+  intentionId?: string;
+  area?: LifeArea;
+  questionKey?: string;
+  questionParams?: Record<string, string>;
+}
+
+export interface PlanStep {
+  kind: MascotEventKind;
+  titleKey: string;
+  why: PlanWhy | null;
+  whyKey?: string;
+  prefill?: PlanPrefill;
+}
+
+export interface DailyPlan {
+  date: string;
+  focusArea: LifeArea;
+  focusWhy: PlanWhy | null;
+  moon: { sign: string; natalHouse: number } | null;
+  powerIntentionId: string | null;
+  gentle: boolean;
+  anchors: PlanStep[];
+  steps: PlanStep[];
+  week: { date: string; area: LifeArea; score: number }[];
 }
 
 export interface MascotEventResult {

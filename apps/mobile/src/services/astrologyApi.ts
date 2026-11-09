@@ -14,6 +14,10 @@ import {
   CreateBirthProfileDto,
   CreateIntentionInput,
   DailyInsight,
+  DailyPlan,
+  LifeArea,
+  LifeAreaContext,
+  PowerDays,
   Forecast,
   ForecastPeriod,
   GuidanceAnswer,
@@ -45,7 +49,10 @@ import {
   TransitOverview,
   YearAhead,
 } from "./types";
-import { mockAward, mockResetMascot } from "./mascotApi";
+import { mockAward, mockResetMascot, mockTodayMood } from "./mascotApi";
+import { buildPlan, focusAreaOf, weekStrip, type PlanTransit } from "../lib/planRules";
+import { LIFE_AREA_HOUSES, starState, visiblePowerDays } from "../lib/intentionRules";
+import { lunarWindow, nextLunarPeak } from "../lib/mascotRules";
 import { Locale } from "../i18n";
 import { generateNatalChart } from "./mock/natalChart";
 import { generateTransits, generateTransitReport } from "./mock/transits";
@@ -174,9 +181,28 @@ export interface AstrologyApi {
     input: CreateIntentionInput,
     locale: Locale,
   ): Promise<Intention>;
-  listIntentions(): Promise<Intention[]>;
+  /** Active wishes by default; "manifested" is the shelf of wishes that came true. */
+  listIntentions(status?: "active" | "manifested"): Promise<Intention[]>;
   getIntention(id: string): Promise<Intention>;
   deleteIntention(id: string): Promise<void>;
+  /** A wish came true → the shelf + Aster celebrates. */
+  manifestIntention(id: string): Promise<Intention>;
+  /** Let a wish go (kept, no longer active). */
+  archiveIntention(id: string): Promise<void>;
+  /** The wish's power days from the user's transits (locked past 3 until Glimmer). */
+  getPowerDays(id: string, dto: CreateBirthProfileDto): Promise<PowerDays>;
+  /** Where each life area lives in the natal chart. */
+  getLifeAreas(dto: CreateBirthProfileDto): Promise<LifeAreaContext[]>;
+  /** The chart-framed affirmation for a wish, before it is planted. */
+  previewAffirmation(
+    dto: CreateBirthProfileDto,
+    goalText: string,
+    lifeArea: LifeArea,
+    locale: Locale,
+  ): Promise<string>;
+
+  // Personal sky plan (built on the server from the stored chart; the dto feeds the mock).
+  getTodayPlan(dto: CreateBirthProfileDto): Promise<DailyPlan>;
   getIntentionSuggestions(
     dto: CreateBirthProfileDto,
     locale: Locale,
@@ -432,26 +458,137 @@ const mockAstrologyApi: AstrologyApi = {
   async createIntention(dto, input, locale) {
     await delay();
     const now = new Date().toISOString();
+    const lifeArea = input.lifeArea ?? "energy";
+    const plantedMoon = input.plant === "newMoon" ? nextLunarPeak(new Date(), "new") : null;
     const intention: Intention = {
       id: `${Date.now()}`,
       goalText: input.goalText,
       category: input.category,
-      lifeArea: input.lifeArea ?? "energy",
-      affirmation: mockAffirmation(input.goalText, locale),
+      lifeArea,
+      affirmation: input.affirmation?.trim() || mockAffirmation(input.goalText, locale),
       dailyTarget: input.dailyTarget,
       status: "active",
       createdAt: now,
       updatedAt: now,
       progress: { count: 0, target: input.dailyTarget },
       streak: { currentStreak: 0, longestStreak: 0 },
+      natalHouse: LIFE_AREA_HOUSES[lifeArea].main,
+      plantedMoon,
+      manifestedAt: null,
+      star: starState(
+        { totalCheckIns: 0, avgConviction: null, lastActiveDate: null, plantedMoon },
+        localDayKey(),
+      ),
     };
     mockIntentions.unshift(intention);
     return { ...intention, mascot: mockAward("INTENTION_CREATE", "", { hatch: true }) };
   },
 
-  async listIntentions() {
+  async listIntentions(status = "active") {
     await delay();
-    return [...mockIntentions];
+    return mockIntentions.filter((i) => i.status === status);
+  },
+
+  async manifestIntention(id) {
+    await delay();
+    const i = mockIntentions.find((x) => x.id === id);
+    if (!i || i.status !== "active") throw new Error("Only an active wish can be manifested");
+    i.status = "manifested";
+    i.manifestedAt = new Date().toISOString();
+    return { ...i, mascot: mockAward("MANIFESTED", id) };
+  },
+
+  async archiveIntention(id) {
+    await delay();
+    const i = mockIntentions.find((x) => x.id === id);
+    if (i) i.status = "archived";
+  },
+
+  async getPowerDays(id, dto) {
+    await delay();
+    const i = mockIntentions.find((x) => x.id === id);
+    const area: LifeArea = i?.lifeArea ?? "energy";
+    const best = mockBestDays(dto, 14, "en");
+    const { useMascotStore } = await import("../store/useMascotStore");
+    const stage = useMascotStore.getState().state?.stage ?? 0;
+    const visible = visiblePowerDays(stage, best.scores.length);
+    // The mock's best days carry prose reasons only, so power days show scores without a transit line.
+    return {
+      area,
+      stage,
+      visible,
+      days: best.scores.map((s, idx) => {
+        const locked = idx >= visible;
+        return { date: s.date, locked, score: locked ? null : s[area], reason: null };
+      }),
+    };
+  },
+
+  async getLifeAreas(dto) {
+    await delay();
+    const chart = generateNatalChart(dto);
+    return (Object.keys(LIFE_AREA_HOUSES) as LifeArea[]).map((area) => {
+      const house = LIFE_AREA_HOUSES[area].main;
+      const h = chart.houses.find((x) => x.house === house);
+      return {
+        area,
+        house,
+        sign: h?.sign ?? null,
+        ruler: h?.ruler ?? null,
+        rulerSign: h?.rulerSign ?? null,
+        rulerHouse: h?.rulerHouse ?? null,
+        planets: h?.planetsInHouse ?? [],
+        approximate: false,
+      };
+    });
+  },
+
+  async previewAffirmation(_dto, goalText, _lifeArea, locale) {
+    await delay();
+    return mockAffirmation(goalText, locale);
+  },
+
+  async getTodayPlan(dto) {
+    await delay();
+    const today = localDayKey();
+    const chart = generateNatalChart(dto);
+    const report = generateTransitReport(dto, chart);
+    const transits: PlanTransit[] = report.movements
+      .flatMap((m) =>
+        m.aspects.map((a) => ({
+          transitPlanet: m.planet,
+          transitSign: m.sign,
+          natalPlanet: a.natalPlanet,
+          aspect: a.aspect,
+          nature: a.nature,
+          orb: a.orb,
+        })),
+      )
+      .sort((a, b) => a.orb - b.orb);
+    const moon = report.movements.find((m) => m.planet === "Moon");
+    const best = mockBestDays(dto, 7, "en");
+    const s0 = best.scores[0];
+    const areaScores = s0 ? { love: s0.love, career: s0.career, money: s0.money, energy: s0.energy } : null;
+    const focus = focusAreaOf(areaScores);
+    const lead = transits.find((t) => t.nature === "harmonic") ?? transits[0];
+    const lunar = lunarWindow(new Date());
+    return buildPlan({
+      today,
+      transits,
+      moon: moon ? { sign: moon.sign, natalHouse: moon.natalHouse } : null,
+      areaScores,
+      areaReasons: lead
+        ? { [focus]: { transitPlanet: lead.transitPlanet, aspect: lead.aspect, natalPoint: lead.natalPlanet, nature: lead.nature } }
+        : {},
+      week: weekStrip(best.scores),
+      intentions: mockIntentions
+        .filter((i) => i.status === "active" && !i.star?.waiting)
+        .slice()
+        .reverse()
+        .map((i) => ({ id: i.id, lifeArea: i.lifeArea })),
+      mood: mockTodayMood(),
+      lunar: lunar ? { phase: lunar.phase, peakDate: lunar.peakDate } : null,
+    });
   },
 
   async getIntention(id) {
@@ -585,6 +722,11 @@ const mockPeople: SavedPerson[] = [];
 const mockUnlocked = new Set<string>();
 const mockChat: ChatMessage[] = [];
 const mockIntentions: Intention[] = [];
+
+/** The device's local day, YYYY-MM-DD (the mock has no x-tz round trip). */
+function localDayKey(now = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
 
 /** Real backend when EXPO_PUBLIC_API_URL is set, otherwise local mock data. */
 export const astrologyApi: AstrologyApi = USE_HTTP ? httpAstrologyApi : mockAstrologyApi;

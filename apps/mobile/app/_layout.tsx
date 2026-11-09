@@ -25,6 +25,7 @@ import { API_CONFIG_ERROR } from "../src/services/config";
 import { initSentry, navigationIntegration, Sentry } from "../src/services/sentry";
 import { AppErrorBoundary } from "../src/components/AppErrorBoundary";
 import { ReminderBridge } from "../src/features/reminders/ReminderBridge";
+import { VaultBridge } from "../src/features/account/VaultBridge";
 import { AiConsentScreen } from "../src/features/consent/AiConsentScreen";
 import { CelebrationHost } from "../src/features/aster/CelebrationHost";
 
@@ -116,6 +117,7 @@ function RootLayout() {
         {hasOnboarded ? <TermSheet /> : null}
         {/* Local reminders: schedule from settings, route taps. */}
         {hasOnboarded ? <ReminderBridge /> : null}
+        {hasOnboarded ? <VaultBridge /> : null}
         {/* Aster's celebrations (hatching, growing, rewards) over everything. */}
         {hasOnboarded ? <CelebrationHost /> : null}
       </SafeAreaProvider>
