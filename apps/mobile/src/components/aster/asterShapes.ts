@@ -1,3 +1,4 @@
+import { art } from "../../lib/design-system";
 /**
  * Geometry for Aster, on a 200×200 artboard. The body is a chubby five-point
  * star whose corners are rounded with quadratic curves (outer tips softer than
@@ -86,11 +87,4 @@ export const HEAD_TIP: Pt = [CX, CY - OUTER_R];
 export const STAGE_SCALE = [1, 0.7, 0.82, 0.92, 0.98, 1.02];
 
 /** Body palette per stage: warm gold, getting richer as Aster grows. */
-export const BODY_COLORS: { top: string; bottom: string; slab: string }[] = [
-  { top: "#FFF6DC", bottom: "#FFE0A0", slab: "#E3BC6E" }, // egg shell
-  { top: "#FFF0B8", bottom: "#FFD25C", slab: "#E2A512" },
-  { top: "#FFEC9E", bottom: "#FFC83D", slab: "#D99A00" },
-  { top: "#FFE98F", bottom: "#FFBE2E", slab: "#D08F00" },
-  { top: "#FFE680", bottom: "#FFB31F", slab: "#C98600" },
-  { top: "#FFF3B0", bottom: "#FFA8D8", slab: "#C9407F" }, // Nova: candy-gold
-];
+export const BODY_COLORS: readonly { top: string; bottom: string; slab: string }[] = art.stageBody;

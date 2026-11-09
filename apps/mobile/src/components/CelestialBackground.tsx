@@ -20,7 +20,7 @@ import {
   cancelAnimation,
 } from "react-native-reanimated";
 
-import { surface } from "../lib/design-system";
+import { art, colors, surface } from "../lib/design-system";
 
 const { width: W, height: H } = Dimensions.get("window");
 
@@ -86,9 +86,9 @@ const CONSTELLATIONS: Constellation[] = [
   },
 ];
 
-const GOLD = "#FFD25C";
-const GOLD_BRIGHT = "#FFF4D1";
-const STAR_WHITE = "#FFF8FF";
+const GOLD = colors.star[300];
+const GOLD_BRIGHT = colors.star[100];
+const STAR_WHITE = colors.text.primary;
 
 interface Props {
   variant?: Variant;
@@ -126,7 +126,7 @@ export function CelestialBackground({ variant = "default" }: Props) {
         <RadialGradient
           c={vec(W * 0.75, H * 0.12)}
           r={W * 0.8}
-          colors={["#4B2FB0", "transparent"]}
+          colors={[art.nebulaViolet, "transparent"]}
         />
       </Circle>
 
@@ -135,7 +135,7 @@ export function CelestialBackground({ variant = "default" }: Props) {
         <RadialGradient
           c={vec(W * 0.15, H * 0.88)}
           r={W * 0.8}
-          colors={["#B23A8A", "transparent"]}
+          colors={[art.nebulaPink, "transparent"]}
         />
       </Circle>
 

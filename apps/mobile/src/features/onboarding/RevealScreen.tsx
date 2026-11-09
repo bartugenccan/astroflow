@@ -5,9 +5,9 @@ import { useRouter, type Href } from "expo-router";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { ChartReveal } from "../../components/ChartReveal";
 import { BigThree } from "../../components/BigThree";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { StarDivider } from "../../components/ui/StarDivider";
 import { astrologyApi } from "../../services/astrologyApi";
 import { BirthProfileResponse, CreateBirthProfileDto } from "../../services/types";
@@ -81,7 +81,7 @@ export function RevealScreen() {
               </AppText>
             </EnterView>
             <EnterView index={1} distance={24} scale>
-              <HairlineCard style={styles.card}>
+              <ChunkyCard style={styles.card}>
                 <BigThree
                   sunSign={profile.sunSign}
                   moonSign={profile.moonSign}
@@ -97,10 +97,10 @@ export function RevealScreen() {
                   {tr("elements", profile.dominantElement)} •{" "}
                   {tr("planets", profile.dominantPlanet)}
                 </AppText>
-              </HairlineCard>
+              </ChunkyCard>
             </EnterView>
             <EnterView index={2}>
-              <GoldButton label={t("onboarding.enterApp")} onPress={enter} />
+              <ChunkyButton label={t("onboarding.enterApp")} onPress={enter} />
             </EnterView>
           </View>
         )}

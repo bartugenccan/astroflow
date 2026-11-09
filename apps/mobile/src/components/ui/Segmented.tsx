@@ -71,11 +71,10 @@ export function Segmented<T extends string>({
             accessibilityState={{ selected: active }}
           >
             <AppText
-              variant="heading"
+              variant={compact ? "labelLong" : "heading"}
               color={active ? palette.primary.on : colors.text.secondary}
               numberOfLines={1}
               maxFontSizeMultiplier={1.15}
-              style={compact ? styles.compactLabel : undefined}
             >
               {o.label}
             </AppText>
@@ -87,10 +86,6 @@ export function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  compactLabel: {
-    fontSize: 14,
-    lineHeight: 19,
-  },
   segmented: {
     flexDirection: "row",
     backgroundColor: surface.sheet,
@@ -113,6 +108,8 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
+    minHeight: 44,
+    justifyContent: "center",
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
     alignItems: "center",

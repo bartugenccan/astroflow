@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Animated, { LinearTransition, useReducedMotion } from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { StarDivider } from "../../components/ui/StarDivider";
 import { ShimmerLines } from "../../components/ui/Shimmer";
@@ -124,7 +124,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
 
         {/* Big Three hero */}
         <EnterView index={1}>
-          <HairlineCard elevated style={styles.hero}>
+          <ChunkyCard depth="lg" style={styles.hero}>
             <View style={styles.heroHeader}>
               <View style={styles.headLeft}>
                 <AppText variant="label" color={colors.text.accent} style={styles.shrink}>
@@ -152,13 +152,13 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
             >
               <AppText variant="lead">{bigThree.data?.text}</AppText>
             </Section>
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
 
         {/* Chart Context — day/night + Saturn return */}
         <EnterView index={2} style={styles.section}>
           <SectionHeader eyebrow={t("reading.contextTitle")} />
-          <HairlineCard>
+          <ChunkyCard>
             {context.data ? (
               <View style={styles.chips}>
                 <View style={styles.chip}>
@@ -185,13 +185,13 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
             >
               <AppText variant="lead">{context.data?.text}</AppText>
             </Section>
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
 
         {/* Overview */}
         <EnterView index={3} style={styles.section}>
           <SectionHeader eyebrow={t("reading.overviewTitle")} />
-          <HairlineCard>
+          <ChunkyCard>
             <Section
               loading={overview.loading}
               error={!!overview.error}
@@ -200,13 +200,13 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
             >
               <AppText variant="lead">{overview.data?.text}</AppText>
             </Section>
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
 
         {/* Houses — 12 lazily-read cards */}
         <View style={styles.section}>
           <TermHeader eyebrow={t("reading.housesTitle")} term="house" />
-          <HairlineCard style={styles.aspectsCard}>
+          <ChunkyCard style={styles.aspectsCard}>
             <Section
               loading={chart.loading}
               error={!!chart.error}
@@ -224,13 +224,13 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
                   ))
                 : null}
             </Section>
-          </HairlineCard>
+          </ChunkyCard>
         </View>
 
         {/* Key aspects */}
         <View style={styles.section}>
           <TermHeader eyebrow={t("reading.aspectsTitle")} term="aspect" />
-          <HairlineCard style={styles.aspectsCard}>
+          <ChunkyCard style={styles.aspectsCard}>
             <Section
               loading={aspects.loading}
               error={!!aspects.error}
@@ -253,13 +253,13 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
                 <AppText variant="body">{t("reading.tapAspect")}</AppText>
               )}
             </Section>
-          </HairlineCard>
+          </ChunkyCard>
         </View>
 
         {/* Lunar Nodes */}
         <View style={styles.section}>
           <TermHeader eyebrow={t("reading.nodesTitle")} term="northNode" />
-          <HairlineCard>
+          <ChunkyCard>
             {nodes.data ? (
               <View style={styles.nodeRow}>
                 <View style={styles.nodeItem}>
@@ -298,7 +298,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
             >
               <AppText variant="lead">{nodes.data?.text}</AppText>
             </Section>
-          </HairlineCard>
+          </ChunkyCard>
         </View>
 
         <ReportCta kind="natal" />

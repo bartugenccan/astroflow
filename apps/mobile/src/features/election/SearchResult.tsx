@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { EnterView } from "../../lib/motion";
 import { formatDayMonthYear, formatLongDay } from "../../lib/dates";
@@ -64,7 +64,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
       </EnterView>
 
       <EnterView index={1}>
-        <HairlineCard style={styles.card}>
+        <ChunkyCard style={styles.card}>
           <ReadingSection text={reading.data?.summary} loading={reading.loading} />
           {reading.data?.tips.map((tip, i) => (
             <View key={i} style={styles.tip}>
@@ -74,7 +74,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
               </AppText>
             </View>
           ))}
-        </HairlineCard>
+        </ChunkyCard>
       </EnterView>
 
       <EnterView index={2} style={styles.block}>
@@ -83,7 +83,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
           const good = p.factors.find((f) => f.tone === "good");
           return (
             <PressableScale key={p.date} onPress={() => onOpenDate(p.date)} scaleTo={0.98}>
-              <HairlineCard style={[styles.pick, i === 0 && styles.pickFirst]}>
+              <ChunkyCard style={[styles.pick, i === 0 && styles.pickFirst]}>
                 <View style={[styles.rank, { backgroundColor: scoreColor(p.score, 0.6) }]}>
                   <AppText variant="numeric" color={colors.text.primary} style={styles.rankScore}>
                     {p.score}
@@ -111,7 +111,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
                   ) : null}
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
-              </HairlineCard>
+              </ChunkyCard>
             </PressableScale>
           );
         })}
@@ -120,7 +120,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
       {r.avoid.length ? (
         <EnterView index={3} style={styles.block}>
           <SectionTitle>{t("election.avoidTitle")}</SectionTitle>
-          <HairlineCard style={styles.avoidCard}>
+          <ChunkyCard style={styles.avoidCard}>
             {r.avoid.map((a, i) => (
               <View key={`${a.kind}-${a.from}-${i}`} style={styles.avoid}>
                 <Ionicons
@@ -138,7 +138,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
                 </View>
               </View>
             ))}
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
       ) : null}
 

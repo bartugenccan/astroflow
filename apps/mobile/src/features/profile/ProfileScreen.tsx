@@ -5,7 +5,7 @@ import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { LangSwitch } from "../../components/ui/LangSwitch";
 import { BigThree } from "../../components/BigThree";
@@ -215,7 +215,7 @@ export function ProfileScreen() {
         {/* Birth details */}
         <EnterView index={4} style={styles.section}>
           <SectionHeader eyebrow={t("profile.birthDataTitle")} />
-          <HairlineCard>
+          <ChunkyCard>
             {birthRows.map((row, i) => {
               const inner = (
                 <View style={styles.dataRow}>
@@ -258,13 +258,13 @@ export function ProfileScreen() {
                 </View>
               );
             })}
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
 
         {/* Settings */}
         <EnterView index={5} style={styles.section}>
           <SectionHeader eyebrow={t("profile.settingsTitle")} />
-          <HairlineCard>
+          <ChunkyCard>
             <View style={styles.settingRow}>
               <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
                 {t("profile.language")}
@@ -339,13 +339,13 @@ export function ProfileScreen() {
                 {APP_VERSION}
               </AppText>
             </View>
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
 
         {/* Help & legal — the store-required privacy/terms/support links. */}
         <EnterView index={6} style={styles.section}>
           <SectionHeader eyebrow={t("profile.legalTitle")} />
-          <HairlineCard>
+          <ChunkyCard>
             {LEGAL_ROWS.map((row, i) => (
               <View key={row.key}>
                 <PressableScale
@@ -370,7 +370,7 @@ export function ProfileScreen() {
                 {i < LEGAL_ROWS.length - 1 ? <View style={styles.sep} /> : null}
               </View>
             ))}
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
 
         {/* Start over */}
@@ -448,7 +448,7 @@ function NavCard({
 }) {
   return (
     <PressableScale onPress={onPress} scaleTo={0.98} accessibilityRole="button">
-      <HairlineCard style={styles.navRow}>
+      <ChunkyCard style={styles.navRow}>
         <View style={styles.navIcon}>
           <Ionicons name={icon} size={20} color={colors.star[300]} />
         </View>
@@ -461,7 +461,7 @@ function NavCard({
           </AppText>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-      </HairlineCard>
+      </ChunkyCard>
     </PressableScale>
   );
 }

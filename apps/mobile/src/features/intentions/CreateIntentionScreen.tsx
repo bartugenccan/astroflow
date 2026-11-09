@@ -3,9 +3,9 @@ import { StyleSheet, View, ScrollView, TextInput } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { DotRating } from "../../components/ui/DotRating";
 import { PressableScale } from "../../components/ui/PressableScale";
@@ -107,14 +107,14 @@ export function CreateIntentionScreen() {
                     accessibilityState={{ selected: goal === s.goal }}
                     onPress={() => pickSuggestion(s)}
                   >
-                    <HairlineCard
+                    <ChunkyCard
                       style={[styles.suggestion, goal === s.goal && styles.suggestionActive]}
                     >
                       <AppText variant="heading">{s.goal}</AppText>
                       <AppText variant="bodySmall" style={styles.suggestionWhy}>
                         {s.why}
                       </AppText>
-                    </HairlineCard>
+                    </ChunkyCard>
                   </PressableScale>
                 </EnterView>
               ))}
@@ -164,7 +164,7 @@ export function CreateIntentionScreen() {
         </EnterView>
 
         <EnterView index={3}>
-          <GoldButton
+          <ChunkyButton
             label={t("intentions.createCta")}
             onPress={create}
             loading={saving}

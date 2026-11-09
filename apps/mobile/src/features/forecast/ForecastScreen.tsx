@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
@@ -12,7 +12,7 @@ import { Segmented } from "../../components/ui/Segmented";
 import { CountUp } from "../../components/ui/CountUp";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { PremiumGate } from "../../components/PremiumGate";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { EnterView } from "../../lib/motion";
 import { BestDaysGrid } from "./BestDaysGrid";
 import { ScoreBar } from "./ScoreBar";
@@ -123,7 +123,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
             ))}
           </View>
 
-          <HairlineCard>
+          <ChunkyCard>
             {bestDays.loading ? (
               <View style={styles.loaderBox}>
                 <CelestialLoader size="sm" />
@@ -155,7 +155,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
             ) : (
               <AppText variant="body">{t("forecast.error")}</AppText>
             )}
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
 
         {/* Forecast prose */}
@@ -164,17 +164,17 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
           {forecastGated ? (
             <LockedForecast onUnlock={() => setPaywall(true)} label={t("forecast.lockedMonthlyTitle")} />
           ) : forecast.loading ? (
-            <HairlineCard>
+            <ChunkyCard>
               <View style={styles.loaderBox}>
                 <CelestialLoader label={t("forecast.loading")} />
               </View>
-            </HairlineCard>
+            </ChunkyCard>
           ) : forecast.data ? (
             <>
               <EnterView>
-                <HairlineCard>
+                <ChunkyCard>
                   <AppText variant="lead">{forecast.data.overview}</AppText>
-                </HairlineCard>
+                </ChunkyCard>
               </EnterView>
 
               {/* Themes: free for premium, gated for non-premium weekly */}
@@ -188,14 +188,14 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                   <View style={styles.themeList}>
                     {forecast.data.themes.map((th, i) => (
                       <EnterView key={th.area} index={i + 1}>
-                        <HairlineCard style={styles.themeCard}>
+                        <ChunkyCard style={styles.themeCard}>
                           <AppText variant="label" color={colors.text.accent}>
                             {t(`lifeAreas.${th.area}` as TranslationKey)}
                           </AppText>
                           <AppText variant="body" color={colors.text.primary} style={styles.themeText}>
                             {th.text}
                           </AppText>
-                        </HairlineCard>
+                        </ChunkyCard>
                       </EnterView>
                     ))}
                   </View>
@@ -206,7 +206,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
               {forecast.data.keyDates.length > 0 ? (
                 <View style={styles.themes}>
                   <SectionHeader eyebrow={t("forecast.keyDatesTitle")} />
-                  <HairlineCard style={styles.keyDates}>
+                  <ChunkyCard style={styles.keyDates}>
                     {forecast.data.keyDates.map((kd, i) => (
                       <EnterView key={`${kd.date}-${i}`} index={i} style={styles.keyDateRow}>
                         <AppText variant="numeric" color={colors.star[300]} style={styles.keyDateDate}>
@@ -217,14 +217,14 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                         </AppText>
                       </EnterView>
                     ))}
-                  </HairlineCard>
+                  </ChunkyCard>
                 </View>
               ) : null}
             </>
           ) : (
-            <HairlineCard>
+            <ChunkyCard>
               <AppText variant="body">{t("forecast.error")}</AppText>
-            </HairlineCard>
+            </ChunkyCard>
           )}
         </EnterView>
       </ScrollView>
@@ -301,14 +301,14 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
 function LockedForecast({ onUnlock, label }: { onUnlock: () => void; label: string }) {
   const { t } = useTranslation();
   return (
-    <HairlineCard>
+    <ChunkyCard>
       <View style={styles.lockedForecast}>
         <AppText variant="heading" center>
           {label}
         </AppText>
-        <GoldButton label={t("paywall.unlockPremium")} onPress={onUnlock} />
+        <ChunkyButton label={t("paywall.unlockPremium")} onPress={onUnlock} />
       </View>
-    </HairlineCard>
+    </ChunkyCard>
   );
 }
 

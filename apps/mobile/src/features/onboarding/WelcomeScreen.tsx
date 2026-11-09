@@ -17,7 +17,7 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { AppText } from "../../components/ui/AppText";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { AccountSheet } from "../account/AccountSheet";
@@ -90,7 +90,7 @@ export function WelcomeScreen() {
               returnKeyType="done"
               autoCapitalize="words"
             />
-            <GoldButton
+            <ChunkyButton
               label={t("onboarding.begin")}
               // Birth data leaves the phone from here on: the AI notice comes first, once.
               onPress={() => router.push(aiConsentAt ? "/birth-date" : "/consent")}

@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { WheelPicker, WheelItem } from "../../components/ui/WheelPicker";
 import { AppText } from "../../components/ui/AppText";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { useTranslation } from "../../i18n";
 import { colors, spacing } from "../../lib/design-system";
 
@@ -104,7 +104,7 @@ export function BirthDetailsSheet({
           <WheelPicker items={minutes} selectedIndex={minute} onChange={(i) => setMinute(minutes[i].value)} width={72} />
         </View>
 
-        <GoldButton label={t("profile.save")} onPress={save} loading={saving} />
+        <ChunkyButton label={t("profile.save")} onPress={save} loading={saving} />
       </View>
     </SpringBottomSheet>
   );

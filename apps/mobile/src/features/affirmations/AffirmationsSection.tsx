@@ -4,7 +4,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { Chip } from "../../components/ui/Chip";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
-import { GoldButton } from "../../components/ui/GoldButton";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { EnterView } from "../../lib/motion";
 import { AffirmationCard } from "./AffirmationCard";
@@ -233,7 +232,7 @@ export function AddAffirmationSheet({
           maxLength={200}
           autoFocus
         />
-        <GoldButton label={t("affirmations.ui.save")} onPress={save} disabled={!draft.trim()} />
+        <ChunkyButton label={t("affirmations.ui.save")} onPress={save} disabled={!draft.trim()} />
       </View>
     </SpringBottomSheet>
   );

@@ -5,8 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as AppleAuthentication from "expo-apple-authentication";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { AppText } from "../../components/ui/AppText";
-import { GoldButton } from "../../components/ui/GoldButton";
-import { DepthButton } from "../../components/ui/DepthButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation, type TFunction, type TranslationKey } from "../../i18n";
@@ -187,9 +186,9 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
             </View>
             {error ? <ErrorLine text={error} /> : null}
             {linked.length < 3 ? (
-              <DepthButton label={t("account.addMethod")} onPress={() => setAdding(true)} tone="ink" />
+              <ChunkyButton label={t("account.addMethod")} onPress={() => setAdding(true)} variant="night" size="md" uppercase={false} haptic="light" />
             ) : null}
-            <DepthButton label={t("account.signOut")} onPress={confirmSignOut} tone="ink" />
+            <ChunkyButton label={t("account.signOut")} onPress={confirmSignOut} variant="night" size="md" uppercase={false} haptic="light" />
           </>
         ) : step === "choose" ? (
           <>
@@ -212,25 +211,31 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
               />
             ) : null}
             {GOOGLE_ENABLED && !linked.includes("google") ? (
-              <DepthButton
+              <ChunkyButton
                 label={t("account.google")}
-                tone="light"
+                variant="cloud"
                 icon={<Ionicons name="logo-google" size={18} color="#181129" />}
                 loading={busy === "google"}
                 disabled={busy !== null}
                 onPress={() => run("google", async () => done(await signInWithGoogle()))}
+                size="md"
+                uppercase={false}
+                haptic="light"
               />
             ) : null}
             {!linked.includes("email") ? (
-              <DepthButton
+              <ChunkyButton
                 label={t("account.email")}
-                tone="ink"
+                variant="night"
                 icon={<Ionicons name="mail-outline" size={18} color={colors.star[300]} />}
                 disabled={busy !== null}
                 onPress={() => {
                   setError(null);
                   setStep("email");
                 }}
+                size="md"
+                uppercase={false}
+                haptic="light"
               />
             ) : null}
             {error ? <ErrorLine text={error} /> : null}
@@ -257,7 +262,7 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
               {t("account.emailNote")}
             </AppText>
             {error ? <ErrorLine text={error} /> : null}
-            <GoldButton
+            <ChunkyButton
               label={t("account.sendCode")}
               onPress={sendCode}
               loading={busy === "email"}
@@ -294,7 +299,7 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
               />
             </Pressable>
             {error ? <ErrorLine text={error} /> : null}
-            <GoldButton
+            <ChunkyButton
               label={t("account.verify")}
               onPress={() => verify(code)}
               loading={busy === "code"}

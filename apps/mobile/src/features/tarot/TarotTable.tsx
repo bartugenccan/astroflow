@@ -22,7 +22,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { AppText } from "../../components/ui/AppText";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { TranslationKey, useTranslation } from "../../i18n";
 import { colors, motion, radii, spacing, surface } from "../../lib/design-system";
 import type { TarotCategory, TarotDrawnCard } from "../../services/types";
@@ -398,11 +398,11 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme }: Prop
       <View style={styles.actions}>
         {mode === "stack" ? (
           <>
-            <GoldButton label={t("tarot.shuffle")} onPress={startShuffle} />
-            <GoldButton label={t("tarot.changeTheme")} variant="ghost" onPress={onChangeTheme} />
+            <ChunkyButton label={t("tarot.shuffle")} onPress={startShuffle} />
+            <ChunkyButton label={t("tarot.changeTheme")} variant="ghost" onPress={onChangeTheme} />
           </>
         ) : mode === "shuffle" ? (
-          <GoldButton label={t("tarot.stop")} onPress={stopShuffle} />
+          <ChunkyButton label={t("tarot.stop")} onPress={stopShuffle} />
         ) : choosing ? (
           <AppText variant="bodySmall" center color={colors.text.secondary}>
             {t("tarot.pickHint")}

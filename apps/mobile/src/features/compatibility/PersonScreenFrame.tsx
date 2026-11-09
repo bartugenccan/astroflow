@@ -5,9 +5,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { BackButton } from "../../components/ui/BackButton";
 import { EnterView } from "../../lib/motion";
@@ -68,7 +68,7 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
         {back}
         <View style={styles.center}>
           <EnterView scale style={styles.fullWidth}>
-          <HairlineCard style={styles.lockCard}>
+          <ChunkyCard style={styles.lockCard}>
             <Ionicons name="lock-closed" size={24} color={colors.star[300]} />
             <AppText variant="title" center>
               {person.label}
@@ -76,8 +76,8 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
             <AppText variant="body" center>
               {t("paywall.forecastSubtitle")}
             </AppText>
-            <GoldButton label={t("paywall.unlockPremium")} onPress={() => setPaywall(true)} />
-          </HairlineCard>
+            <ChunkyButton label={t("paywall.unlockPremium")} onPress={() => setPaywall(true)} />
+          </ChunkyCard>
           </EnterView>
         </View>
         <PaywallSheet visible={paywall} onClose={() => setPaywall(false)} variant="premium" />

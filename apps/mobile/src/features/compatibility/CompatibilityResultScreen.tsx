@@ -12,10 +12,10 @@ import Animated, {
 } from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { BackButton } from "../../components/ui/BackButton";
 import { CountUp } from "../../components/ui/CountUp";
@@ -133,7 +133,7 @@ export function CompatibilityResultScreen() {
 
             {/* Dimension bars — the same 7 for every couple */}
             <EnterView index={2}>
-              <HairlineCard style={styles.catCard}>
+              <ChunkyCard style={styles.catCard}>
                 {score.data.dimensions.map((d, i) => (
                   <CategoryBar
                     key={d.key}
@@ -145,7 +145,7 @@ export function CompatibilityResultScreen() {
                     lowerBetterLabel={t("compatibility.lowerBetter")}
                   />
                 ))}
-              </HairlineCard>
+              </ChunkyCard>
             </EnterView>
 
             {/* Top aspects */}
@@ -161,7 +161,7 @@ export function CompatibilityResultScreen() {
                   {t("synastry.tapToExplain")}
                 </AppText>
               </EnterView>
-              <HairlineCard>
+              <ChunkyCard>
                 {score.data.topAspects.map((a, i) => (
                   <EnterView key={`${a.planetA}-${a.planetB}-${i}`} index={i} delay={300}>
                     <SynastryAspectRow
@@ -174,7 +174,7 @@ export function CompatibilityResultScreen() {
                     ) : null}
                   </EnterView>
                 ))}
-              </HairlineCard>
+              </ChunkyCard>
             </View>
 
             {/* View this person's charts (premium after 2 free) */}
@@ -217,25 +217,25 @@ export function CompatibilityResultScreen() {
             <EnterView index={5} style={styles.section}>
               <SectionHeader eyebrow={t("compatibility.readingTitle")} />
               {locked ? (
-                <HairlineCard>
+                <ChunkyCard>
                   <View style={styles.lockedBox}>
                     <Ionicons name="lock-closed" size={20} color={colors.star[300]} />
                     <AppText variant="body" center>
                       {t("compatibility.lockedAspects")}
                     </AppText>
-                    <GoldButton label={t("paywall.unlock")} onPress={() => setPaywall(true)} />
+                    <ChunkyButton label={t("paywall.unlock")} onPress={() => setPaywall(true)} />
                   </View>
-                </HairlineCard>
+                </ChunkyCard>
               ) : reading.loading ? (
-                <HairlineCard>
+                <ChunkyCard>
                   <View style={styles.loaderBox}>
                     <CelestialLoader size="sm" />
                   </View>
-                </HairlineCard>
+                </ChunkyCard>
               ) : reading.data ? (
-                <HairlineCard>
+                <ChunkyCard>
                   <AppText variant="lead">{reading.data.text}</AppText>
-                </HairlineCard>
+                </ChunkyCard>
               ) : null}
             </EnterView>
           </>

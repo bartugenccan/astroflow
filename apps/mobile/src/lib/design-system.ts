@@ -107,6 +107,31 @@ export const colors = {
   },
 } as const;
 
+/**
+ * Illustration-only colours (Aster, the sky backdrop) that have no UI role.
+ * Everything else in the art reuses the palette above.
+ */
+export const art = {
+  /** Pure white catch-lights in Aster's eyes and shine. */
+  sparkle: "#FFFFFF",
+  /** Aster's blush. */
+  blush: "#FF8FC5",
+  /** Backdrop nebula clouds. */
+  nebulaViolet: "#4B2FB0",
+  nebulaPink: "#B23A8A",
+  /** Hard ink for Aster's face (eyes, mouth). */
+  ink: palette.star.on,
+  /** Aster's body gradient per stage (egg → Nova): top, bottom and the slab under it. */
+  stageBody: [
+  { top: "#FFF6DC", bottom: "#FFE0A0", slab: "#E3BC6E" }, // egg shell
+  { top: "#FFF0B8", bottom: "#FFD25C", slab: "#E2A512" },
+  { top: "#FFEC9E", bottom: "#FFC83D", slab: "#D99A00" },
+  { top: "#FFE98F", bottom: "#FFBE2E", slab: "#D08F00" },
+  { top: "#FFE680", bottom: "#FFB31F", slab: "#C98600" },
+  { top: "#FFF3B0", bottom: "#FFA8D8", slab: "#C9407F" }, // Nova: candy-gold,
+  ] as readonly { top: string; bottom: string; slab: string }[],
+} as const;
+
 /** Life-area / category accent tones, used by chips and intention cards. */
 export const areaTone: Record<string, Tone> = {
   love: "candy",
@@ -134,6 +159,13 @@ export const gradients = {
 
 // ─── Typography ───────────────────────────────────────────────────────────────
 export const typography = StyleSheet.create({
+  /** The biggest moment on a screen (welcome title, a reveal). Use once per screen. */
+  hero: {
+    fontFamily: fonts.display,
+    fontSize: 44,
+    lineHeight: 50,
+    color: colors.text.primary,
+  } as TextStyle,
   display: {
     fontFamily: fonts.display,
     fontSize: 34,

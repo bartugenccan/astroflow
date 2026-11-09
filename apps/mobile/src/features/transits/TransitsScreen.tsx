@@ -16,7 +16,7 @@ import {
 } from "@shopify/react-native-skia";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { TermInfo } from "../../components/TermInfo";
@@ -192,7 +192,7 @@ export function TransitsContent({
 
       {/* The sky now — overview */}
       <EnterView index={enterIndex + 2}>
-        <HairlineCard elevated style={styles.hero}>
+        <ChunkyCard depth="lg" style={styles.hero}>
           <AppText variant="label" color={colors.text.accent}>
             {t("transits.skyOverviewTitle")}
           </AppText>
@@ -204,7 +204,7 @@ export function TransitsContent({
           >
             <AppText variant="lead">{overview.data?.text}</AppText>
           </Loader>
-        </HairlineCard>
+        </ChunkyCard>
       </EnterView>
 
       {/* Per-planet transit cards */}
@@ -215,7 +215,7 @@ export function TransitsContent({
             {t("transits.tapPlanet")}
           </AppText>
         </View>
-        <HairlineCard style={styles.listCard}>
+        <ChunkyCard style={styles.listCard}>
           <Loader
             loading={report.loading}
             error={!!report.error}
@@ -239,7 +239,7 @@ export function TransitsContent({
                 ))
               : null}
           </Loader>
-        </HairlineCard>
+        </ChunkyCard>
       </EnterView>
 
       {/* Reports are cast from the user's own birth data, never a saved person's. */}

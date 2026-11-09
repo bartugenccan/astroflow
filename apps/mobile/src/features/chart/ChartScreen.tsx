@@ -4,7 +4,7 @@ import { Canvas, Circle, RadialGradient, vec } from "@shopify/react-native-skia"
 import { Dimensions } from "react-native";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
@@ -133,14 +133,14 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
             {/* Placements */}
             <View style={styles.section}>
               <SectionHeader eyebrow={t("chart.placementsTitle")} />
-              <HairlineCard style={styles.placementsCard}>
+              <ChunkyCard style={styles.placementsCard}>
                 {chart.planets.map((planet, i) => (
                   <EnterView key={planet.name} index={i} delay={motion.stagger * 2} distance={10}>
                     <PlacementRow planet={planet} onPress={setSelected} />
                     {i < chart.planets.length - 1 ? <View style={styles.sep} /> : null}
                   </EnterView>
                 ))}
-              </HairlineCard>
+              </ChunkyCard>
             </View>
           </>
         )}

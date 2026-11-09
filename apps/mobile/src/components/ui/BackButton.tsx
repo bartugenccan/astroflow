@@ -1,9 +1,8 @@
 import React from "react";
 import { StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { PressableScale } from "./PressableScale";
-import { colors } from "../../lib/design-system";
+import { IconButton } from "./IconButton";
+import { useTranslation } from "../../i18n";
 
 interface BackButtonProps {
   /** Override the default `router.back()` (e.g. to go to a specific tab). */
@@ -12,37 +11,29 @@ interface BackButtonProps {
 }
 
 /**
- * The one back affordance for pushed screens. Falls back to the Today tab when
- * there's no history (deep link / fresh launch) instead of doing nothing.
+ * The one back affordance for pushed screens — a round chunky button. Falls
+ * back to the Today tab when there's no history (deep link / fresh launch)
+ * instead of doing nothing.
  */
 export function BackButton({ onPress, icon = "chevron-back" }: BackButtonProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const goBack = () => {
     if (onPress) return onPress();
     if (router.canGoBack()) router.back();
     else router.replace("/(tabs)");
   };
   return (
-    <PressableScale
+    <IconButton
+      icon={icon}
       onPress={goBack}
-      hitSlop={12}
-      scaleTo={0.85}
+      size={40}
+      accessibilityLabel={icon === "close" ? t("common.close") : t("common.back")}
       style={styles.btn}
-      accessibilityRole="button"
-      accessibilityLabel="Back"
-    >
-      <Ionicons name={icon} size={24} color={colors.text.secondary} />
-    </PressableScale>
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  btn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: -8,
-  },
+  btn: { marginLeft: -4 },
 });

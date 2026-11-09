@@ -4,7 +4,7 @@ import Animated, { LinearTransition, useReducedMotion } from "react-native-reani
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { BackButton } from "../../components/ui/BackButton";
 import { EnterView } from "../../lib/motion";
@@ -75,7 +75,7 @@ export function GlossaryScreen() {
           return (
             <EnterView key={e.id} index={i + 2}>
               <Animated.View layout={reduced ? undefined : LinearTransition.springify().damping(18)}>
-                <HairlineCard padded={false}>
+                <ChunkyCard padded={false}>
                   <PressableScale
                     onPress={() => setOpen(isOpen ? null : e.id)}
                     scaleTo={0.98}
@@ -103,7 +103,7 @@ export function GlossaryScreen() {
                       <TermBody id={e.id} onRelated={setOpen} />
                     </View>
                   ) : null}
-                </HairlineCard>
+                </ChunkyCard>
               </Animated.View>
             </EnterView>
           );

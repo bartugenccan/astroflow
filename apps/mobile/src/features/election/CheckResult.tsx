@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { CountUp } from "../../components/ui/CountUp";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { ScoreRing } from "../../components/ScoreRing";
 import { EnterView } from "../../lib/motion";
@@ -63,7 +63,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
     <View style={styles.root}>
       {/* Verdict */}
       <EnterView scale>
-        <HairlineCard elevated style={styles.hero}>
+        <ChunkyCard depth="lg" style={styles.hero}>
           <ScoreRing
             score={r.score}
             size={112}
@@ -86,7 +86,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
               </AppText>
             </View>
           </View>
-        </HairlineCard>
+        </ChunkyCard>
       </EnterView>
       {r.event.fromText ? (
         <AppText variant="bodySmall" color={colors.text.tertiary}>
@@ -96,7 +96,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
 
       {/* Plain-language reading */}
       <EnterView index={1}>
-        <HairlineCard style={styles.card}>
+        <ChunkyCard style={styles.card}>
           <AppText variant="lead" color={colors.text.primary}>
             {reading.data?.summary ?? ""}
           </AppText>
@@ -104,7 +104,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
           <ReadingSection title={t("election.sections.why")} text={reading.data?.why} loading={reading.loading} />
           <ReadingSection title={t("election.sections.advice")} text={reading.data?.advice} loading={reading.loading} />
           <ReadingSection title={t("election.sections.caution")} text={reading.data?.caution} loading={reading.loading} />
-        </HairlineCard>
+        </ChunkyCard>
       </EnterView>
 
       {/* Hours */}
@@ -116,9 +116,9 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
       {/* Factors */}
       <EnterView index={3} style={styles.block}>
         <SectionTitle>{t("election.factorsTitle")}</SectionTitle>
-        <HairlineCard>
+        <ChunkyCard>
           <FactorList factors={r.factors} />
-        </HairlineCard>
+        </ChunkyCard>
       </EnterView>
 
       {/* Better days nearby */}
@@ -127,7 +127,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
         {r.alternatives.length ? (
           r.alternatives.map((a) => (
             <PressableScale key={a.date} onPress={() => onOpenDate(a.date)} scaleTo={0.98}>
-              <HairlineCard style={styles.alt}>
+              <ChunkyCard style={styles.alt}>
                 <View style={[styles.altScore, { backgroundColor: scoreColor(a.score, 0.55) }]}>
                   <AppText variant="numeric" color={colors.text.primary}>
                     {a.score}
@@ -140,7 +140,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
                   <VerdictBadge verdict={a.verdict} />
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
-              </HairlineCard>
+              </ChunkyCard>
             </PressableScale>
           ))
         ) : (

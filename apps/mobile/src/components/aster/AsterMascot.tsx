@@ -26,11 +26,12 @@ import {
 } from "./asterShapes";
 import { useAsterMotion } from "./useAsterMotion";
 import type { MascotRendererProps } from "./types";
+import { art, colors as tokens, palette } from "../../lib/design-system";
 
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
-const INK = "#2B1A00";
-const CHEEK = "#FF8FC5";
+const INK = art.ink;
+const CHEEK = art.blush;
 
 /**
  * Aster — AstroFlow's star mascot, drawn in code. A chubby five-point star
@@ -71,8 +72,8 @@ export function AsterMascot({
         <Svg width={size} height={size} viewBox={`0 0 ${ART} ${ART}`}>
           <Defs>
             <RadialGradient id="asterGlow" cx="50%" cy="56%" r="50%">
-              <Stop offset="0" stopColor={s === 5 ? "#FF6FB5" : "#FFD25C"} stopOpacity={glowing ? 0.6 : 0.4} />
-              <Stop offset="1" stopColor="#FFD25C" stopOpacity={0} />
+              <Stop offset="0" stopColor={s === 5 ? palette.candy.face : tokens.star[300]} stopOpacity={glowing ? 0.6 : 0.4} />
+              <Stop offset="1" stopColor={tokens.star[300]} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Circle cx={CX} cy={CY} r={s === 0 ? 80 : 60 + s * 8} fill="url(#asterGlow)" />
@@ -81,7 +82,7 @@ export function AsterMascot({
                 <Path
                   key={i}
                   d={`M ${CX} ${CY} L ${CX + 98 * Math.cos((i * Math.PI) / 4 - 0.12)} ${CY + 98 * Math.sin((i * Math.PI) / 4 - 0.12)} L ${CX + 98 * Math.cos((i * Math.PI) / 4 + 0.12)} ${CY + 98 * Math.sin((i * Math.PI) / 4 + 0.12)} Z`}
-                  fill="#FFF4D1"
+                  fill={tokens.star[100]}
                   opacity={0.16}
                 />
               ))
@@ -106,19 +107,19 @@ export function AsterMascot({
 
               {s >= 4 ? <ConstellationTail /> : null}
               {s >= 3 ? (
-                <Ellipse cx={CX} cy={CY - 76} rx={30} ry={8} fill="none" stroke="#FFF4D1" strokeWidth={5} opacity={0.9} />
+                <Ellipse cx={CX} cy={CY - 76} rx={30} ry={8} fill="none" stroke={tokens.star[100]} strokeWidth={5} opacity={0.9} />
               ) : null}
 
               {/* Hard slab under the body — the same physical depth as the buttons. */}
               <Path d={BODY_PATH} fill={colors.slab} transform="translate(0 7)" />
               <Path d={BODY_PATH} fill="url(#asterBody)" />
-              <Ellipse cx={74} cy={84} rx={11} ry={6} fill="#FFFFFF" opacity={0.55} transform="rotate(-32 74 84)" />
+              <Ellipse cx={74} cy={84} rx={11} ry={6} fill={art.sparkle} opacity={0.55} transform="rotate(-32 74 84)" />
 
               {/* Face */}
               <Face sleepy={sleepy} glowing={glowing} talking={talking} eyeProps={eyeProps} mouthProps={mouthProps} />
 
               {s >= 3 ? (
-                <Ellipse cx={CX} cy={CY - 76} rx={30} ry={8} fill="none" stroke="#FFF4D1" strokeWidth={5} opacity={0.9} strokeDasharray="0 47 48 0" />
+                <Ellipse cx={CX} cy={CY - 76} rx={30} ry={8} fill="none" stroke={tokens.star[100]} strokeWidth={5} opacity={0.9} strokeDasharray="0 47 48 0" />
               ) : null}
 
               <AccessoryFront ids={items} />
@@ -127,20 +128,20 @@ export function AsterMascot({
 
           {s >= 2 ? (
             <G>
-              <Path d={sparklePath(32, 44, 7)} fill="#FFF4D1" />
-              <Path d={sparklePath(172, 150, 5)} fill="#FFD25C" />
-              {s >= 4 ? <Path d={sparklePath(170, 40, 6)} fill="#B9A2FF" /> : null}
+              <Path d={sparklePath(32, 44, 7)} fill={tokens.star[100]} />
+              <Path d={sparklePath(172, 150, 5)} fill={tokens.star[300]} />
+              {s >= 4 ? <Path d={sparklePath(170, 40, 6)} fill={tokens.text.violet} /> : null}
             </G>
           ) : s === 1 ? (
-            <Path d={sparklePath(150, 60, 5)} fill="#FFF4D1" />
+            <Path d={sparklePath(150, 60, 5)} fill={tokens.star[100]} />
           ) : null}
 
           {sleepy ? (
             <G>
-              <SvgText x={146} y={58} fontSize={18} fontWeight="900" fill="#CFD6FF" opacity={0.85}>
+              <SvgText x={146} y={58} fontSize={18} fontWeight="900" fill={tokens.moon} opacity={0.85}>
                 z
               </SvgText>
-              <SvgText x={160} y={40} fontSize={13} fontWeight="900" fill="#CFD6FF" opacity={0.6}>
+              <SvgText x={160} y={40} fontSize={13} fontWeight="900" fill={tokens.moon} opacity={0.6}>
                 z
               </SvgText>
             </G>
@@ -181,8 +182,8 @@ function Face({
         <G>
           <AnimatedEllipse cx={CX - 19} cy={eyeY} rx={7} ry={9} fill={INK} animatedProps={eyeProps} />
           <AnimatedEllipse cx={CX + 19} cy={eyeY} rx={7} ry={9} fill={INK} animatedProps={eyeProps} />
-          <Circle cx={CX - 21.5} cy={eyeY - 3.5} r={2.6} fill="#FFFFFF" />
-          <Circle cx={CX + 16.5} cy={eyeY - 3.5} r={2.6} fill="#FFFFFF" />
+          <Circle cx={CX - 21.5} cy={eyeY - 3.5} r={2.6} fill={art.sparkle} />
+          <Circle cx={CX + 16.5} cy={eyeY - 3.5} r={2.6} fill={art.sparkle} />
         </G>
       )}
 
@@ -194,7 +195,7 @@ function Face({
       ) : glowing ? (
         <G>
           <Path d={`M ${CX - 11} ${CY + 9} Q ${CX} ${CY + 27} ${CX + 11} ${CY + 9} Z`} fill={INK} />
-          <Ellipse cx={CX} cy={CY + 18} rx={5} ry={3} fill="#FF6FB5" />
+          <Ellipse cx={CX} cy={CY + 18} rx={5} ry={3} fill={palette.candy.face} />
         </G>
       ) : sleepy ? (
         <Ellipse cx={CX} cy={CY + 14} rx={3.5} ry={2.5} fill={INK} />
@@ -217,11 +218,11 @@ function Egg({ cracking }: { cracking: boolean }) {
     <G>
       <Path d={EGG_PATH} fill={c.slab} transform="translate(0 7)" />
       <Path d={EGG_PATH} fill="url(#asterBody)" />
-      <Ellipse cx={78} cy={70} rx={10} ry={16} fill="#FFFFFF" opacity={0.6} transform="rotate(20 78 70)" />
-      <Path d={sparklePath(124, 72, 9)} fill="#FFC83D" />
-      <Path d={sparklePath(70, 146, 7)} fill="#FF6FB5" />
-      <Path d={sparklePath(132, 150, 6)} fill="#7C4DFF" />
-      <Path d={sparklePath(98, 164, 5)} fill="#4CC9F0" />
+      <Ellipse cx={78} cy={70} rx={10} ry={16} fill={art.sparkle} opacity={0.6} transform="rotate(20 78 70)" />
+      <Path d={sparklePath(124, 72, 9)} fill={palette.star.face} />
+      <Path d={sparklePath(70, 146, 7)} fill={palette.candy.face} />
+      <Path d={sparklePath(132, 150, 6)} fill={palette.primary.face} />
+      <Path d={sparklePath(98, 164, 5)} fill={palette.sky.face} />
       {/* Sleepy face peeking through the shell */}
       <G stroke={INK} strokeWidth={4} strokeLinecap="round" fill="none">
         <Path d="M 80 112 Q 87 118 94 112" />
@@ -231,7 +232,7 @@ function Egg({ cracking }: { cracking: boolean }) {
       <Ellipse cx={126} cy={124} rx={7} ry={4} fill={CHEEK} opacity={0.7} />
       <Path
         d={EGG_CRACK}
-        stroke="#C99300"
+        stroke={palette.star.slab}
         strokeWidth={3.5}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -253,14 +254,14 @@ function ConstellationTail() {
     <G>
       <Path
         d={`M ${pts.map((p) => p.join(" ")).join(" L ")}`}
-        stroke="#CFD6FF"
+        stroke={tokens.moon}
         strokeWidth={2.5}
         strokeDasharray="4 5"
         strokeLinecap="round"
         fill="none"
       />
       {pts.slice(1).map(([x, y], i) => (
-        <Path key={i} d={sparklePath(x, y, 5 - i)} fill="#FFF4D1" />
+        <Path key={i} d={sparklePath(x, y, 5 - i)} fill={tokens.star[100]} />
       ))}
     </G>
   );

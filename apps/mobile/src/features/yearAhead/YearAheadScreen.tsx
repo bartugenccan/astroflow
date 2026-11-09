@@ -9,7 +9,7 @@ import Animated, {
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { StarDivider } from "../../components/ui/StarDivider";
@@ -76,7 +76,7 @@ export function YearAheadScreen() {
         {/* What this is, before anything else — a reading you can't place
             isn't worth much. */}
         <EnterView index={1}>
-          <HairlineCard style={styles.whatCard}>
+          <ChunkyCard style={styles.whatCard}>
             <View style={styles.whatHead}>
               <Ionicons name="sunny-outline" size={18} color={colors.star[300]} />
               <AppText variant="heading" color={colors.text.primary}>
@@ -94,15 +94,15 @@ export function YearAheadScreen() {
               </AppText>
               <Ionicons name="arrow-forward" size={14} color={colors.star[300]} />
             </PressableScale>
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
 
         {year.loading ? (
-          <HairlineCard>
+          <ChunkyCard>
             <View style={styles.loaderBox}>
               <CelestialLoader label={t("yearAhead.loading")} />
             </View>
-          </HairlineCard>
+          </ChunkyCard>
         ) : year.data ? (
           <Reading
             data={year.data}
@@ -112,14 +112,14 @@ export function YearAheadScreen() {
             onToggleWhy={() => setWhyOpen((w) => !w)}
           />
         ) : (
-          <HairlineCard style={styles.errorCard}>
+          <ChunkyCard style={styles.errorCard}>
             <AppText variant="body">{t("yearAhead.error")}</AppText>
             <PressableScale onPress={year.reload} style={styles.learnMore}>
               <AppText variant="heading" color={colors.star[300]} style={styles.learnMoreText}>
                 {t("common.retry")}
               </AppText>
             </PressableScale>
-          </HairlineCard>
+          </ChunkyCard>
         )}
       </ScrollView>
     </ScreenWrapper>
@@ -154,12 +154,12 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
       {/* Headline + overview: the answer, before any reasoning. */}
       <EnterView index={3} style={styles.section}>
         <SectionHeader eyebrow={t("yearAhead.aboutTitle")} />
-        <HairlineCard style={styles.headlineCard}>
+        <ChunkyCard style={styles.headlineCard}>
           <AppText variant="lead" color={colors.text.primary}>
             {data.headline}
           </AppText>
           <AppText variant="body">{data.overview}</AppText>
-        </HairlineCard>
+        </ChunkyCard>
       </EnterView>
 
       {data.strengths.length > 0 ? (
@@ -183,7 +183,7 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
       {data.turningPoints.length > 0 ? (
         <View style={styles.section}>
           <SectionHeader eyebrow={t("yearAhead.turningTitle")} />
-          <HairlineCard>
+          <ChunkyCard>
             {data.turningPoints.map((tp, i) => (
               <EnterView key={tp.month} index={i} delay={200}>
                 <View style={styles.turningRow}>
@@ -201,7 +201,7 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
                 </View>
               </EnterView>
             ))}
-          </HairlineCard>
+          </ChunkyCard>
           <AppText variant="bodySmall" color={colors.text.tertiary}>
             {t("yearAhead.turningHint")}
           </AppText>
@@ -230,9 +230,9 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
             exiting={reduced ? undefined : FadeOut.duration(160)}
             style={styles.section}
           >
-            <HairlineCard>
+            <ChunkyCard>
               <AppText variant="body">{data.why}</AppText>
-            </HairlineCard>
+            </ChunkyCard>
             <ChartDetail data={data} locale={locale} t={t} />
           </Animated.View>
         ) : null}
@@ -258,14 +258,14 @@ function ThemeSection({
       <View style={styles.themeList}>
         {themes.map((th, i) => (
           <EnterView key={`${eyebrow}-${th.area}`} index={i} delay={120}>
-            <HairlineCard style={styles.themeCard}>
+            <ChunkyCard style={styles.themeCard}>
               <AppText variant="label" color={tone}>
                 {t(`lifeAreas.${th.area}` as TranslationKey)}
               </AppText>
               <AppText variant="body" color={colors.text.primary}>
                 {th.text}
               </AppText>
-            </HairlineCard>
+            </ChunkyCard>
           </EnterView>
         ))}
       </View>
@@ -314,7 +314,7 @@ function ChartDetail({
   return (
     <View style={styles.section}>
       <SectionHeader eyebrow={t("yearAhead.chartTitle")} />
-      <HairlineCard>
+      <ChunkyCard>
         {rows.map((r) => (
           <View key={r.key} style={styles.detailRow}>
             <View style={styles.detailLabelWrap}>
@@ -343,7 +343,7 @@ function ChartDetail({
             </View>
           </View>
         ) : null}
-      </HairlineCard>
+      </ChunkyCard>
 
       <AppText variant="bodySmall" color={colors.text.tertiary}>
         {t("yearAhead.chartFootnote", {

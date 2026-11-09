@@ -4,9 +4,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { BackButton } from "../../components/ui/BackButton";
@@ -98,7 +98,7 @@ export function IntentionDetailScreen() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {/* Streak + progress */}
           <EnterView style={styles.statsRow}>
-            <HairlineCard style={styles.statCard}>
+            <ChunkyCard style={styles.statCard}>
               <View style={styles.statNumRow}>
                 <Ionicons name="flame" size={20} color={colors.star[300]} />
                 <CountUp
@@ -119,8 +119,8 @@ export function IntentionDetailScreen() {
                 {t("intentions.streakLabel")}
               </AppText>
               <StarBurst playKey={burstKey} radius={70} />
-            </HairlineCard>
-            <HairlineCard style={styles.statCard}>
+            </ChunkyCard>
+            <ChunkyCard style={styles.statCard}>
               <AppText
                 variant="display"
                 style={styles.statNum}
@@ -139,17 +139,17 @@ export function IntentionDetailScreen() {
               >
                 {t("intentions.todayPractice")}
               </AppText>
-            </HairlineCard>
+            </ChunkyCard>
           </EnterView>
 
           {/* Affirmation */}
           <EnterView index={1} style={styles.section}>
             <SectionHeader eyebrow={t("intentions.affirmationLabel")} />
-            <HairlineCard elevated>
+            <ChunkyCard depth="lg">
               <AppText variant="lead" center>
                 “{intention.affirmation}”
               </AppText>
-            </HairlineCard>
+            </ChunkyCard>
           </EnterView>
 
           {done ? (
@@ -162,7 +162,7 @@ export function IntentionDetailScreen() {
             </EnterView>
           ) : (
             <EnterView key="cta" index={2}>
-              <GoldButton
+              <ChunkyButton
                 label={t("intentions.checkInCta")}
                 onPress={() => setChecking(true)}
                 icon={<Ionicons name="add" size={18} color={colors.text.onPrimary} />}

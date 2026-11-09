@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { GoldButton } from "../../components/ui/GoldButton";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
@@ -115,7 +115,7 @@ export function ReadingStep({ spread, freshDraw, onFlip, onNewReading }: Props) 
 
         <SynthesisCard part={synthesis} onRetry={retrySynthesis} />
 
-        <GoldButton label={t("tarot.newReading")} variant="ghost" onPress={onNewReading} />
+        <ChunkyButton label={t("tarot.newReading")} variant="ghost" onPress={onNewReading} />
       </ScrollView>
 
       <SpringBottomSheet
@@ -209,7 +209,7 @@ function CardChapter({
               </View>
             ))}
           </View>
-          <HairlineCard style={styles.sections}>
+          <ChunkyCard style={styles.sections}>
             {SECTIONS.map((key, i) => (
               <View key={key} style={[styles.section, i > 0 && styles.sectionRule]}>
                 <AppText variant="label" color={colors.text.accent}>
@@ -220,17 +220,17 @@ function CardChapter({
                 </AppText>
               </View>
             ))}
-          </HairlineCard>
+          </ChunkyCard>
         </>
       ) : part.error ? (
         <ErrorBlock onRetry={onRetry} />
       ) : (
-        <HairlineCard style={styles.sections}>
+        <ChunkyCard style={styles.sections}>
           <AppText variant="bodySmall" color={colors.text.tertiary}>
             {t("tarot.reading")}
           </AppText>
           <ShimmerLines lines={6} />
-        </HairlineCard>
+        </ChunkyCard>
       )}
     </EnterView>
   );
@@ -251,7 +251,7 @@ function SynthesisCard({ part, onRetry }: { part: Part<TarotSynthesis>; onRetry:
         <View style={styles.rule} />
       </View>
       {s ? (
-        <HairlineCard elevated style={styles.sections}>
+        <ChunkyCard depth="lg" style={styles.sections}>
           <AppText variant="title">{s.title}</AppText>
           <AppText variant="body" color={colors.text.primary} style={styles.sectionBody}>
             {s.story}
@@ -276,13 +276,13 @@ function SynthesisCard({ part, onRetry }: { part: Part<TarotSynthesis>; onRetry:
               {s.affirmation}
             </AppText>
           </View>
-        </HairlineCard>
+        </ChunkyCard>
       ) : part.error ? (
         <ErrorBlock onRetry={onRetry} />
       ) : (
-        <HairlineCard style={styles.sections}>
+        <ChunkyCard style={styles.sections}>
           <ShimmerLines lines={5} />
-        </HairlineCard>
+        </ChunkyCard>
       )}
     </EnterView>
   );
@@ -307,10 +307,10 @@ function OrientationPill({ reversed }: { reversed: boolean }) {
 function ErrorBlock({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
   return (
-    <HairlineCard style={styles.sections}>
+    <ChunkyCard style={styles.sections}>
       <AppText variant="body">{t("tarot.sectionError")}</AppText>
-      <GoldButton label={t("common.retry")} variant="ghost" onPress={onRetry} />
-    </HairlineCard>
+      <ChunkyButton label={t("common.retry")} variant="ghost" onPress={onRetry} />
+    </ChunkyCard>
   );
 }
 

@@ -18,7 +18,7 @@ import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { Glyph } from "../../components/Glyph";
 import { AsterMascot } from "../../components/aster/AsterMascot";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
 import { useAppStore } from "../../store/useAppStore";
@@ -163,7 +163,7 @@ export function TourScreen() {
             <Dot key={s.title} index={i} x={x} width={width} />
           ))}
         </View>
-        <GoldButton
+        <ChunkyButton
           label={last ? t("tour.start") : t("tour.next")}
           onPress={next}
           icon={

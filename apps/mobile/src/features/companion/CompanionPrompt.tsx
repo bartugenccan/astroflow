@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { GuidanceTopic } from "../../services/types";
 import { useTranslation, TranslationKey } from "../../i18n";
@@ -50,13 +50,13 @@ export function CompanionPrompt({
       </ScrollView>
 
       <PressableScale scaleTo={0.98} onPress={() => router.push("/companion" as Href)}>
-        <HairlineCard style={styles.talkRow}>
+        <ChunkyCard style={styles.talkRow}>
           <Ionicons name="sparkles-outline" size={18} color={colors.star[300]} />
           <AppText variant="body" color={colors.text.secondary} style={styles.talkText}>
             {t("companion.talkCta")}
           </AppText>
           <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-        </HairlineCard>
+        </ChunkyCard>
       </PressableScale>
     </View>
   );

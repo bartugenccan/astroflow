@@ -4,7 +4,7 @@ import { useFocusEffect } from "expo-router";
 import { StyleSheet, View, ScrollView } from "react-native";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { StarDivider } from "../../components/ui/StarDivider";
@@ -174,7 +174,7 @@ export function TodayScreen() {
 
         {/* 3 — The day's guidance. */}
         {failed && !insight ? (
-          <HairlineCard elevated style={[styles.hero, styles.heroLoading]}>
+          <ChunkyCard depth="lg" style={[styles.hero, styles.heroLoading]}>
             <AppText variant="body" center>
               {t("today.insightError")}
             </AppText>
@@ -183,14 +183,14 @@ export function TodayScreen() {
                 {t("common.retry")}
               </AppText>
             </PressableScale>
-          </HairlineCard>
+          </ChunkyCard>
         ) : loading || !insight ? (
-          <HairlineCard elevated style={[styles.hero, styles.heroLoading]}>
+          <ChunkyCard depth="lg" style={[styles.hero, styles.heroLoading]}>
             <CelestialLoader label={t("common.loading")} />
-          </HairlineCard>
+          </ChunkyCard>
         ) : (
           <EnterView scale>
-            <HairlineCard elevated style={styles.hero}>
+            <ChunkyCard depth="lg" style={styles.hero}>
               <View style={styles.heroTop}>
                 <AppText
                   variant="label"
@@ -217,7 +217,7 @@ export function TodayScreen() {
               <EnterView delay={250} from="none">
                 <AppText variant="lead">{insight.summary}</AppText>
               </EnterView>
-            </HairlineCard>
+            </ChunkyCard>
           </EnterView>
         )}
 

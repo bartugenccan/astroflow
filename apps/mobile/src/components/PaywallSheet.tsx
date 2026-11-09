@@ -3,7 +3,7 @@ import { View, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import { SpringBottomSheet } from "./ui/SpringBottomSheet";
-import { GoldButton } from "./ui/GoldButton";
+import { ChunkyButton } from "./ui/ChunkyButton";
 import { AppText } from "./ui/AppText";
 import { PressableScale } from "./ui/PressableScale";
 import { EnterView } from "../lib/motion";
@@ -115,13 +115,13 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
 
       <EnterView index={perks.length + 1}>
         {canStubUnlock ? (
-          <GoldButton label={cta} onPress={unlock} loading={busy} style={{ marginTop: spacing.lg }} />
+          <ChunkyButton label={cta} onPress={unlock} loading={busy} style={{ marginTop: spacing.lg }} />
         ) : PREMIUM_BETA ? (
           <>
             <AppText variant="body" center color={colors.star[200]} style={{ marginTop: spacing.lg }}>
               {t("paywall.betaNote")}
             </AppText>
-            <GoldButton label={t("paywall.betaCta")} onPress={continueBeta} style={{ marginTop: spacing.md }} />
+            <ChunkyButton label={t("paywall.betaCta")} onPress={continueBeta} style={{ marginTop: spacing.md }} />
           </>
         ) : (
           <AppText variant="body" center color={colors.star[200]} style={{ marginTop: spacing.lg }}>

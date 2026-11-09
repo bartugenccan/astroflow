@@ -5,8 +5,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { BackButton } from "../../components/ui/BackButton";
-import { GoldButton } from "../../components/ui/GoldButton";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { Segmented } from "../../components/ui/Segmented";
 import { WheelItem, WheelPicker } from "../../components/ui/WheelPicker";
@@ -206,7 +206,7 @@ export function ElectionFormScreen() {
         <EnterView index={3} style={styles.block}>
           <AppText variant="heading">{t("election.placeTitle")}</AppText>
           <PressableScale onPress={() => setPlaceOpen(true)} scaleTo={0.98}>
-            <HairlineCard style={styles.placeCard}>
+            <ChunkyCard style={styles.placeCard}>
               <Ionicons name="location" size={18} color={colors.star[300]} />
               <View style={styles.placeText}>
                 <AppText variant="heading" numberOfLines={1}>
@@ -219,7 +219,7 @@ export function ElectionFormScreen() {
               <AppText variant="bodySmall" color={colors.star[300]}>
                 {t("election.placeChange")}
               </AppText>
-            </HairlineCard>
+            </ChunkyCard>
           </PressableScale>
         </EnterView>
 
@@ -228,7 +228,7 @@ export function ElectionFormScreen() {
           {mode === "check" ? (
             <>
               <AppText variant="heading">{t("election.dateTitle")}</AppText>
-              <HairlineCard style={styles.wheels}>
+              <ChunkyCard style={styles.wheels}>
                 <View style={styles.wheelRow}>
                   <WheelPicker
                     key={`d-${year}-${month}`}
@@ -243,12 +243,12 @@ export function ElectionFormScreen() {
                 <AppText variant="bodySmall" center color={dateValid ? colors.star[200] : colors.semantic.error}>
                   {formatDayMonthYear(locale, date)}
                 </AppText>
-              </HairlineCard>
+              </ChunkyCard>
             </>
           ) : (
             <>
               <AppText variant="heading">{t("election.rangeTitle")}</AppText>
-              <HairlineCard style={styles.wheels}>
+              <ChunkyCard style={styles.wheels}>
                 <View style={styles.rangeRow}>
                   <View style={styles.rangeCol}>
                     <AppText variant="label" center color={colors.text.tertiary}>
@@ -274,7 +274,7 @@ export function ElectionFormScreen() {
                     ? `${formatMonthYear(locale, ym(fromY, fromM))} – ${formatMonthYear(locale, ym(toY, toM))} · ${t("election.rangeNote")}`
                     : t("election.rangeInvalid")}
                 </AppText>
-              </HairlineCard>
+              </ChunkyCard>
             </>
           )}
         </EnterView>
@@ -284,7 +284,7 @@ export function ElectionFormScreen() {
             {t("election.pickEvent")}
           </AppText>
         ) : null}
-        <GoldButton
+        <ChunkyButton
           label={mode === "check" ? t("election.cta") : t("election.ctaSearch")}
           disabled={!ready}
           onPress={onSubmit}
@@ -302,7 +302,7 @@ export function ElectionFormScreen() {
             </AppText>
             {recent.map((r) => (
               <PressableScale key={r.askedAt} onPress={() => submit(r.query)} scaleTo={0.98}>
-                <HairlineCard style={styles.recentRow}>
+                <ChunkyCard style={styles.recentRow}>
                   <Ionicons
                     name={r.query.mode === "check" ? "calendar-outline" : "search-outline"}
                     size={16}
@@ -321,7 +321,7 @@ export function ElectionFormScreen() {
                     </AppText>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
-                </HairlineCard>
+                </ChunkyCard>
               </PressableScale>
             ))}
           </View>

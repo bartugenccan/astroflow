@@ -4,7 +4,7 @@ import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
 import { Ionicons } from "@expo/vector-icons";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { AppText } from "../../components/ui/AppText";
 import { DotRating } from "../../components/ui/DotRating";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
@@ -108,7 +108,7 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
             </AppText>
           ) : null}
 
-          <GoldButton label={t("common.done")} onPress={close} style={{ marginTop: spacing.md }} />
+          <ChunkyButton label={t("common.done")} onPress={close} style={{ marginTop: spacing.md }} />
         </View>
       ) : (
         <View style={styles.inputWrap}>
@@ -142,7 +142,7 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
               <CelestialLoader size="sm" />
             </View>
           ) : (
-            <GoldButton
+            <ChunkyButton
               label={t("intentions.submit")}
               onPress={submit}
               disabled={conviction === 0}

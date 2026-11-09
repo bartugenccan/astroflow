@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { EnterView } from "../../lib/motion";
 import { ReadingScreen } from "../reading/ReadingScreen";
@@ -36,7 +36,7 @@ export function ChartPane() {
               scaleTo={0.98}
               accessibilityRole="button"
             >
-              <HairlineCard style={styles.wheelCard}>
+              <ChunkyCard style={styles.wheelCard}>
                 <View style={styles.wheelIcon}>
                   <Ionicons name="planet-outline" size={22} color={colors.star[200]} />
                 </View>
@@ -47,7 +47,7 @@ export function ChartPane() {
                   <AppText variant="bodySmall">{t("you.wheelCardSub")}</AppText>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-              </HairlineCard>
+              </ChunkyCard>
             </PressableScale>
           </EnterView>
         </View>

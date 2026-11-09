@@ -12,7 +12,7 @@ import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { BackButton } from "../../components/ui/BackButton";
 import { EnterView } from "../../lib/motion";
@@ -355,7 +355,7 @@ export function AddPersonScreen() {
             </EnterView>
           </View>
 
-          <GoldButton
+          <ChunkyButton
             label={t("compatibility.save")}
             onPress={onSave}
             loading={saving}

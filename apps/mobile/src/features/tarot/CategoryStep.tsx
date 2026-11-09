@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { EnterView } from "../../lib/motion";
 import { TranslationKey, useTranslation } from "../../i18n";
@@ -136,7 +136,7 @@ export function CategoryStep({ initialCategory, initialQuestion, today, atLimit,
         </AppText>
       ) : null}
 
-      <GoldButton
+      <ChunkyButton
         label={t("tarot.start")}
         disabled={!category}
         onPress={() => category && onStart(category, question.trim())}

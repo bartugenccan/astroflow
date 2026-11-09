@@ -18,6 +18,7 @@ interface AppTextProps extends TextProps {
  * pills, buttons) break apart.
  */
 const MAX_SCALE: Record<Variant, number> = {
+  hero: 1.1,
   display: 1.2,
   title: 1.25,
   lead: 1.35,

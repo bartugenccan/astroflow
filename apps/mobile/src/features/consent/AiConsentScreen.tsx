@@ -3,9 +3,9 @@ import { Linking, ScrollView, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { AppText } from "../../components/ui/AppText";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { EnterView } from "../../lib/motion";
 import { useTranslation, type TranslationKey } from "../../i18n";
@@ -40,7 +40,7 @@ export function AiConsentScreen({ onAccept }: { onAccept: () => void }) {
 
         {POINTS.map((p, i) => (
           <EnterView key={p.title} index={i + 1}>
-            <HairlineCard style={styles.point}>
+            <ChunkyCard style={styles.point}>
               <View style={styles.icon}>
                 <Ionicons name={p.icon} size={20} color={colors.star[300]} />
               </View>
@@ -50,7 +50,7 @@ export function AiConsentScreen({ onAccept }: { onAccept: () => void }) {
                   {t(p.body)}
                 </AppText>
               </View>
-            </HairlineCard>
+            </ChunkyCard>
           </EnterView>
         ))}
 
@@ -66,7 +66,7 @@ export function AiConsentScreen({ onAccept }: { onAccept: () => void }) {
               {t("aiConsent.privacyLink")}
             </AppText>
           </PressableScale>
-          <GoldButton label={t("aiConsent.accept")} onPress={onAccept} />
+          <ChunkyButton label={t("aiConsent.accept")} onPress={onAccept} />
         </EnterView>
       </ScrollView>
     </ScreenWrapper>

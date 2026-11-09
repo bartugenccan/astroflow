@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { AppText } from "../../components/ui/AppText";
 import { ShareableCard, ShareCardData, CARD_W, CARD_H } from "./ShareableCard";
 import { useShareCard } from "./useShareCard";
@@ -50,7 +50,7 @@ export function ShareCardModal({ visible, onClose, data }: ShareCardModalProps) 
           </View>
         </EnterView>
 
-        <GoldButton
+        <ChunkyButton
           label={t("share.cta")}
           onPress={share}
           loading={busy}

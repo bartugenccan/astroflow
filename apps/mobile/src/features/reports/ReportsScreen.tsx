@@ -6,8 +6,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { BackButton } from "../../components/ui/BackButton";
-import { GoldButton } from "../../components/ui/GoldButton";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { Glyph } from "../../components/Glyph";
@@ -77,7 +77,7 @@ export function ReportsScreen() {
           const job = activeJob(kind);
           return (
             <EnterView key={kind} index={i + 1}>
-              <HairlineCard style={[styles.kindCard, focus === kind && styles.kindCardFocus]}>
+              <ChunkyCard style={[styles.kindCard, focus === kind && styles.kindCardFocus]}>
                 <View style={styles.kindHead}>
                   <View style={styles.kindGlyph}>
                     <Glyph name={glyph} size={22} color={colors.star[300]} />
@@ -94,7 +94,7 @@ export function ReportsScreen() {
                 {job ? (
                   <JobProgress job={job} />
                 ) : (
-                  <GoldButton
+                  <ChunkyButton
                     label={t("reports.create")}
                     onPress={() => onCreate(kind)}
                     loading={creating === kind}
@@ -102,7 +102,7 @@ export function ReportsScreen() {
                     icon={<Ionicons name="document-text-outline" size={18} color={colors.text.onPrimary} />}
                   />
                 )}
-              </HairlineCard>
+              </ChunkyCard>
             </EnterView>
           );
         })}
@@ -213,7 +213,7 @@ function ReportRow({ meta, locale, busy, saved, onOpen, onRetry, onDelete }: Rep
   const { t } = useTranslation();
   const failed = meta.status === "failed";
   return (
-    <HairlineCard style={styles.row}>
+    <ChunkyCard style={styles.row}>
       <View style={styles.kindHead}>
         <View style={styles.kindGlyph}>
           <Glyph name={meta.kind === "natal" ? "Sun" : "Saturn"} size={18} color={failed ? colors.text.tertiary : colors.star[300]} />
@@ -229,21 +229,21 @@ function ReportRow({ meta, locale, busy, saved, onOpen, onRetry, onDelete }: Rep
         </PressableScale>
       </View>
       {failed ? (
-        <GoldButton variant="ghost" label={t("reports.retry")} onPress={onRetry} />
+        <ChunkyButton variant="ghost" label={t("reports.retry")} onPress={onRetry} />
       ) : busy ? (
         <View style={styles.making}>
           <CelestialLoader size="sm" />
           <AppText variant="bodySmall">{t("reports.making")}</AppText>
         </View>
       ) : (
-        <GoldButton
-          variant={saved ? "solid" : "ghost"}
+        <ChunkyButton
+          variant={saved ? "primary" : "ghost"}
           label={saved ? t("reports.open") : t("reports.remake")}
           onPress={onOpen}
           icon={<Ionicons name={saved ? "share-outline" : "refresh"} size={18} color={saved ? colors.text.onPrimary : colors.star[300]} />}
         />
       )}
-    </HairlineCard>
+    </ChunkyCard>
   );
 }
 

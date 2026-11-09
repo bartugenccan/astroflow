@@ -2,8 +2,8 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { GoldButton } from "../../components/ui/GoldButton";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import type { ElectionFactor, ElectionHourWindow, ElectionVerdict } from "../../services/types";
 import { TranslationKey, useTranslation } from "../../i18n";
@@ -112,10 +112,10 @@ export function SectionTitle({ children }: { children: string }) {
 export function ErrorCard({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
   return (
-    <HairlineCard style={styles.error}>
+    <ChunkyCard style={styles.error}>
       <AppText variant="body">{t("election.resultError")}</AppText>
-      <GoldButton label={t("common.retry")} variant="ghost" onPress={onRetry} />
-    </HairlineCard>
+      <ChunkyButton label={t("common.retry")} variant="ghost" onPress={onRetry} />
+    </ChunkyCard>
   );
 }
 

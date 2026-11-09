@@ -4,8 +4,8 @@ import { useRouter, useFocusEffect, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { BackButton } from "../../components/ui/BackButton";
@@ -70,7 +70,7 @@ export function CompatibilityList() {
       </EnterView>
 
       <EnterView index={1}>
-        <GoldButton
+        <ChunkyButton
           label={t("compatibility.addPerson")}
           onPress={() => router.push("/compatibility/add")}
           icon={<Ionicons name="add" size={18} color={colors.text.onPrimary} />}
@@ -95,7 +95,7 @@ export function CompatibilityList() {
                 accessibilityRole="button"
                 onPress={() => router.push(`/compatibility/${p.id}` as Href)}
               >
-                <HairlineCard style={styles.personCard}>
+                <ChunkyCard style={styles.personCard}>
                   <View style={styles.personGlyph}>
                     <Glyph
                       name={p.sunSign}
@@ -132,14 +132,14 @@ export function CompatibilityList() {
                     size={18}
                     color={colors.text.tertiary}
                   />
-                </HairlineCard>
+                </ChunkyCard>
               </PressableScale>
             </EnterView>
           ))}
         </View>
       ) : (
         <EnterView index={2}>
-          <HairlineCard style={styles.emptyCard}>
+          <ChunkyCard style={styles.emptyCard}>
             <Ionicons
               name="people-outline"
               size={26}
@@ -148,7 +148,7 @@ export function CompatibilityList() {
             <AppText variant="body" center>
               {t("compatibility.noPeople")}
             </AppText>
-          </HairlineCard>
+          </ChunkyCard>
         </EnterView>
       )}
     </View>

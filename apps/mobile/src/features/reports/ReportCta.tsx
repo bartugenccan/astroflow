@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Href, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { HairlineCard } from "../../components/ui/HairlineCard";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { colors, spacing } from "../../lib/design-system";
 import { useTranslation } from "../../i18n";
@@ -18,7 +18,7 @@ export function ReportCta({ kind }: { kind: ReportKind }) {
       scaleTo={0.98}
       accessibilityRole="button"
     >
-      <HairlineCard style={styles.row}>
+      <ChunkyCard style={styles.row}>
         <View style={styles.icon}>
           <Ionicons name="document-text-outline" size={20} color={colors.star[300]} />
         </View>
@@ -31,7 +31,7 @@ export function ReportCta({ kind }: { kind: ReportKind }) {
           </AppText>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-      </HairlineCard>
+      </ChunkyCard>
     </PressableScale>
   );
 }

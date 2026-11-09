@@ -4,7 +4,7 @@ import { StyleSheet, View, KeyboardAvoidingView, Platform } from "react-native";
 import { MotiView } from "moti";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { ConstellationProgress } from "../../components/ConstellationProgress";
-import { GoldButton } from "../../components/ui/GoldButton";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { AppText } from "../../components/ui/AppText";
 import { colors, spacing } from "../../lib/design-system";
 
@@ -81,7 +81,7 @@ export function OnboardingFrame({
             animate={{ opacity: 1 }}
             transition={mt({ type: "timing", duration: 400, delay: 250 })}
           >
-            <GoldButton label={ctaLabel} onPress={onNext} disabled={nextDisabled} />
+            <ChunkyButton label={ctaLabel} onPress={onNext} disabled={nextDisabled} />
           </MotiView>
         </View>
       </KeyboardAvoidingView>
