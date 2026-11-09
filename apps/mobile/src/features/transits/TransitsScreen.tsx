@@ -1,9 +1,9 @@
+import { runAfterInteractions } from "../../lib/afterInteractions";
 import React, { useEffect } from "react";
 import {
   StyleSheet,
   View,
   ScrollView,
-  InteractionManager,
   Dimensions,
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
@@ -106,7 +106,7 @@ export function TransitsContent({
     const planets = report.data.movements.map((m) => m.planet);
     const date = report.data.date;
     let cancelled = false;
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       if (!cancelled) void prefetchTransits(dto, planets, date, locale);
     });
     return () => {
@@ -122,7 +122,7 @@ export function TransitsContent({
   return (
     <View style={styles.stack}>
       <EnterView index={enterIndex} style={styles.header}>
-        <AppText variant="label" color={colors.text.gold}>
+        <AppText variant="label" color={colors.text.accent}>
           {t("transits.eyebrow")}
         </AppText>
         <View style={styles.titleRow}>
@@ -171,7 +171,7 @@ export function TransitsContent({
               <View
                 style={[
                   styles.legendDot,
-                  { backgroundColor: colors.gold[300] },
+                  { backgroundColor: colors.star[300] },
                 ]}
               />
               <AppText
@@ -193,7 +193,7 @@ export function TransitsContent({
       {/* The sky now — overview */}
       <EnterView index={enterIndex + 2}>
         <HairlineCard elevated style={styles.hero}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("transits.skyOverviewTitle")}
           </AppText>
           <Loader
@@ -202,7 +202,7 @@ export function TransitsContent({
             onRetry={overview.reload}
             retryLabel={t("reading.retry")}
           >
-            <AppText variant="serifBody">{overview.data?.text}</AppText>
+            <AppText variant="lead">{overview.data?.text}</AppText>
           </Loader>
         </HairlineCard>
       </EnterView>
@@ -265,8 +265,8 @@ function Loader({
   if (error)
     return (
       <PressableScale style={styles.retry} onPress={onRetry} haptic="none">
-        <Ionicons name="refresh" size={16} color={colors.gold[300]} />
-        <AppText variant="body" color={colors.gold[300]}>
+        <Ionicons name="refresh" size={16} color={colors.star[300]} />
+        <AppText variant="body" color={colors.star[300]}>
           {retryLabel}
         </AppText>
       </PressableScale>

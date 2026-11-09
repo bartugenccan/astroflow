@@ -114,7 +114,7 @@ function Star({
   });
   return (
     <Animated.View style={[styles.star, style]}>
-      <Ionicons name="star" size={size} color={colors.gold[200]} />
+      <Ionicons name="star" size={size} color={colors.star[200]} />
     </Animated.View>
   );
 }

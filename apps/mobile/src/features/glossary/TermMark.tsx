@@ -8,7 +8,7 @@ import { colors } from "../../lib/design-system";
 export function TermMark({
   mark,
   size,
-  color = colors.gold[200],
+  color = colors.star[200],
 }: {
   mark: GlossaryMark;
   size: number;

@@ -38,7 +38,7 @@ import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { EnterView } from "../../lib/motion";
-import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { colors, spacing, radii, motion, surface } from "../../lib/design-system";
 
 /** Delay before the first dimension bar starts filling (lets the ring sweep first). */
 const BARS_START = 450;
@@ -111,7 +111,7 @@ export function CompatibilityResultScreen() {
         {/* Newcomer framing: what this screen actually compares. */}
         <EnterView style={styles.intro}>
           <View style={styles.eyebrowRow}>
-            <AppText variant="label" color={colors.text.gold} style={styles.eyebrowText}>
+            <AppText variant="label" color={colors.text.accent} style={styles.eyebrowText}>
               {t("compatibility.synastryEyebrow")}
             </AppText>
             <TermInfo term="synastry" size={15} />
@@ -152,7 +152,7 @@ export function CompatibilityResultScreen() {
             <View style={styles.section}>
               <EnterView index={3}>
                 <View style={styles.eyebrowRow}>
-                  <AppText variant="label" color={colors.text.gold} style={styles.eyebrowText}>
+                  <AppText variant="label" color={colors.text.accent} style={styles.eyebrowText}>
                     {t("compatibility.topAspectsTitle")}
                   </AppText>
                   <TermInfo term="aspect" size={14} />
@@ -183,9 +183,9 @@ export function CompatibilityResultScreen() {
                 style={styles.chartBtn}
                 scaleTo={0.96}
                 accessibilityRole="button"
-                onPress={() => router.push(`/compatibility/${String(id)}/chart` as Href)}
+                onPress={() => router.push(`/compatibility/${encodeURIComponent(String(id))}/chart` as Href)}
               >
-                <Ionicons name="planet-outline" size={18} color={colors.gold[300]} />
+                <Ionicons name="planet-outline" size={18} color={colors.star[300]} />
                 <AppText
                   variant="bodySmall"
                   color={colors.text.primary}
@@ -199,9 +199,9 @@ export function CompatibilityResultScreen() {
                 style={styles.chartBtn}
                 scaleTo={0.96}
                 accessibilityRole="button"
-                onPress={() => router.push(`/compatibility/${String(id)}/transits` as Href)}
+                onPress={() => router.push(`/compatibility/${encodeURIComponent(String(id))}/transits` as Href)}
               >
-                <Ionicons name="telescope-outline" size={18} color={colors.gold[300]} />
+                <Ionicons name="telescope-outline" size={18} color={colors.star[300]} />
                 <AppText
                   variant="bodySmall"
                   color={colors.text.primary}
@@ -219,7 +219,7 @@ export function CompatibilityResultScreen() {
               {locked ? (
                 <HairlineCard>
                   <View style={styles.lockedBox}>
-                    <Ionicons name="lock-closed" size={20} color={colors.gold[300]} />
+                    <Ionicons name="lock-closed" size={20} color={colors.star[300]} />
                     <AppText variant="body" center>
                       {t("compatibility.lockedAspects")}
                     </AppText>
@@ -234,7 +234,7 @@ export function CompatibilityResultScreen() {
                 </HairlineCard>
               ) : reading.data ? (
                 <HairlineCard>
-                  <AppText variant="serifBody">{reading.data.text}</AppText>
+                  <AppText variant="lead">{reading.data.text}</AppText>
                 </HairlineCard>
               ) : null}
             </EnterView>
@@ -282,7 +282,7 @@ function CategoryBar({
     goodness >= 66
       ? colors.semantic.harmonic
       : goodness >= 40
-        ? colors.gold[400]
+        ? colors.star[400]
         : colors.semantic.challenging;
 
   const target = Math.max(4, Math.min(100, value));
@@ -404,13 +404,13 @@ const styles = StyleSheet.create({
   barTrack: {
     height: 8,
     borderRadius: radii.pill,
-    backgroundColor: colors.ink[700],
+    backgroundColor: surface.raised,
     overflow: "hidden",
   },
   barFill: {
     height: "100%",
     borderRadius: radii.pill,
-    backgroundColor: colors.gold[400],
+    backgroundColor: colors.star[400],
   },
   barValue: {
     minWidth: 28,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   chartBtnText: {
     flexShrink: 1,

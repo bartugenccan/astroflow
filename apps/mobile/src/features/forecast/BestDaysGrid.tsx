@@ -80,7 +80,7 @@ export function BestDaysGrid({ scores, area, topDates, onDayPress }: BestDaysGri
               >
                 <AppText
                   variant="numeric"
-                  color={isTop ? colors.gold[200] : colors.text.primary}
+                  color={isTop ? colors.star[200] : colors.text.primary}
                   maxFontSizeMultiplier={1.2}
                 >
                   {dayNum(s.date)}
@@ -92,7 +92,7 @@ export function BestDaysGrid({ scores, area, topDates, onDayPress }: BestDaysGri
                   value={value}
                   delay={cellDelay(i) + 120}
                   height={2}
-                  color={isTop ? colors.gold[300] : scoreColor(value, 0.9)}
+                  color={isTop ? colors.star[300] : scoreColor(value, 0.9)}
                   style={styles.cellBar}
                 />
               </PressableScale>
@@ -118,7 +118,7 @@ function LegendItem({ swatch, label, gold }: { swatch: string; label: string; go
         style={[
           styles.legendSwatch,
           { backgroundColor: swatch },
-          gold && { borderColor: colors.gold[400] },
+          gold && { borderColor: colors.star[400] },
         ]}
       />
       <AppText variant="bodySmall" color={colors.text.tertiary} style={styles.legendText}>
@@ -152,8 +152,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cellTop: {
-    borderColor: colors.gold[400],
-    ...shadows.goldGlow,
+    borderColor: colors.star[400],
+    ...shadows.glow,
   },
   cellScore: {
     fontSize: 9,

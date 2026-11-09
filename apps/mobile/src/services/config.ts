@@ -25,3 +25,15 @@ export const USE_HTTP = API_URL.length > 0 || !__DEV__;
  * EXPO_PUBLIC_PREMIUM_BETA=false (with PREMIUM_BETA=false on the API) when they do.
  */
 export const PREMIUM_BETA = (process.env.EXPO_PUBLIC_PREMIUM_BETA ?? "true") !== "false";
+
+/**
+ * Public website with the privacy policy, terms and support pages
+ * (apps/web, one page per language: /{locale}/privacy, /terms, /support).
+ */
+const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL ?? "https://getastroflow.com").trim().replace(/\/+$/, "");
+
+export type LegalPage = "privacy" | "terms" | "support";
+
+export function legalUrl(page: LegalPage, locale: "en" | "tr"): string {
+  return `${SITE_URL}/${locale}/${page}`;
+}

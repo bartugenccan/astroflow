@@ -59,10 +59,10 @@ const styles = StyleSheet.create({
   },
   fill: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: colors.gold[400],
+    backgroundColor: colors.star[400],
   },
   dotFilled: {
-    borderColor: colors.gold[300],
+    borderColor: colors.star[300],
   },
   dotEmpty: {
     backgroundColor: "transparent",

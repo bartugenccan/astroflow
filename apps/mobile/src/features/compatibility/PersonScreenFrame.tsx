@@ -15,7 +15,7 @@ import { ChartScreen } from "../chart/ChartScreen";
 import { TransitsScreen } from "../transits/TransitsScreen";
 import { savedPersonToDto, usePerson, usePersonChartAccess } from "./savedPerson";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii } from "../../lib/design-system";
+import { colors, spacing, radii, surface } from "../../lib/design-system";
 
 function formatDate(iso: string, locale: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -69,7 +69,7 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
         <View style={styles.center}>
           <EnterView scale style={styles.fullWidth}>
           <HairlineCard style={styles.lockCard}>
-            <Ionicons name="lock-closed" size={24} color={colors.gold[300]} />
+            <Ionicons name="lock-closed" size={24} color={colors.star[300]} />
             <AppText variant="title" center>
               {person.label}
             </AppText>
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     justifyContent: "center",
     alignItems: "flex-start",
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
   },

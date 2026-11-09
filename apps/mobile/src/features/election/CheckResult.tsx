@@ -76,7 +76,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
             </AppText>
             <VerdictBadge verdict={r.verdict} />
             <AppText variant="heading">{r.event.label}</AppText>
-            <AppText variant="bodySmall" color={colors.gold[200]}>
+            <AppText variant="bodySmall" color={colors.star[200]}>
               {formatLongDay(r.date, locale)}
             </AppText>
             <View style={styles.place}>
@@ -97,7 +97,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
       {/* Plain-language reading */}
       <EnterView index={1}>
         <HairlineCard style={styles.card}>
-          <AppText variant="serifBody" color={colors.text.primary}>
+          <AppText variant="lead" color={colors.text.primary}>
             {reading.data?.summary ?? ""}
           </AppText>
           {!reading.data && reading.loading ? <ReadingSection loading /> : null}

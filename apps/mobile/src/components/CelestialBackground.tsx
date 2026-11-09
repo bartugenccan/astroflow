@@ -20,6 +20,8 @@ import {
   cancelAnimation,
 } from "react-native-reanimated";
 
+import { surface } from "../lib/design-system";
+
 const { width: W, height: H } = Dimensions.get("window");
 
 type Variant = "default" | "dense" | "still";
@@ -84,9 +86,9 @@ const CONSTELLATIONS: Constellation[] = [
   },
 ];
 
-const GOLD = "#E7CD8F";
-const GOLD_BRIGHT = "#F7F0DD";
-const STAR_WHITE = "#F3EFE4";
+const GOLD = "#FFD25C";
+const GOLD_BRIGHT = "#FFF4D1";
+const STAR_WHITE = "#FFF8FF";
 
 interface Props {
   variant?: Variant;
@@ -117,23 +119,23 @@ export function CelestialBackground({ variant = "default" }: Props) {
 
   return (
     <Canvas style={StyleSheet.absoluteFill}>
-      <Fill color="#060810" />
+      <Fill color={surface.base} />
 
-      {/* Soft indigo glow, upper area */}
-      <Circle cx={W * 0.7} cy={H * 0.18} r={W * 0.7} opacity={0.5}>
+      {/* Violet nebula, upper area */}
+      <Circle cx={W * 0.75} cy={H * 0.12} r={W * 0.8} opacity={0.55}>
         <RadialGradient
-          c={vec(W * 0.7, H * 0.18)}
-          r={W * 0.7}
-          colors={["#141B38", "transparent"]}
+          c={vec(W * 0.75, H * 0.12)}
+          r={W * 0.8}
+          colors={["#4B2FB0", "transparent"]}
         />
       </Circle>
 
-      {/* Warm gold glow, lower area */}
-      <Circle cx={W * 0.2} cy={H * 0.9} r={W * 0.75} opacity={0.16}>
+      {/* Candy-pink nebula, lower area */}
+      <Circle cx={W * 0.15} cy={H * 0.88} r={W * 0.8} opacity={0.28}>
         <RadialGradient
-          c={vec(W * 0.2, H * 0.9)}
-          r={W * 0.75}
-          colors={["#3A2E12", "transparent"]}
+          c={vec(W * 0.15, H * 0.88)}
+          r={W * 0.8}
+          colors={["#B23A8A", "transparent"]}
         />
       </Circle>
 

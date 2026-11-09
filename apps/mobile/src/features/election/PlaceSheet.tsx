@@ -9,7 +9,7 @@ import { searchCities } from "../../services/mock/cities";
 import { searchCitiesRemote } from "../../services/geocoding";
 import type { City, ElectionPlace } from "../../services/types";
 import { useTranslation } from "../../i18n";
-import { colors, fonts, radii, spacing } from "../../lib/design-system";
+import { colors, fonts, radii, spacing, surface } from "../../lib/design-system";
 
 interface Props {
   visible: boolean;
@@ -75,7 +75,7 @@ export function PlaceSheet({ visible, birthPlace, onClose, onPick }: Props) {
         <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
           {birthPlace ? (
             <PressableScale onPress={() => pick(birthPlace)} scaleTo={0.98} style={styles.row}>
-              <Ionicons name="home-outline" size={18} color={colors.gold[300]} />
+              <Ionicons name="home-outline" size={18} color={colors.star[300]} />
               <View style={styles.rowText}>
                 <AppText variant="heading" numberOfLines={1}>
                   {t("election.placeUseBirth")}
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   input: {
     flex: 1,

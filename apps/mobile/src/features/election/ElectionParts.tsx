@@ -7,11 +7,11 @@ import { HairlineCard } from "../../components/ui/HairlineCard";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import type { ElectionFactor, ElectionHourWindow, ElectionVerdict } from "../../services/types";
 import { TranslationKey, useTranslation } from "../../i18n";
-import { colors, radii, spacing } from "../../lib/design-system";
+import { colors, radii, spacing, surface } from "../../lib/design-system";
 
 export function verdictColor(v: ElectionVerdict): string {
   if (v === "excellent") return colors.semantic.harmonic;
-  if (v === "good") return colors.gold[300];
+  if (v === "good") return colors.star[300];
   if (v === "mixed") return colors.semantic.neutral;
   return colors.semantic.challenging;
 }
@@ -64,12 +64,12 @@ export function HourWindows({ hours, place }: { hours: ElectionHourWindow[]; pla
       {hours.map((h, i) => (
         <View key={h.from} style={[styles.hour, i === 0 && styles.hourBest]}>
           <View style={styles.hourHead}>
-            <Ionicons name={i === 0 ? "star" : "time-outline"} size={14} color={i === 0 ? colors.text.onGold : colors.gold[300]} />
-            <AppText variant="heading" color={i === 0 ? colors.text.onGold : colors.text.primary}>
+            <Ionicons name={i === 0 ? "star" : "time-outline"} size={14} color={i === 0 ? colors.text.onAccent : colors.star[300]} />
+            <AppText variant="heading" color={i === 0 ? colors.text.onAccent : colors.text.primary}>
               {h.from}–{h.to}
             </AppText>
           </View>
-          <AppText variant="bodySmall" color={i === 0 ? colors.text.onGold : colors.text.secondary}>
+          <AppText variant="bodySmall" color={i === 0 ? colors.text.onAccent : colors.text.secondary}>
             {h.highlights.join(" · ")}
           </AppText>
         </View>
@@ -86,7 +86,7 @@ export function ReadingSection({ title, text, loading }: { title?: string; text?
   return (
     <View style={styles.section}>
       {title ? (
-        <AppText variant="label" color={colors.text.gold}>
+        <AppText variant="label" color={colors.text.accent}>
           {title}
         </AppText>
       ) : null}
@@ -103,7 +103,7 @@ export function ReadingSection({ title, text, loading }: { title?: string; text?
 
 export function SectionTitle({ children }: { children: string }) {
   return (
-    <AppText variant="label" color={colors.text.gold} style={styles.sectionTitle}>
+    <AppText variant="label" color={colors.text.accent} style={styles.sectionTitle}>
       {children}
     </AppText>
   );
@@ -146,11 +146,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   hourBest: {
-    backgroundColor: colors.gold[400],
-    borderColor: colors.gold[400],
+    backgroundColor: colors.star[400],
+    borderColor: colors.star[400],
   },
   hourHead: {
     flexDirection: "row",

@@ -38,7 +38,7 @@ export function ChartPane() {
             >
               <HairlineCard style={styles.wheelCard}>
                 <View style={styles.wheelIcon}>
-                  <Ionicons name="planet-outline" size={22} color={colors.gold[200]} />
+                  <Ionicons name="planet-outline" size={22} color={colors.star[200]} />
                 </View>
                 <View style={styles.wheelText}>
                   <AppText variant="heading" color={colors.text.primary}>
@@ -66,7 +66,7 @@ export function AskPane() {
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <EnterView style={styles.header}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("companion.name")}
           </AppText>
           <AppText variant="title">{t("companion.whatsOnYourMind")}</AppText>
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.glow.goldSoft,
+    backgroundColor: colors.glow.starSoft,
   },
   wheelText: {
     flex: 1,

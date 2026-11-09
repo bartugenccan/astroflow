@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   rowText: {
-    fontFamily: fonts.serifMedium,
+    fontFamily: fonts.rounded,
     fontSize: 26,
   },
   frameTop: {

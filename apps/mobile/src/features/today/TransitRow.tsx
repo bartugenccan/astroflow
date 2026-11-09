@@ -40,7 +40,7 @@ export function TransitRow({ transit }: { transit: Transit }) {
     <View style={styles.row}>
       <Animated.View style={[styles.dot, { backgroundColor: tint }, dotStyle]} />
       <View style={styles.glyphs}>
-        <Glyph name={transit.transitPlanet} size={18} color={colors.gold[300]} />
+        <Glyph name={transit.transitPlanet} size={18} color={colors.star[300]} />
         <Glyph name={transit.aspect} size={14} color={tint} />
         <Glyph name={transit.natalPlanet} size={18} color={colors.moon} />
       </View>

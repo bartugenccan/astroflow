@@ -9,30 +9,6 @@ datasource db {
 
 // ──── Enums ──────────────────────────────────────────────────────────────────
 
-enum EnergyState {
-  HARMONY
-  MOMENTUM
-  STRESS
-  OVERLOAD
-}
-
-enum RitualType {
-  WATER_PROGRAMMING
-  KINETIC_SYNC
-  BREATHWORK
-  GROUNDING
-  LIGHT_EXPOSURE
-  FREQUENCY_TUNING
-}
-
-enum SynergyLevel {
-  ALPHA
-  BETA
-  GAMMA
-  DELTA
-  OMEGA
-}
-
 enum FeatureType {
   TRANSIT_CHART
   COMPATIBILITY
@@ -67,136 +43,6 @@ enum InterpretationKind {
   TRANSIT_QUARTER
 }
 
-// ──── Core Models ────────────────────────────────────────────────────────────
-
-model User {
-  id            String    @id @default(uuid()) @db.Uuid
-  email         String    @unique
-  passwordHash  String
-  displayName   String
-  avatarUrl     String?
-  timezone      String    @default("Europe/Istanbul")
-  starPoints    Int       @default(0)
-
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  birthProfile    BirthProfile?
-  streaks         UserStreak[]
-  ritualLogs      RitualLog[]
-  unlockedFeatures UnlockedFeature[]
-
-  @@map("users")
-}
-
-model BirthProfile {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @unique @db.Uuid
-
-  birthDate    DateTime @db.Date
-  birthTime    String
-  latitude     Float
-  longitude    Float
-
-  sunSign      String
-  moonSign     String
-  risingSign   String
-  risingDegree Float
-  dominantElement String?
-  dominantPlanet  String?
-
-  chartData    Json?
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("birth_profiles")
-}
-
-model UserStreak {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  ritualType      RitualType
-
-  currentStreak   Int      @default(0)
-  longestStreak   Int      @default(0)
-  lastActiveDate  DateTime @db.Date
-  totalCompletions Int     @default(0)
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, ritualType])
-  @@map("user_streaks")
-}
-
-model RitualLog {
-  id           String     @id @default(uuid()) @db.Uuid
-  userId       String     @db.Uuid
-  ritualType   RitualType
-  completedAt  DateTime   @default(now())
-  frequencyBoost Int      @default(0)
-  durationMinutes Int     @default(0)
-  notes        String?
-
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, completedAt])
-  @@map("ritual_logs")
-}
-
-model FrequencyScore {
-  id           String      @id @default(uuid()) @db.Uuid
-  userId       String      @unique @db.Uuid
-
-  value        Int         @default(0)
-  trend        String      @default("stable")
-  synergyLevel SynergyLevel @default(ALPHA)
-
-  breakdown    Json?
-
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  @@map("frequency_scores")
-}
-
-model DailyAction {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String    @db.Uuid
-
-  title          String
-  description    String
-  ritualType     RitualType
-  energyCost     Int       @default(0)
-  frequencyBoost Int       @default(0)
-  durationMinutes Int      @default(0)
-  completed      Boolean   @default(false)
-  completedAt    DateTime?
-
-  generatedAt    DateTime  @default(now())
-  expiresAt      DateTime
-
-  @@index([userId, completed, expiresAt])
-  @@map("daily_actions")
-}
-
-model UnlockedFeature {
-  id          String      @id @default(uuid()) @db.Uuid
-  userId      String      @db.Uuid
-  featureType FeatureType
-  unlockedAt  DateTime    @default(now())
-
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, featureType])
-  @@map("unlocked_features")
-}
-
 // ──── Anonymous (device-ID) chart + AI interpretation cache ──────────────────
 
 model DeviceChart {
@@ -214,6 +60,10 @@ model DeviceChart {
   moonSign    String
   risingSign  String
   chartData   Json
+
+  /// Display-only profile fields, so a sign-in on a new phone restores them.
+  displayName String?
+  placeName   String?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -334,6 +184,8 @@ model IntentionStreak {
   longestStreak  Int      @default(0)
   lastActiveDate String? // YYYY-MM-DD
   totalCheckIns  Int      @default(0)
+  /// Missed days bridged by an Aster streak shield (YYYY-MM-DD strings).
+  shieldUsedDates Json    @default("[]")
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -342,6 +194,45 @@ model IntentionStreak {
 
   @@index([deviceId])
   @@map("intention_streaks")
+}
+
+// ─── Aster, the growing star mascot ─────────────────────────────────────────
+// One row per subject. Işık (xp) never decreases and decides the stage;
+// Yıldız Tozu (stardust) is the spendable balance. Stage is a cache of
+// stageFor(xp) once the egg has hatched (first intention).
+model MascotState {
+  deviceId           String    @id
+  xp                 Int       @default(0)
+  stardust           Int       @default(0)
+  stage              Int       @default(0)
+  equipped           Json      @default("[]") // accessory ids, one per slot
+  owned              Json      @default("[]") // accessory ids bought
+  shields            Int       @default(0)    // streak shields in stock
+  lastFreeShieldWeek String?                  // ISO week of the last free shield, "2026-W45"
+  hatchedAt          DateTime?
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("mascot_states")
+}
+
+// Every positive action that fed Aster. The unique key makes awards
+// idempotent and enforces daily caps (refKey is a slot number for capped
+// repeatable kinds, or the intention / milestone / moon-phase id).
+model MascotEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  deviceId  String
+  kind      String   // INTENTION_CREATE | CHECKIN | DAY_COMPLETE | MILESTONE | SKY_READ | AFFIRMATION | TAROT | MOON_RITUAL | EVENING_REFLECTION | BREATH
+  localDate String   // YYYY-MM-DD in the user's zone (x-tz)
+  refKey    String   @default("")
+  xp        Int
+  createdAt DateTime @default(now())
+
+  @@unique([deviceId, kind, localDate, refKey])
+  @@index([deviceId, localDate])
+  @@index([deviceId, kind, refKey])
+  @@map("mascot_events")
 }
 
 // A second person a device has entered for compatibility checks. Big-three is
@@ -373,15 +264,76 @@ model SavedPerson {
 
 // ─── Device identity & cost guards ───────────────────────────────────────────
 
-/// An anonymous install. The device id is issued (or, once, claimed) by
-/// POST /auth/device and only ever travels inside a signed device token.
+/// An install. Its id is issued (or, once, claimed) by POST /auth/device and
+/// travels as the `did` claim of a signed device token.
+///
+/// `subjectId` is whose data the install works on — the `sub` claim, and the
+/// value every `deviceId` column in this schema holds. A fresh install is its
+/// own subject (null = same as deviceId). Signing in to an account on another
+/// install points that install at the account's subject.
 model DeviceIdentity {
   deviceId  String    @id
+  subjectId String?
   createdAt DateTime  @default(now())
-  /// Set when the device's data is deleted — its token stops working.
+  /// Set on logout or data deletion — the install's token stops working.
   revokedAt DateTime?
 
+  @@index([subjectId])
   @@map("device_identities")
+}
+
+// ─── Accounts (optional, linked to an anonymous subject) ─────────────────────
+
+enum AuthProvider {
+  APPLE
+  GOOGLE
+  EMAIL
+}
+
+/// A durable identity a user can sign in to from any install. It owns exactly
+/// one subject; linking never moves data, it pins the current subject.
+model Account {
+  id          String    @id @default(uuid()) @db.Uuid
+  subjectId   String    @unique
+  displayName String?
+  createdAt   DateTime  @default(now())
+
+  identities AuthIdentity[]
+
+  @@map("accounts")
+}
+
+/// One way to sign in to an account. `providerSubject` is Apple/Google `sub`,
+/// or the lower-cased address for EMAIL. Accounts are never merged by email.
+model AuthIdentity {
+  id              String       @id @default(uuid()) @db.Uuid
+  accountId       String       @db.Uuid
+  account         Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  provider        AuthProvider
+  providerSubject String
+  email           String?
+  emailVerified   Boolean      @default(false)
+  /// Sign in with Apple refresh token (AES-256-GCM), needed to revoke on deletion.
+  appleRefreshTokenEnc String?
+  createdAt       DateTime     @default(now())
+
+  @@unique([provider, providerSubject])
+  @@unique([accountId, provider])
+  @@map("auth_identities")
+}
+
+/// A one-time sign-in code sent by email. Only a hash of the code is stored.
+model EmailOtp {
+  id         String    @id @default(uuid()) @db.Uuid
+  email      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email, createdAt])
+  @@map("email_otps")
 }
 
 /// AI generations that missed the cache, per UTC day. `deviceId = "*"` is the
@@ -393,6 +345,19 @@ model AiUsage {
 
   @@id([day, deviceId])
   @@map("ai_usage")
+}
+
+/// Per-subject daily allowances for metered features (e.g. "report"), keyed by
+/// UTC day. Only ever incremented: deleting what was made does not refund it.
+model DailyQuota {
+  day      String // "YYYY-MM-DD" (UTC)
+  deviceId String
+  feature  String
+  count    Int    @default(0)
+
+  @@id([day, deviceId, feature])
+  @@index([deviceId])
+  @@map("daily_quotas")
 }
 
 /// A long PDF report (natal chart, or transits now → 24 months), assembled in
@@ -414,4 +379,16 @@ model Report {
 
   @@index([deviceId, createdAt])
   @@map("reports")
+}
+
+/// Pre-launch waitlist sign-ups from the marketing site. Not tied to a device;
+/// removal requests come through the support email.
+model WaitlistEntry {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  locale    String
+  source    String?
+  createdAt DateTime @default(now())
+
+  @@map("waitlist_entries")
 }

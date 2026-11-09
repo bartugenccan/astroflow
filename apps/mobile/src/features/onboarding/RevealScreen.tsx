@@ -12,7 +12,7 @@ import { StarDivider } from "../../components/ui/StarDivider";
 import { astrologyApi } from "../../services/astrologyApi";
 import { BirthProfileResponse, CreateBirthProfileDto } from "../../services/types";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
-import { EnterView } from "../../lib/motion";
+import { EnterView, mt } from "../../lib/motion";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { colors, spacing } from "../../lib/design-system";
 
@@ -65,10 +65,10 @@ export function RevealScreen() {
             <MotiView
               from={{ opacity: 0 }}
               animate={{ opacity: 0.9 }}
-              transition={{ loop: true, type: "timing", duration: 1400 }}
+              transition={mt({ loop: true, type: "timing", duration: 1400 })}
               style={styles.castingWrap}
             >
-              <AppText variant="serifBody" center color={colors.text.secondary}>
+              <AppText variant="lead" center color={colors.text.secondary}>
                 {t("onboarding.casting")}
               </AppText>
             </MotiView>
@@ -76,7 +76,7 @@ export function RevealScreen() {
         ) : (
           <View style={styles.result}>
             <EnterView distance={24}>
-              <AppText variant="label" color={colors.text.gold} center>
+              <AppText variant="label" color={colors.text.accent} center>
                 {t("onboarding.revealReady")}
               </AppText>
             </EnterView>
@@ -93,7 +93,7 @@ export function RevealScreen() {
                 <AppText variant="labelLong" center>
                   {t("onboarding.dominantLabel")}
                 </AppText>
-                <AppText variant="serifBody" center>
+                <AppText variant="lead" center>
                   {tr("elements", profile.dominantElement)} •{" "}
                   {tr("planets", profile.dominantPlanet)}
                 </AppText>

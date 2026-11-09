@@ -4,17 +4,17 @@ import {
   IsLatitude,
   IsLongitude,
   IsOptional,
-  Matches,
   Max,
   Min,
 } from 'class-validator';
+import { IsCalendarDate, IsClockTime } from '../../../common/validation/calendar.validators';
 
 /** Birth data payload for chart + interpretation endpoints. */
 export class BirthInputDto {
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'birthDate must be YYYY-MM-DD' })
+  @IsCalendarDate()
   birthDate: string;
 
-  @Matches(/^\d{2}:\d{2}$/, { message: 'birthTime must be HH:mm' })
+  @IsClockTime()
   birthTime: string;
 
   @IsLatitude()

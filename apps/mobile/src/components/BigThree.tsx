@@ -11,7 +11,7 @@ import { AppText } from "./ui/AppText";
 import { Glyph } from "./Glyph";
 import { TermInfo } from "./TermInfo";
 import { useTranslation } from "../i18n";
-import { colors, spacing, radii, motion } from "../lib/design-system";
+import { colors, spacing, radii, motion, surface } from "../lib/design-system";
 
 interface BigThreeProps {
   sunSign: string;
@@ -46,7 +46,7 @@ export function BigThree({
       {items.map((item, i) => (
         <View key={item.key} style={styles.item}>
           <PopRing index={i} animate={animate}>
-            <Glyph name={item.sign} size={28} color={colors.gold[300]} />
+            <Glyph name={item.sign} size={28} color={colors.star[300]} />
           </PopRing>
           <View style={styles.labelRow}>
             <AppText variant="label" color={colors.text.tertiary} style={styles.label}>
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xs,
-    backgroundColor: colors.ink[900],
+    backgroundColor: surface.card,
   },
   labelRow: {
     flexDirection: "row",

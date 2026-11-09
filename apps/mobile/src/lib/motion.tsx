@@ -1,10 +1,21 @@
 import React from "react";
 import { StyleProp, ViewStyle } from "react-native";
 import { useReducedMotion } from "react-native-reanimated";
-import { MotiView } from "moti";
+import { MotiView, type MotiTransitionProp, type TransitionConfig } from "moti";
 import { motion } from "./design-system";
 
 type SpringName = keyof typeof motion.spring;
+
+/**
+ * Typed Moti transition. With RN 0.88 + Reanimated 4.7, Moti 0.30 infers its
+ * animate prop as `any`, so a plain config literal no longer satisfies
+ * `MotiTransitionProp` (the per-key index signature swallows `type`). The
+ * config itself is still a valid TransitionConfig; this checks it against
+ * that and hands Moti the type it expects. Runtime behaviour is unchanged.
+ */
+export function mt(config: TransitionConfig): MotiTransitionProp {
+  return config as unknown as MotiTransitionProp;
+}
 
 /**
  * Motion helpers bound to the design-system tokens and the OS "Reduce Motion"
@@ -17,16 +28,16 @@ export function useMotion() {
   /** Moti transition for a spring token (or a short fade when reduced). */
   const spring = (name: SpringName = "gentle", delay = 0) =>
     reduced
-      ? ({ type: "timing", duration: motion.duration.fast, delay: 0 } as const)
-      : ({ type: "spring", ...motion.spring[name], delay } as const);
+      ? mt({ type: "timing", duration: motion.duration.fast, delay: 0 })
+      : mt({ type: "spring", ...motion.spring[name], delay });
 
   /** Moti transition for a timed animation. */
   const timing = (duration: number = motion.duration.base, delay = 0) =>
-    ({
+    mt({
       type: "timing",
       duration: reduced ? Math.min(duration, motion.duration.fast) : duration,
       delay: reduced ? 0 : delay,
-    }) as const;
+    });
 
   /** Delay for the n-th item of a staggered list (capped so long lists don't drag). */
   const stagger = (index: number, base = 0) =>

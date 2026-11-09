@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { View } from "react-native";
+import type { ViewInstance } from "react-native";
 import { captureRef, releaseCapture } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import * as Haptics from "expo-haptics";
@@ -12,7 +13,7 @@ export type ShareStatus = "idle" | "capturing" | "sharing" | "error" | "unavaila
  * OS share sheet. The ref must point at a mounted, laid-out ShareableCard.
  */
 export function useShareCard() {
-  const ref = useRef<View>(null);
+  const ref = useRef<ViewInstance>(null);
   const [status, setStatus] = useState<ShareStatus>("idle");
 
   const share = useCallback(async () => {

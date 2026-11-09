@@ -135,6 +135,29 @@ export interface BirthProfileResponse {
   unknownTime?: boolean;
 }
 
+/** A linked account, as GET /auth/me returns it. */
+export interface AccountInfo {
+  id: string;
+  providers: AuthProviderId[];
+  email: string | null;
+  displayName: string | null;
+}
+
+export type AuthProviderId = "apple" | "google" | "email";
+
+/** POST /auth/{apple,google,email/verify}. `token` is set when the install switched to the account (sign-in). */
+export interface LinkResult {
+  account: AccountInfo;
+  token: string | null;
+  signedIn: boolean;
+}
+
+/** GET /me/profile — the saved chart plus display fields. */
+export interface SavedProfile extends Omit<BirthProfileResponse, "placeName"> {
+  displayName: string | null;
+  placeName: string | null;
+}
+
 export interface City {
   id: string;
   name: string;
@@ -453,7 +476,16 @@ export interface Intention {
   createdAt: string;
   updatedAt: string;
   progress: { count: number; target: number };
-  streak: { currentStreak: number; longestStreak: number };
+  streak: IntentionStreakInfo;
+  /** Present on create: what setting it did for Aster (first one hatches the egg). */
+  mascot?: MascotDelta | null;
+}
+
+export interface IntentionStreakInfo {
+  currentStreak: number;
+  longestStreak: number;
+  /** Shields Aster spent on this read to keep the streak alive. */
+  shieldsUsed?: number;
 }
 
 export interface IntentionSuggestion {
@@ -483,8 +515,9 @@ export interface CheckInResult {
   strongerPhrasing?: string;
   progress: { count: number; target: number };
   dayCompleted: boolean;
-  streak: { currentStreak: number; longestStreak: number };
+  streak: IntentionStreakInfo;
   milestoneName: string | null;
+  mascot?: MascotDelta | null;
 }
 
 export interface IntentionCheckInHistory {
@@ -788,4 +821,75 @@ export interface CreateReportInput {
   name: string;
   placeName?: string;
   unknownTime?: boolean;
+}
+
+// ─── Aster (the growing star mascot) ─────────────────────────────────────────
+export type MascotEventKind =
+  | "INTENTION_CREATE"
+  | "CHECKIN"
+  | "DAY_COMPLETE"
+  | "MILESTONE"
+  | "SKY_READ"
+  | "AFFIRMATION"
+  | "TAROT"
+  | "MOON_RITUAL"
+  | "EVENING_REFLECTION"
+  | "BREATH";
+
+export type MascotMood = "sleepy" | "happy" | "glowing";
+export type AccessorySlot = "head" | "neck" | "hand" | "aura";
+
+export interface MascotDelta {
+  kind: MascotEventKind;
+  xpGained: number;
+  stardustGained: number;
+  xp: number;
+  stardust: number;
+  stage: number;
+  previousStage: number;
+  leveledUp: boolean;
+  hatched: boolean;
+  energy: number;
+}
+
+export interface MascotCatalogItem {
+  id: string;
+  kind: "accessory" | "shield";
+  slot?: AccessorySlot;
+  price: number;
+  minStage: number;
+  owned: boolean;
+  locked: boolean;
+}
+
+export interface MascotAbility {
+  key: "skyWhisper" | "streakShield" | "powerDays" | "weeklyLetter" | "novaTheme";
+  minStage: number;
+  unlocked: boolean;
+  /** False while the ability is still "coming soon". */
+  available: boolean;
+}
+
+export interface MascotState {
+  xp: number;
+  stardust: number;
+  stage: number;
+  stageKey: "egg" | "spark" | "starling" | "glimmer" | "constellation" | "nova";
+  hatched: boolean;
+  stageFloorXp: number;
+  nextStageXp: number | null;
+  energy: number;
+  mood: MascotMood;
+  shields: number;
+  maxShields: number;
+  equipped: string[];
+  owned: string[];
+  today: Partial<Record<MascotEventKind, number>>;
+  abilities: MascotAbility[];
+  catalog: MascotCatalogItem[];
+}
+
+export interface MascotEventResult {
+  delta: MascotDelta;
+  state: MascotState;
 }

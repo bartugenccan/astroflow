@@ -83,7 +83,7 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
       >
         <EnterView from="none" style={styles.header}>
           <View style={styles.eyebrowRow}>
-            <AppText variant="label" color={colors.text.gold} style={styles.shrink}>
+            <AppText variant="label" color={colors.text.accent} style={styles.shrink}>
               {t("chart.eyebrow")}
             </AppText>
             <TermInfo term="natalChart" size={14} />
@@ -161,7 +161,7 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
           <View style={styles.sheetBody}>
             <SheetReveal delay={0}>
               <View style={styles.sheetGlyph}>
-                <Glyph name={selected.name} size={44} color={colors.gold[200]} />
+                <Glyph name={selected.name} size={44} color={colors.star[200]} />
               </View>
             </SheetReveal>
             <SheetReveal delay={motion.stagger}>

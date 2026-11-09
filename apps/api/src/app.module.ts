@@ -3,28 +3,22 @@ import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppConfigModule } from './common/config/app-config.module';
 import { PrismaModule } from './common/prisma/prisma.module';
-import { QueueModule } from './common/queue/queue.module';
+import { QuotaModule } from './common/quota/quota.module';
 import { isAiRoute, isAuthRoute } from './common/auth/route-tags';
 import { RequestContextInterceptor } from './common/context/request-context';
 import { AuthModule } from './modules/auth/auth.module';
 import { DeviceAuthGuard } from './modules/auth/device-auth.guard';
-import { UsersModule } from './modules/users/users.module';
 import { AstrologyModule } from './modules/astrology/astrology.module';
-import { GamificationModule } from './modules/gamification/gamification.module';
 import { AIModule } from './modules/ai/ai.module';
 import { CompanionModule } from './modules/companion/companion.module';
 import { IntentionsModule } from './modules/intentions/intentions.module';
+import { MascotModule } from './modules/mascot/mascot.module';
 import { TarotModule } from './modules/tarot/tarot.module';
 import { ElectionModule } from './modules/election/election.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { ReportsModule } from './modules/reports/reports.module';
-import { WorkersModule } from './workers/workers.module';
+import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { HealthController } from './common/health/health.controller';
-
-// The streak worker + its BullMQ queue require Redis. Off by default so the API
-// boots on Postgres alone; set ENABLE_WORKERS=true to run the streak scheduler.
-const workerModules =
-  process.env.ENABLE_WORKERS === 'true' ? [QueueModule, WorkersModule] : [];
 
 const MINUTE = 60_000;
 
@@ -32,11 +26,12 @@ const MINUTE = 60_000;
   imports: [
     AppConfigModule,
     PrismaModule,
+    QuotaModule,
     /**
      * Rate limits (in-memory; per instance):
      *  - default: 60 requests/min per client IP, every route;
      *  - ai:      20 requests/min per device on routes tagged @AiRoute;
-     *  - auth:    5 requests/min per IP on routes tagged @AuthRoute (sign-up, login).
+     *  - auth:    5 requests/min per IP on routes tagged @AuthRoute (device sign-up, sign-in).
      * The daily AI caps live in AiBudgetService.
      */
     ThrottlerModule.forRoot({
@@ -53,17 +48,16 @@ const MINUTE = 60_000;
       ],
     }),
     AuthModule,
-    UsersModule,
     AstrologyModule,
-    GamificationModule,
     AIModule,
     CompanionModule,
     IntentionsModule,
+    MascotModule,
     TarotModule,
     ElectionModule,
     PrivacyModule,
     ReportsModule,
-    ...workerModules,
+    WaitlistModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "../services/secureStorage";
 import { ElectionQuery } from "../services/types";
 
 const MAX_RECENT = 6;
@@ -33,7 +33,8 @@ export const useElectionStore = create<ElectionState>()(
     }),
     {
       name: "astroflow-election",
-      storage: createJSONStorage(() => AsyncStorage),
+      // Keychain/Keystore, not plain storage: questions carry what the user typed and where.
+      storage: createJSONStorage(() => secureStorage),
       partialize: (s) => ({ current: s.current, recent: s.recent }),
     },
   ),

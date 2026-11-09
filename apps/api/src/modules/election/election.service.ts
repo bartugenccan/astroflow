@@ -24,10 +24,10 @@ import {
 } from './prompts/election.prompts';
 import { electionCheckStub, electionSearchStub } from './prompts/election.stubs';
 import { safeError } from '../../common/logging/safe-error';
-import { trackAiCalls } from '../../common/ai/ai-call-tracker';
+import { ownedReading } from '../../common/ai/owned-reading-cache';
 
 /** Bump when election prompts change so cached readings regenerate. */
-const ELECTION_CACHE_VERSION = 'e2';
+const ELECTION_CACHE_VERSION = 'e3';
 /** How far ahead a single date may be checked. */
 const MAX_YEARS_AHEAD = 3;
 /** Longest search window, in months. */
@@ -213,41 +213,16 @@ export class ElectionService {
     return createHash('sha256').update(s).digest('hex');
   }
 
-  private async cached<T>(
+  private cached<T>(
     kind: InterpretationKind,
     locale: Locale,
     rawKey: string,
     build: () => Promise<T>,
   ): Promise<T> {
-    const cacheKey = this.hash(`${ELECTION_CACHE_VERSION}|${locale}|${rawKey}`);
-    try {
-      const hit = await this.prisma.interpretation.findUnique({ where: { cacheKey } });
-      if (hit) return hit.content as T;
-    } catch (err) {
-      this.logger.warn(`election cache read failed: ${safeError(err)}`);
-    }
-
-    // No key: the result is templated text — serve it, never store it.
-    if (!this.ai.available) return build();
-    const { value: content, failed } = await trackAiCalls(build);
-    // An AI call failed while building, so (part of) this is stub text: serve, don't cache.
-    if (failed) return content;
-
-    try {
-      await this.prisma.interpretation.upsert({
-        where: { cacheKey },
-        create: {
-          cacheKey,
-          kind,
-          locale,
-          content: content as object,
-          model: this.ai.model,
-        },
-        update: {},
-      });
-    } catch (err) {
-      this.logger.warn(`election cache write failed: ${safeError(err)}`);
-    }
-    return content;
+    return ownedReading(
+      { prisma: this.prisma, ai: this.ai, logger: this.logger },
+      { version: ELECTION_CACHE_VERSION, kind, locale, rawKey },
+      build,
+    );
   }
 }

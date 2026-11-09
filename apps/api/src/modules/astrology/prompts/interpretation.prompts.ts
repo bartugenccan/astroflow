@@ -536,8 +536,8 @@ export function checkInPrompt(
 ): { user: string; schemaHint: string } {
   const mem = args.recent
     ? locale === 'tr'
-      ? `Son check-in'lerden notlar:\n${args.recent}\n`
-      : `Notes from recent check-ins:\n${args.recent}\n`
+      ? `Son check-in'lerden notlar: ${userData(args.recent)}. ${USER_DATA_RULE.tr}\n`
+      : `Notes from recent check-ins: ${userData(args.recent)}. ${USER_DATA_RULE.en}\n`
     : '';
   const said = args.userText
     ? locale === 'tr'

@@ -51,6 +51,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** Machine-readable reason the API put in the body (e.g. "ACCOUNT_CONFLICT"). */
+    readonly code?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -93,14 +95,23 @@ function post<T>(
   });
 }
 
+/** The device's IANA time zone, read once (undefined if the runtime can't tell). */
+const DEVICE_TIME_ZONE: string | undefined = (() => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined;
+  } catch {
+    return undefined;
+  }
+})();
+
 /**
  * Every API call. `path` is relative to `/api/v1/` and includes the module
  * prefix (e.g. "astrology/compatibility", "companion/message", "intentions").
  * Carries the device token; a 401 means it was revoked or expired, so the
  * token is dropped, re-registered once, and the call retried.
  */
-async function request<T>(
-  method: "GET" | "POST" | "DELETE" | "PATCH",
+export async function request<T>(
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH",
   path: string,
   body?: unknown,
   query?: Record<string, string | number>,
@@ -115,6 +126,8 @@ async function request<T>(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${await getDeviceToken()}`,
+        // The server counts daily things (check-ins) by the user's local day.
+        ...(DEVICE_TIME_ZONE ? { "x-tz": DEVICE_TIME_ZONE } : {}),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
@@ -125,7 +138,14 @@ async function request<T>(
     res = await send();
   }
   if (!res.ok) {
-    throw new ApiError(`Request failed (${res.status})`, res.status);
+    let code: string | undefined;
+    try {
+      const body = (await res.json()) as { code?: unknown };
+      if (typeof body.code === "string") code = body.code;
+    } catch {
+      // Non-JSON error body.
+    }
+    throw new ApiError(`Request failed (${res.status})`, res.status, code);
   }
   // DELETE / unlock may return empty-ish bodies; tolerate non-JSON.
   const text = await res.text();

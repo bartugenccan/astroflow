@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, View, Pressable, LayoutChangeEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Animated, {
@@ -29,32 +27,41 @@ import type { Tabs } from "expo-router";
 type BottomTabBarProps = Parameters<
   NonNullable<React.ComponentProps<typeof Tabs>["tabBar"]>
 >[0];
-import { colors, spacing, motion, typography, fonts } from "../lib/design-system";
+import { colors, spacing, motion, typography, fonts, palette, surface, Tone, depth } from "../lib/design-system";
 import { useUiStore } from "../store/useUiStore";
 import { useTranslation, TranslationKey } from "../i18n";
 import { StarBurst } from "../features/intentions/StarBurst";
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  index: "moon",
-  you: "planet",
+  index: "sunny",
+  manifest: "sparkles",
   tarot: "albums",
-  ahead: "telescope",
+  sky: "planet",
   profile: "person-circle",
+};
+
+/** Each destination owns a candy tone — the capsule and icon take it on. */
+const TONES: Record<string, Tone> = {
+  index: "star",
+  manifest: "candy",
+  tarot: "primary",
+  sky: "sky",
+  profile: "mint",
 };
 
 /** i18n key per route, so the bar can name its destinations. */
 const LABELS: Record<string, TranslationKey> = {
   index: "tabs.today",
-  you: "tabs.you",
+  manifest: "tabs.manifest",
+  sky: "tabs.sky",
   tarot: "tabs.tarot",
-  ahead: "tabs.ahead",
   profile: "tabs.profile",
 };
 
 // The capsule is concentric with the bar: the same gap on every side, and a
 // radius that is the bar's inner radius minus that gap (both are full pills).
 const BAR_HEIGHT = 64;
-const BORDER = 1;
+const BORDER = 2;
 const GAP = 6; // capsule ↔ bar edge, on all four sides at the outer tabs
 const CAPSULE_INSET = 4; // capsule is this much narrower than its button, per side
 const CAPSULE_HEIGHT = BAR_HEIGHT - 2 * BORDER - 2 * GAP; // 50
@@ -71,7 +78,7 @@ interface Slot {
  * springs from tab to tab. Choosing a tab sets off a small burst of stars from
  * its icon.
  */
-export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
+export function CelestialTabBar({ state, emitter, navigateToTab }: BottomTabBarProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
@@ -124,6 +131,8 @@ export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
     capW.value = withSpring(w, motion.spring.snappy);
   }, [slots, state.index, reduced, capX, capW]);
 
+  const activeTone = palette[TONES[state.routes[state.index]?.name] ?? "primary"];
+
   const capsuleStyle = useAnimatedStyle(() => ({
     width: capW.value,
     transform: [{ translateX: capX.value }],
@@ -136,35 +145,34 @@ export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
       style={[styles.wrap, { paddingBottom: insets.bottom + spacing.md }, wrapStyle]}
     >
       <View style={styles.pill}>
-        <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-        <View style={styles.overlay} />
-
-        <Animated.View pointerEvents="none" style={[styles.capsule, capsuleStyle]}>
-          <LinearGradient
-            colors={["rgba(231,205,143,0.24)", "rgba(231,205,143,0.06)"]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={styles.capsuleFill}
-          />
-        </Animated.View>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.capsule,
+            { backgroundColor: activeTone.soft, borderColor: activeTone.face },
+            capsuleStyle,
+          ]}
+        />
 
         {state.routes.map((route, index) => {
           const focused = state.index === index;
           const onPress = () => {
             Haptics.selectionAsync().catch(() => {});
-            const event = navigation.emit({
+            // expo-router 58 hands the bar an emitter + navigateToTab instead of `navigation`.
+            const event = emitter.emit({
               type: "tabPress",
               target: route.key,
               canPreventDefault: true,
             });
             if (!focused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+              navigateToTab(route.key);
             }
           };
           return (
             <TabButton
               key={route.key}
               icon={ICONS[route.name] ?? "ellipse"}
+              tone={TONES[route.name] ?? "primary"}
               label={LABELS[route.name] ? t(LABELS[route.name]) : ""}
               focused={focused}
               onPress={onPress}
@@ -179,12 +187,14 @@ export function CelestialTabBar({ state, navigation }: BottomTabBarProps) {
 
 function TabButton({
   icon,
+  tone,
   label,
   focused,
   onPress,
   onLayout,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
+  tone: Tone;
   /** Named destinations: an icon alone asks the user to decode it. */
   label: string;
   focused: boolean;
@@ -192,6 +202,7 @@ function TabButton({
   onLayout: (e: LayoutChangeEvent) => void;
 }) {
   const reduced = useReducedMotion();
+  const toneFace = palette[tone].face;
   const scale = useSharedValue(focused ? 1.08 : 1);
   const tilt = useSharedValue(0);
   const tint = useSharedValue(focused ? 1 : 0);
@@ -260,7 +271,7 @@ function TabButton({
     transform: [{ scale: 0.5 + twinkle.value * 0.5 }, { rotate: `${twinkle.value * 45}deg` }],
   }));
   const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(tint.value, [0, 1], [colors.text.tertiary, colors.gold[200]]),
+    color: interpolateColor(tint.value, [0, 1], [colors.text.tertiary, toneFace]),
   }));
 
   return (
@@ -279,12 +290,12 @@ function TabButton({
         <Animated.View style={iconStyle}>
           <Ionicons
             name={icon}
-            size={21}
-            color={focused ? colors.gold[300] : colors.text.tertiary}
+            size={22}
+            color={focused ? toneFace : colors.text.tertiary}
           />
         </Animated.View>
         <Animated.View pointerEvents="none" style={[styles.twinkle, twinkleStyle]}>
-          <Ionicons name="star" size={7} color={colors.gold[100]} />
+          <Ionicons name="star" size={7} color={colors.star[100]} />
         </Animated.View>
       </View>
       {label ? (
@@ -314,10 +325,13 @@ const styles = StyleSheet.create({
   },
   pill: {
     flexDirection: "row",
-    height: BAR_HEIGHT,
+    height: BAR_HEIGHT + depth.md,
     borderRadius: BAR_HEIGHT / 2,
     borderWidth: BORDER,
-    borderColor: colors.border.hairline,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: BORDER + depth.md,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.card,
     overflow: "hidden",
     alignItems: "center",
     paddingHorizontal: GAP - CAPSULE_INSET,
@@ -326,22 +340,13 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
   },
-  overlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(10,14,28,0.85)",
-  },
   capsule: {
     position: "absolute",
     left: 0,
     top: GAP,
     height: CAPSULE_HEIGHT,
     borderRadius: CAPSULE_RADIUS,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    overflow: "hidden",
-  },
-  capsuleFill: {
-    flex: 1,
+    borderWidth: 2,
   },
   button: {
     flex: 1,
@@ -364,7 +369,7 @@ const styles = StyleSheet.create({
     height: 30,
     borderRadius: 15,
     borderWidth: 1.5,
-    borderColor: colors.gold[300],
+    borderColor: colors.star[300],
   },
   twinkle: {
     position: "absolute",
@@ -374,7 +379,7 @@ const styles = StyleSheet.create({
   label: {
     // Sentence case, barely tracked: the old uppercase 9px label ran wider
     // than its highlight and spilled out ("SANA ÖZEL").
-    fontFamily: fonts.sansSemiBold,
+    fontFamily: fonts.heading,
     fontSize: 10.5,
     lineHeight: 14,
     letterSpacing: 0.2,

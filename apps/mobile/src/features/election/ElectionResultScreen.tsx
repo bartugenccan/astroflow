@@ -1,5 +1,6 @@
 import React, { useRef } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
+import type { ScrollViewInstance } from "react-native";
 import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
@@ -21,7 +22,7 @@ export function ElectionResultScreen() {
   const dto = useBirthDto();
   const query = useElectionStore((s) => s.current);
   const ask = useElectionStore((s) => s.ask);
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
 
   if (!dto || !query) return <Frame title={t("election.title")} onNew={() => router.back()} />;
 
@@ -56,7 +57,7 @@ export function ElectionDayScreen() {
   // Route params can come from a deep link; only a real calendar day is used.
   const date = isIsoDay(params.date) ? params.date : null;
   const search = useElectionStore((s) => s.current);
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
 
   if (!dto || !search || !date) return <Frame title={t("election.title")} onNew={() => router.back()} />;
   const query: ElectionCheckQuery = {
@@ -89,7 +90,7 @@ function Frame({
 }: {
   title: string;
   onNew?: () => void;
-  scrollRef?: React.RefObject<ScrollView | null>;
+  scrollRef?: React.RefObject<ScrollViewInstance | null>;
   children?: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -98,12 +99,12 @@ function Frame({
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.bar}>
           <BackButton />
-          <AppText variant="label" color={colors.text.gold} style={styles.barTitle}>
+          <AppText variant="label" color={colors.text.accent} style={styles.barTitle}>
             {title}
           </AppText>
           {onNew ? (
             <PressableScale onPress={onNew} scaleTo={0.95} style={styles.newBtn}>
-              <AppText variant="bodySmall" color={colors.gold[200]}>
+              <AppText variant="bodySmall" color={colors.star[200]}>
                 {t("election.newQuery")}
               </AppText>
             </PressableScale>

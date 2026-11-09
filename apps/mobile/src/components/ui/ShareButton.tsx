@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PressableScale } from "./PressableScale";
-import { colors, radii } from "../../lib/design-system";
+import { colors, radii, surface } from "../../lib/design-system";
 
 interface ShareButtonProps {
   onPress: () => void;
@@ -21,7 +21,7 @@ export function ShareButton({ onPress, size = 34, style }: ShareButtonProps) {
       accessibilityRole="button"
       accessibilityLabel="Share"
     >
-      <Ionicons name="share-outline" size={size * 0.5} color={colors.gold[300]} />
+      <Ionicons name="share-outline" size={size * 0.5} color={colors.star[300]} />
     </PressableScale>
   );
 }
@@ -33,6 +33,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
 });

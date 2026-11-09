@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+import { mt } from "../../lib/motion";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   View,
@@ -18,15 +19,22 @@ import Animated, {
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { GoldButton } from "../../components/ui/GoldButton";
 import { AppText } from "../../components/ui/AppText";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { AccountSheet } from "../account/AccountSheet";
+import { ACCOUNTS_ENABLED } from "../../services/auth/account";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
+import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, fonts, radii } from "../../lib/design-system";
+import { colors, spacing, fonts, radii, surface } from "../../lib/design-system";
 
 export function WelcomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const name = useOnboardingDraft((s) => s.name);
   const setName = useOnboardingDraft((s) => s.setName);
+  const aiConsentAt = useAppStore((s) => s.aiConsentAt);
+  // Returning users (new phone, reinstall) sign in instead of re-onboarding.
+  const [signInOpen, setSignInOpen] = useState(false);
 
   const spacingV = useSharedValue(10);
 
@@ -56,9 +64,9 @@ export function WelcomeScreen() {
             <MotiView
               from={{ opacity: 0, translateY: 8 }}
               animate={{ opacity: 1, translateY: 0 }}
-              transition={{ type: "timing", duration: 700, delay: 700 }}
+              transition={mt({ type: "timing", duration: 700, delay: 700 })}
             >
-              <AppText variant="serifBody" center color={colors.text.secondary} style={styles.tagline}>
+              <AppText variant="lead" center color={colors.text.secondary} style={styles.tagline}>
                 {t("onboarding.welcomeTagline")}
               </AppText>
             </MotiView>
@@ -67,10 +75,10 @@ export function WelcomeScreen() {
           <MotiView
             from={{ opacity: 0, translateY: 16 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 500, delay: 1000 }}
+            transition={mt({ type: "timing", duration: 500, delay: 1000 })}
             style={styles.footer}
           >
-            <AppText variant="labelLong" color={colors.text.gold} style={styles.nameLabel}>
+            <AppText variant="labelLong" color={colors.text.accent} style={styles.nameLabel}>
               {t("onboarding.nameQuestion")}
             </AppText>
             <TextInput
@@ -84,13 +92,26 @@ export function WelcomeScreen() {
             />
             <GoldButton
               label={t("onboarding.begin")}
-              onPress={() => router.push("/birth-date")}
+              // Birth data leaves the phone from here on: the AI notice comes first, once.
+              onPress={() => router.push(aiConsentAt ? "/birth-date" : "/consent")}
               disabled={name.trim().length === 0}
               style={styles.cta}
             />
+            {ACCOUNTS_ENABLED ? (
+              <PressableScale
+                onPress={() => setSignInOpen(true)}
+                style={styles.signIn}
+                accessibilityRole="button"
+              >
+                <AppText variant="label" color={colors.text.accent} center>
+                  {t("account.haveAccount")}
+                </AppText>
+              </PressableScale>
+            ) : null}
           </MotiView>
         </View>
       </KeyboardAvoidingView>
+      <AccountSheet visible={signInOpen} onClose={() => setSignInOpen(false)} intent="signIn" />
     </ScreenWrapper>
   );
 }
@@ -109,7 +130,7 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   wordmark: {
-    fontFamily: fonts.serif,
+    fontFamily: fonts.heading,
     fontSize: 46,
     color: colors.text.primary,
   },
@@ -127,7 +148,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
@@ -135,5 +156,10 @@ const styles = StyleSheet.create({
   },
   cta: {
     marginTop: spacing.md,
+  },
+  signIn: {
+    alignSelf: "center",
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
 });

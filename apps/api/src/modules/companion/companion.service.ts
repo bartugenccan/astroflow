@@ -9,6 +9,9 @@ import { companionStub } from '../astrology/prompts/interpretation.stubs';
 import { ChatMessageDto, ChatReply } from './companion.types';
 import { safeError } from '../../common/logging/safe-error';
 
+/** Stored chat turns per subject; older ones are deleted as new ones arrive. */
+const CHAT_HISTORY_KEEP = 200;
+
 @Injectable()
 export class CompanionService {
   private readonly logger = new Logger(CompanionService.name);
@@ -107,8 +110,23 @@ export class CompanionService {
     });
     // Remember the user's own words as lightweight continuity.
     await this.memory.remember(deviceId, 'chat', clean);
+    await this.pruneHistory(deviceId);
 
     return reply;
+  }
+
+  /** Keep only the newest messages: the prompt reads 8 and the app shows 40. */
+  private async pruneHistory(deviceId: string): Promise<void> {
+    const cutoff = await this.prisma.chatMessage.findFirst({
+      where: { deviceId },
+      orderBy: { createdAt: 'desc' },
+      skip: CHAT_HISTORY_KEEP,
+      select: { createdAt: true },
+    });
+    if (!cutoff) return;
+    await this.prisma.chatMessage.deleteMany({
+      where: { deviceId, createdAt: { lte: cutoff.createdAt } },
+    });
   }
 
   async getHistory(deviceId: string, limit = 40): Promise<ChatMessageDto[]> {

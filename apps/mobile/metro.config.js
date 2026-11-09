@@ -1,13 +1,14 @@
 // Metro config for the AstroFlow Expo app inside an npm-workspaces monorepo.
 // Watches the repo root so hoisted packages resolve, and lets Metro look in
 // both the app's and the root's node_modules.
-const { getDefaultConfig } = require("expo/metro-config");
+// getSentryExpoConfig = Expo default config + debug IDs for Sentry source maps.
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const path = require("path");
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "../..");
 
-const config = getDefaultConfig(projectRoot);
+const config = getSentryExpoConfig(projectRoot);
 
 config.watchFolders = [workspaceRoot];
 config.resolver.nodeModulesPaths = [

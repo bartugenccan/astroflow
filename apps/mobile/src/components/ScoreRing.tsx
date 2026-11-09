@@ -72,8 +72,8 @@ export function ScoreRing({
       <Svg width={size} height={size}>
         <Defs>
           <LinearGradient id="scoreRingGold" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={colors.gold[300]} />
-            <Stop offset="1" stopColor={colors.gold[500]} />
+            <Stop offset="0" stopColor={colors.star[300]} />
+            <Stop offset="1" stopColor={colors.star[500]} />
           </LinearGradient>
         </Defs>
         <Circle
@@ -106,7 +106,7 @@ export function ScoreRing({
               animate={animate}
               delay={delay}
               variant="display"
-              style={{ fontFamily: fonts.serif, color: colors.text.primary }}
+              style={{ fontFamily: fonts.heading, color: colors.text.primary }}
             />
             {label ? (
               <AppText

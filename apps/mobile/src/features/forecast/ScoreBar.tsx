@@ -27,7 +27,7 @@ interface ScoreBarProps {
 export function ScoreBar({
   value,
   delay = 0,
-  color = colors.gold[300],
+  color = colors.star[300],
   height = 4,
   trackColor = colors.border.hairline,
   style,

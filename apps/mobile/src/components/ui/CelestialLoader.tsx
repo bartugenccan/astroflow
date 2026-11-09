@@ -50,8 +50,7 @@ export function CelestialLoader({ size = "lg", label }: Props) {
   }, [spin, pulse, reduced]);
 
   const arcPath = useMemo(() => {
-    const p = Skia.Path.Make();
-    p.addCircle(center, center, ringR);
+    const p = Skia.Path.Circle(center, center, ringR);
     return p;
   }, [center, ringR]);
 
@@ -76,7 +75,7 @@ export function CelestialLoader({ size = "lg", label }: Props) {
             r={ringR}
             style="stroke"
             strokeWidth={0.75}
-            color={colors.gold[600]}
+            color={colors.star[600]}
             opacity={0.4}
           />
           {/* rotating gold arc — a comet sweeping the ring */}
@@ -85,17 +84,17 @@ export function CelestialLoader({ size = "lg", label }: Props) {
               path={arcPath}
               style="stroke"
               strokeWidth={1.6}
-              color={colors.gold[300]}
+              color={colors.star[300]}
               start={0}
               end={0.28}
             />
           </Group>
           {/* two orbiting planets, opposite directions */}
-          <Circle cx={dotCx} cy={dotCy} r={dim * 0.03} color={colors.gold[200]} />
+          <Circle cx={dotCx} cy={dotCy} r={dim * 0.03} color={colors.star[200]} />
           <Circle cx={dot2Cx} cy={dot2Cy} r={dim * 0.022} color={colors.moon} opacity={0.85} />
           {/* pulsing core: glow + star */}
-          <Circle cx={center} cy={center} r={glowR} color={colors.glow.gold} opacity={glowO} />
-          <Circle cx={center} cy={center} r={coreR} color={colors.gold[100]} />
+          <Circle cx={center} cy={center} r={glowR} color={colors.glow.star} opacity={glowO} />
+          <Circle cx={center} cy={center} r={coreR} color={colors.star[100]} />
         </Canvas>
       </View>
       {label ? (

@@ -7,7 +7,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { AppText } from "./AppText";
 import { PressableScale } from "./PressableScale";
-import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { colors, spacing, radii, motion, surface, palette } from "../../lib/design-system";
 
 interface SegmentedProps<T extends string> {
   value: T;
@@ -72,7 +72,7 @@ export function Segmented<T extends string>({
           >
             <AppText
               variant="heading"
-              color={active ? colors.text.onGold : colors.text.secondary}
+              color={active ? palette.primary.on : colors.text.secondary}
               numberOfLines={1}
               maxFontSizeMultiplier={1.15}
               style={compact ? styles.compactLabel : undefined}
@@ -93,11 +93,13 @@ const styles = StyleSheet.create({
   },
   segmented: {
     flexDirection: "row",
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderRadius: radii.pill,
     padding: PAD,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: 5,
+    borderBottomColor: surface.slab,
   },
   thumb: {
     position: "absolute",
@@ -105,7 +107,9 @@ const styles = StyleSheet.create({
     bottom: PAD,
     left: PAD,
     borderRadius: radii.pill,
-    backgroundColor: colors.gold[400],
+    backgroundColor: palette.primary.face,
+    borderBottomWidth: 3,
+    borderBottomColor: palette.primary.slab,
   },
   segment: {
     flex: 1,

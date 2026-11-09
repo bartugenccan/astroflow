@@ -1,120 +1,180 @@
 {
-  "$comment": "ship-kit beyan dosyasi. doctor ve preflight bu beyani KODA KARSI dogrular. Bos URL alanlari yayin oncesi doldurulmak zorundadir.",
-  "app": {
-    "name": "AstroFlow",
-    "bundleId": "com.astroflow.app",
-    "supportUrl": "",
-    "privacyUrl": "",
-    "termsUrl": ""
+ "$comment": "ship-kit beyan dosyasi. doctor ve preflight bu beyani KODA KARSI dogrular. Bos URL alanlari yayin oncesi doldurulmak zorundadir.",
+ "app": {
+  "name": "AstroFlow",
+  "bundleId": "com.astroflow.app",
+  "supportUrl": "https://getastroflow.com/en/support",
+  "privacyUrl": "https://getastroflow.com/en/privacy",
+  "termsUrl": "https://getastroflow.com/en/terms"
+ },
+ "compliance": {
+  "accountDeletion": {
+   "inApp": true,
+   "route": "DELETE /api/v1/me/data (privacy.controller.ts) — Profil > Verilerimi sil (hesap varsa hesabi da siler; ayri bir hesap silme ucu yok)",
+   "scope": "Sohbet, hafiza notlari, niyetler ve check-in'ler, kayitli kisiler, cihaz haritasi, kilitler, AI sayaclari ve gunluk kotalar, Aster maskot durumu ve olay gecmisi (mascot_states, mascot_events), TUM onbellekli okumalar (her okuma sahibine bagli), raporlar; ardindan cihaz token'i iptal edilir. Cihazdaki tum veriler (ses kayitlari dahil) de silinir. Hesap varsa: hesap, tum giris yontemleri (Apple/Google/e-posta), e-posta giris kodlari silinir; Sign in with Apple refresh token Apple uzerinden iptal edilir; hesaba bagli TUM cihazlarin token'i iptal edilir."
   },
-  "compliance": {
-    "accountDeletion": {
-      "inApp": true,
-      "route": "DELETE /api/v1/me/data (privacy.controller.ts) — Profil > Verilerimi sil; kullanici hesabi icin DELETE /api/v1/users/account",
-      "scope": "Sohbet, hafiza notlari, niyetler ve check-in'ler, kayitli kisiler, cihaz haritasi, kilitler, AI sayaclari, cihaza ozel onbellekli okumalar; ardindan cihaz token'i iptal edilir. Cihazdaki tum veriler (ses kayitlari dahil) de silinir."
-    },
-    "ai": {
-      "used": true,
-      "providers": [
-        "DeepSeek"
-      ],
-      "dataShared": [
-        "Dogum haritasindan turetilen yerlesimler (gunes, ay, yukselen, gezegen/burc/ev, acilar)",
-        "Gunun transit ozeti",
-        "Kullanicinin companion sohbetinde yazdigi serbest metin",
-        "Kullanicinin yazdigi olumlama metni (rezonans skoru icin)",
-        "Kullanici hakkinda saklanan hafiza notlari (MemoryEntry)",
-        "Tarot sorusu (kullanici yazarsa)",
-        "Eleksiyon icin kullanicinin yazdigi olay metni"
-      ],
-      "notShared": [
-        "Ham dogum tarihi/saati/yeri - harita sunucuda hesaplanir, saglayiciya gonderilmez"
-      ],
-      "declaredInAppPrivacy": false
-    },
-    "thirdPartySdks": [
-      {
-        "name": "DeepSeek API",
-        "purpose": "Yorum ve companion metni uretimi",
-        "dataSent": "Turetilmis harita verisi, sohbet metni, olumlama metni, hafiza notlari",
-        "privacyManifest": "n/a (sunucu tarafi HTTP cagrisi, mobil SDK degil)"
-      },
-      {
-        "name": "@react-native-async-storage/async-storage",
-        "purpose": "Cihaz ici onbellek ve tercihler",
-        "dataSent": "yok - yerel",
-        "privacyManifest": "gerekli"
-      },
-      {
-        "name": "@shopify/react-native-skia",
-        "purpose": "Harita ve gorsel cizim",
-        "dataSent": "yok",
-        "privacyManifest": "gerekli"
-      },
-      {
-        "name": "react-native-view-shot",
-        "purpose": "Paylasilabilir kart uretimi",
-        "dataSent": "yok - kullanici paylasim baslatir",
-        "privacyManifest": "gerekli"
-      },
-      {
-        "name": "expo-localization",
-        "purpose": "Dil ve saat dilimi",
-        "dataSent": "yok",
-        "privacyManifest": "gerekli"
-      },
-      {
-        "name": "Open-Meteo Geocoding API",
-        "purpose": "Dogum yeri / etkinlik yeri sehir aramasi",
-        "dataSent": "Yazilan sehir arama metni, dil kodu ve cihaz IP adresi (HTTPS, anahtarsiz, cihaz kimligi yok)",
-        "privacyManifest": "n/a (dogrudan HTTPS cagrisi, SDK degil)"
-      },
-      {
-        "name": "expo-secure-store",
-        "purpose": "Cihaz token'i ve dogum verisinin Keychain/Keystore'da saklanmasi",
-        "dataSent": "yok - yerel",
-        "privacyManifest": "gerekli"
-      }
-    ],
-    "dataSafetySubmitted": false,
-    "$note": "Sentry, PostHog ve odeme SDK'si kurulunca bu envantere EKLENMELIDIR.",
-    "localDataProtection": {
-      "keychain": "Cihaz token'i ve useAppStore (dogum tarihi/saati/yeri) expo-secure-store ile, AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY",
-      "asyncStorage": "Tarot, eleksiyon ve olumlama gecmisi (sifresiz, uygulama sandbox'i)",
-      "files": "Olumlama ses kayitlari Documents/affirmations (iOS Data Protection varsayilani; sunucuya gonderilmez)",
-      "backup": "Android allowBackup=false"
-    }
+  "ai": {
+   "used": true,
+   "providers": [
+    "Anthropic (Claude) — varsayilan (AI_PROVIDER=anthropic)",
+    "DeepSeek — alternatif (AI_PROVIDER=deepseek)"
+   ],
+   "dataShared": [
+    "Dogum haritasindan turetilen yerlesimler (gunes, ay, yukselen, gezegen/burc/ev, acilar)",
+    "Gunun transit ozeti",
+    "Kullanicinin companion sohbetinde yazdigi serbest metin",
+    "Kullanicinin yazdigi olumlama metni (rezonans skoru icin)",
+    "Kullanici hakkinda saklanan hafiza notlari (MemoryEntry)",
+    "Tarot sorusu (kullanici yazarsa)",
+    "Eleksiyon icin kullanicinin yazdigi olay metni ve secilen yer adi"
+   ],
+   "notShared": [
+    "Ham dogum tarihi/saati/yeri - harita sunucuda hesaplanir, saglayiciya gonderilmez"
+   ],
+   "declaredInAppPrivacy": true,
+   "inAppDisclosure": "Onboarding'de dogum verisi girilmeden once tek seferlik AI bildirimi + onay (features/consent/AiConsentScreen; hesapla girenler ve eski kurulumlar icin root layout'ta). Profil > Yardim ve yasal > AI yorumlari hakkinda; Aster ekraninda 'AI ile yazildi' dipnotu."
   },
-  "testing": {
-    "criticalModules": [
-      {
-        "label": "Efemeris / harita hesabi",
-        "pattern": "(ephemeris|astrology-engine|synastry)"
-      },
-      {
-        "label": "Yorum uretimi (AI)",
-        "pattern": "(interpretation|companion|deepseek)"
-      },
-      {
-        "label": "Yetkilendirme / premium kilit",
-        "pattern": "(entitlement|unlock|paywall)"
-      },
-      {
-        "label": "Kimlik dogrulama",
-        "pattern": "(users|jwt|auth)"
-      },
-      {
-        "label": "Streak ve niyet durum makinesi",
-        "pattern": "(streak|intention|score)"
-      }
-    ]
+  "thirdPartySdks": [
+   {
+    "name": "DeepSeek API",
+    "purpose": "Yorum ve companion metni uretimi (yalnizca AI_PROVIDER=deepseek iken)",
+    "dataSent": "Turetilmis harita verisi, sohbet metni, olumlama metni, hafiza notlari",
+    "privacyManifest": "n/a (sunucu tarafi HTTP cagrisi, mobil SDK degil)"
+   },
+   {
+    "name": "Anthropic API (Claude)",
+    "purpose": "Yorum ve companion metni uretimi (varsayilan saglayici)",
+    "dataSent": "Turetilmis harita verisi, sohbet metni, olumlama metni, hafiza notlari. Ham dogum verisi gonderilmez.",
+    "privacyManifest": "n/a (sunucu tarafi SDK cagrisi, mobil SDK degil)"
+   },
+   {
+    "name": "expo-notifications",
+    "purpose": "Yerel gunluk hatirlaticilar (cihazda planlanir)",
+    "dataSent": "yok - push token olusturulmaz, sunucuya hicbir sey gitmez",
+    "privacyManifest": "gerekli (Expo modulu)"
+   },
+   {
+    "name": "@react-native-async-storage/async-storage",
+    "purpose": "Cihaz ici onbellek ve tercihler",
+    "dataSent": "yok - yerel",
+    "privacyManifest": "gerekli"
+   },
+   {
+    "name": "@shopify/react-native-skia",
+    "purpose": "Harita ve gorsel cizim",
+    "dataSent": "yok",
+    "privacyManifest": "gerekli"
+   },
+   {
+    "name": "react-native-view-shot",
+    "purpose": "Paylasilabilir kart uretimi",
+    "dataSent": "yok - kullanici paylasim baslatir",
+    "privacyManifest": "gerekli"
+   },
+   {
+    "name": "expo-localization",
+    "purpose": "Dil ve saat dilimi",
+    "dataSent": "yok",
+    "privacyManifest": "gerekli"
+   },
+   {
+    "name": "Open-Meteo Geocoding API",
+    "purpose": "Dogum yeri / etkinlik yeri sehir aramasi",
+    "dataSent": "Yazilan sehir arama metni, dil kodu ve cihaz IP adresi (HTTPS, anahtarsiz, cihaz kimligi yok)",
+    "privacyManifest": "n/a (dogrudan HTTPS cagrisi, SDK degil)"
+   },
+   {
+    "name": "expo-secure-store",
+    "purpose": "Cihaz token'i ve dogum verisinin Keychain/Keystore'da saklanmasi",
+    "dataSent": "yok - yerel",
+    "privacyManifest": "gerekli"
+   },
+   {
+    "name": "@sentry/react-native",
+    "purpose": "Cokme ve hata takibi (mobil)",
+    "dataSent": "Cokme/hata yigin izi, cihaz modeli, OS surumu, uygulama surumu, performans olcumleri. Kullanici/cihaz kimligi, IP ve dogum verisi GONDERILMEZ (sendDefaultPii false + beforeSend temizligi). Kimlikle iliskilendirilmez, tracking yok.",
+    "privacyManifest": "SDK kendi manifestini getirir; app.json'da CrashData + PerformanceData (linked:false) beyan edildi"
+   },
+   {
+    "name": "@sentry/nestjs",
+    "purpose": "Sunucu 5xx hata takibi",
+    "dataSent": "Sadece 5xx hatalar: yigin izi + maskelenmis mesaj, route, user-agent. Istek govdesi, Authorization, cookie, kullanici, IP ve DB sorgu verisi GONDERILMEZ (src/instrument.ts dataCollection).",
+    "privacyManifest": "n/a (sunucu tarafi)"
+   },
+   {
+    "name": "expo-apple-authentication",
+    "purpose": "Sign in with Apple (opsiyonel hesap)",
+    "dataSent": "Apple'a: giris istegi. Sunucumuza: Apple identity token (Apple kimligi, e-posta/relay e-posta), tek kullanimlik kod.",
+    "privacyManifest": "gerekli (Expo modulu)"
+   },
+   {
+    "name": "@react-native-google-signin/google-signin",
+    "purpose": "Google ile giris (opsiyonel hesap)",
+    "dataSent": "Google'a: giris istegi. Sunucumuza: Google ID token (Google kimligi, e-posta, ad).",
+    "privacyManifest": "SDK kendi manifestini getirir (GoogleSignIn iOS)"
+   },
+   {
+    "name": "Resend (e-posta API)",
+    "purpose": "E-posta giris kodunun gonderimi (sunucu tarafi)",
+    "dataSent": "Alici e-posta adresi ve 6 haneli kod",
+    "privacyManifest": "n/a (sunucu tarafi HTTP cagrisi)"
+   }
+  ],
+  "dataSafetySubmitted": false,
+  "$note": "PostHog, RevenueCat ve AdMob kurulunca bu envantere EKLENMELIDIR. App Privacy: Contact Info > Email Address ve Identifiers > User ID (linked, App Functionality), Name (linked, App Functionality) eklenmeli. Aster: Usage Data > Product Interaction (linked, App Functionality) - yalnizca olay turu ve gun (or. CHECKIN, AFFIRMATION), kullanici metni yok.",
+  "localDataProtection": {
+   "keychain": "Cihaz token'i ve useAppStore (dogum tarihi/saati/yeri) expo-secure-store ile, AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY",
+   "secureStoreOther": "Tarot okumasi, eleksiyon sorulari, olumlamalar, Gun Kapanisi ve Ay Rituali notlari da Keychain/Keystore'da (bu notlar sunucuya gitmez; yalnizca 'yapildi' olayi Aster'a raporlanir) (eski AsyncStorage kopyasi ilk acilista tasinip silinir)",
+   "asyncStorage": "Yalnizca rapor listesi meta verisi (sifresiz, uygulama sandbox'i)",
+   "files": "Olumlama ses kayitlari Documents/affirmations (kullanici icerigi, iOS Data Protection; sunucuya gonderilmez). PDF raporlar Caches/reports (yedege girmez, sunucudan yeniden uretilir)",
+   "backup": "Android allowBackup=false"
   },
-  "release": {
-    "ios": {
-      "enabled": true
-    },
-    "android": {
-      "enabled": true
-    }
+  "accounts": {
+   "required": false,
+   "providers": [
+    "Sign in with Apple",
+    "Google Sign-In",
+    "E-posta (6 haneli kod, sifresiz)"
+   ],
+   "dataCollected": [
+    "E-posta adresi (giris icin; kimlikle iliskili, uygulama islevi)",
+    "Kullanici kimligi: Apple/Google hesap kimligi ve sunucu hesap id'si (kimlikle iliskili, uygulama islevi)",
+    "Ad (Apple'in ilk giriste paylastigi ad / Google given_name; opsiyonel gosterim adi)",
+    "Gosterim adi ve dogum yeri etiketi (yeni telefonda geri yukleme icin sunucuda DeviceChart'ta)"
+   ],
+   "notes": "Kayit zorunlu degil (Guideline 5.1.1). Google oldugu icin Sign in with Apple da var (4.8). Hesaplar e-postaya gore birlestirilmez. Uygulama ici hesap silme: Profil > Verilerimi sil."
   }
+ },
+ "testing": {
+  "criticalModules": [
+   {
+    "label": "Efemeris / harita hesabi",
+    "pattern": "(ephemeris|astrology-engine|synastry)"
+   },
+   {
+    "label": "Yorum uretimi (AI)",
+    "pattern": "(interpretation|companion|deepseek)"
+   },
+   {
+    "label": "Yetkilendirme / premium kilit",
+    "pattern": "(entitlement|unlock|paywall)"
+   },
+   {
+    "label": "Kimlik dogrulama",
+    "pattern": "(users|jwt|auth)"
+   },
+   {
+    "label": "Streak ve niyet durum makinesi",
+    "pattern": "(streak|intention|score)"
+   }
+  ]
+ },
+ "release": {
+  "ios": {
+   "enabled": true
+  },
+  "android": {
+   "enabled": true
+  }
+ }
 }

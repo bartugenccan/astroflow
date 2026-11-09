@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { astrologyApi } from "../../services/astrologyApi";
+import { useMascotStore } from "../../store/useMascotStore";
 import { cachedCall, tarotCardKey, tarotSynthesisKey } from "../../services/interpretationCache";
 import type { CreateBirthProfileDto, TarotCardReading, TarotSpread, TarotSynthesis } from "../../services/types";
 import type { Locale } from "../../i18n";
@@ -77,6 +78,8 @@ export function useTarotReading(
       )
         .then((result) => {
           saveSynthesis(result);
+          // A completed reading feeds Aster (capped once a day server-side).
+          useMascotStore.getState().report("TAROT");
           if (alive.current) setSynthesis({ data: result, error: false });
         })
         .catch(() => {

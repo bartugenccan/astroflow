@@ -12,6 +12,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { runAsDevice } from '../../common/context/request-context';
+import { DailyQuotaService } from '../../common/quota/daily-quota.service';
 import { safeError } from '../../common/logging/safe-error';
 import { AI_TEXT_PROVIDER, AiTextProvider } from '../ai/ai-text-provider';
 import { DeepSeekBalanceService } from '../ai/deepseek-balance.service';
@@ -75,6 +76,7 @@ export class ReportsService implements OnModuleInit {
     private readonly timeline: TransitTimelineService,
     private readonly balance: DeepSeekBalanceService,
     @Inject(AI_TEXT_PROVIDER) private readonly ai: AiTextProvider,
+    private readonly quota: DailyQuotaService,
     config: ConfigService,
   ) {
     this.dailyLimit = config.get<number>('REPORTS_DAILY_PER_DEVICE') ?? 3;
@@ -93,14 +95,13 @@ export class ReportsService implements OnModuleInit {
   }
 
   async create(deviceId: string, dto: CreateReportDto, locale: Locale): Promise<ReportMeta> {
-    const dayStart = new Date(`${new Date().toISOString().slice(0, 10)}T00:00:00Z`);
-    const today = await this.prisma.report.count({ where: { deviceId, createdAt: { gte: dayStart } } });
-    if (today >= this.dailyLimit) {
-      throw new HttpException({ statusCode: 429, message: 'daily_report_limit', limit: this.dailyLimit }, HttpStatus.TOO_MANY_REQUESTS);
-    }
     // A report is ~60 generations; don't start one the balance can't finish.
     if (this.ai.available && !(await this.balance.hasBalance())) {
       throw new ServiceUnavailableException('ai_paused');
+    }
+    // Counted atomically and never refunded, so deleting reports can't reopen the cap.
+    if (!(await this.quota.take(deviceId, 'report', this.dailyLimit))) {
+      throw new HttpException({ statusCode: 429, message: 'daily_report_limit', limit: this.dailyLimit }, HttpStatus.TOO_MANY_REQUESTS);
     }
 
     const row = await this.prisma.report.create({

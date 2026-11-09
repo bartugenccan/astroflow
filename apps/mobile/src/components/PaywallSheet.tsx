@@ -10,6 +10,7 @@ import { EnterView } from "../lib/motion";
 import { useTranslation } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
 import { astrologyApi } from "../services/astrologyApi";
+import { PREMIUM_BETA } from "../services/config";
 import { colors, spacing } from "../lib/design-system";
 
 export type PaywallVariant = "compat" | "forecast" | "premium";
@@ -57,8 +58,17 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
 
   const cta = variant === "compat" ? t("paywall.unlock") : t("paywall.unlockPremium");
 
-  // No real payments yet: only dev builds can flip the stub. Release builds say "coming soon".
+  // No real payments yet: only dev builds can flip the stub. During the beta
+  // release builds explain that Premium is open; otherwise they say "coming soon".
   const canStubUnlock = __DEV__;
+
+  const continueBeta = () => {
+    // Subscription features are client-gated: make sure they're open. Compatibility
+    // readings are gated by the server, which follows its own PREMIUM_BETA.
+    if (variant !== "compat") setPremium(true);
+    onUnlocked?.();
+    onClose();
+  };
 
   const unlock = async () => {
     if (!canStubUnlock) return;
@@ -94,7 +104,7 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
         {perks.map((perk, i) => (
           <EnterView key={perk} index={i + 1} style={styles.perkRow}>
             <View style={styles.perkIcon}>
-              <Ionicons name="sparkles" size={16} color={colors.gold[300]} />
+              <Ionicons name="sparkles" size={16} color={colors.star[300]} />
             </View>
             <AppText variant="body" color={colors.text.primary} style={styles.perkText}>
               {perk}
@@ -106,8 +116,15 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
       <EnterView index={perks.length + 1}>
         {canStubUnlock ? (
           <GoldButton label={cta} onPress={unlock} loading={busy} style={{ marginTop: spacing.lg }} />
+        ) : PREMIUM_BETA ? (
+          <>
+            <AppText variant="body" center color={colors.star[200]} style={{ marginTop: spacing.lg }}>
+              {t("paywall.betaNote")}
+            </AppText>
+            <GoldButton label={t("paywall.betaCta")} onPress={continueBeta} style={{ marginTop: spacing.md }} />
+          </>
         ) : (
-          <AppText variant="body" center color={colors.gold[200]} style={{ marginTop: spacing.lg }}>
+          <AppText variant="body" center color={colors.star[200]} style={{ marginTop: spacing.lg }}>
             {t("paywall.comingSoon")}
           </AppText>
         )}

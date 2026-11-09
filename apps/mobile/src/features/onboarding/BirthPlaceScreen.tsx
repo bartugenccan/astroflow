@@ -1,3 +1,4 @@
+import { mt } from "../../lib/motion";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View, TextInput, ScrollView } from "react-native";
 import { PressableScale } from "../../components/ui/PressableScale";
@@ -12,7 +13,7 @@ import { searchCitiesRemote } from "../../services/geocoding";
 import { City } from "../../services/types";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, fonts } from "../../lib/design-system";
+import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
 
 function cityLabel(c: City): string {
   const region = c.admin1 && c.admin1 !== c.name ? `, ${c.admin1}` : "";
@@ -135,7 +136,7 @@ export function BirthPlaceScreen() {
                     key={c.id}
                     from={{ opacity: 0, translateY: 8 }}
                     animate={{ opacity: 1, translateY: 0 }}
-                    transition={{ type: "timing", duration: 240, delay: Math.min(i, 8) * 35 }}
+                    transition={mt({ type: "timing", duration: 240, delay: Math.min(i, 8) * 35 })}
                   >
                     <PressableScale
                       onPress={() => selectCity(c)}
@@ -151,7 +152,7 @@ export function BirthPlaceScreen() {
                         </AppText>
                       </View>
                       {selected ? (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.gold[300]} />
+                        <Ionicons name="checkmark-circle" size={20} color={colors.star[300]} />
                       ) : null}
                     </PressableScale>
                   </MotiView>
@@ -163,7 +164,7 @@ export function BirthPlaceScreen() {
       ) : (
         <View style={styles.manualWrap}>
           <View style={styles.coordField}>
-            <AppText variant="label" color={colors.text.gold}>
+            <AppText variant="label" color={colors.text.accent}>
               {t("onboarding.latitude")}
             </AppText>
             <TextInput
@@ -176,7 +177,7 @@ export function BirthPlaceScreen() {
             />
           </View>
           <View style={styles.coordField}>
-            <AppText variant="label" color={colors.text.gold}>
+            <AppText variant="label" color={colors.text.accent}>
               {t("onboarding.longitude")}
             </AppText>
             <TextInput
@@ -195,9 +196,9 @@ export function BirthPlaceScreen() {
         <Ionicons
           name={manual ? "search" : "location-outline"}
           size={16}
-          color={colors.gold[300]}
+          color={colors.star[300]}
         />
-        <AppText variant="bodySmall" color={colors.gold[300]}>
+        <AppText variant="bodySmall" color={colors.star[300]}>
           {manual ? t("onboarding.placeSearchPlaceholder") : t("onboarding.manualCoords")}
         </AppText>
       </PressableScale>
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     paddingHorizontal: spacing.lg,
   },
   searchInput: {
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   cityRowSelected: {
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
   },
@@ -268,7 +269,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,

@@ -56,7 +56,7 @@ export function CompatibilityList() {
         <View style={styles.eyebrowRow}>
           <AppText
             variant="label"
-            color={colors.text.gold}
+            color={colors.text.accent}
             style={styles.shrink}
           >
             {t("compatibility.eyebrow")}
@@ -73,7 +73,7 @@ export function CompatibilityList() {
         <GoldButton
           label={t("compatibility.addPerson")}
           onPress={() => router.push("/compatibility/add")}
-          icon={<Ionicons name="add" size={18} color={colors.text.onGold} />}
+          icon={<Ionicons name="add" size={18} color={colors.text.onPrimary} />}
         />
       </EnterView>
 
@@ -84,7 +84,7 @@ export function CompatibilityList() {
       ) : people.data && people.data.length > 0 ? (
         <View style={styles.list}>
           <EnterView index={2}>
-            <AppText variant="label" color={colors.text.gold}>
+            <AppText variant="label" color={colors.text.accent}>
               {t("compatibility.peopleTitle")}
             </AppText>
           </EnterView>
@@ -100,7 +100,7 @@ export function CompatibilityList() {
                     <Glyph
                       name={p.sunSign}
                       size={24}
-                      color={colors.gold[300]}
+                      color={colors.star[300]}
                     />
                   </View>
                   <View style={styles.personInfo}>
@@ -143,7 +143,7 @@ export function CompatibilityList() {
             <Ionicons
               name="people-outline"
               size={26}
-              color={colors.gold[300]}
+              color={colors.star[300]}
             />
             <AppText variant="body" center>
               {t("compatibility.noPeople")}

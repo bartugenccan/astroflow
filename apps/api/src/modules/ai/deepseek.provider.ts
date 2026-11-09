@@ -1,11 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as Sentry from '@sentry/nestjs';
 import {
   AiTextProvider,
   GenerateJsonParams,
   GenerateTextParams,
 } from './ai-text-provider';
 import { noteAiFailure } from '../../common/ai/ai-call-tracker';
+import { parseModelJson, withSchemaHint } from './ai-json';
 
 interface DeepSeekResponse {
   choices: {
@@ -149,16 +151,20 @@ export class DeepSeekProvider implements AiTextProvider {
       }
     }
     noteAiFailure();
+    // Users still get templated text; this surfaces provider outages. The message is
+    // fixed (grouping) and carries no prompt or response content.
+    Sentry.captureMessage('DeepSeek failed after retries — served fallback text', {
+      level: 'warning',
+      tags: { ai_provider: 'deepseek', ai_error: lastError?.name ?? 'unknown' },
+    });
     throw new Error(`DeepSeek failed: ${lastError?.message ?? 'unknown error'}`);
   }
 
   async generateJson<T>(params: GenerateJsonParams): Promise<T> {
-    const user = params.schemaHint
-      ? `${params.user}\n\nReturn ONLY valid JSON matching: ${params.schemaHint}`
-      : params.user;
+    const user = withSchemaHint(params.user, params.schemaHint);
     const raw = await this.generateText({ ...params, user });
     try {
-      return this.parseJson<T>(raw);
+      return parseModelJson<T>(raw);
     } catch (err) {
       // Unparseable output means the caller will serve its stub — don't let it be cached.
       noteAiFailure();
@@ -166,17 +172,6 @@ export class DeepSeekProvider implements AiTextProvider {
     }
   }
 
-  /** Tolerant JSON extraction — strips code fences and slices to the outer braces. */
-  private parseJson<T>(raw: string): T {
-    let s = raw.trim();
-    s = s.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
-    const start = s.indexOf('{');
-    const end = s.lastIndexOf('}');
-    if (start !== -1 && end !== -1 && end > start) {
-      s = s.slice(start, end + 1);
-    }
-    return JSON.parse(s) as T;
-  }
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));

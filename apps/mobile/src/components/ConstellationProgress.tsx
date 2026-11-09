@@ -61,7 +61,7 @@ function SegmentLine({
       y1={cy}
       x2={x2}
       y2={cy}
-      stroke={colors.gold[300]}
+      stroke={colors.star[300]}
       strokeWidth={0.8}
       animatedProps={animatedProps}
     />
@@ -89,7 +89,7 @@ function Node({
     <AnimatedCircle
       cx={cx}
       cy={cy}
-      fill={colors.gold[300]}
+      fill={colors.star[300]}
       animatedProps={animatedProps}
     />
   );

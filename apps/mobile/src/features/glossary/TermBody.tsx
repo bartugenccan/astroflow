@@ -25,7 +25,7 @@ import {
   personalLine,
   termText,
 } from "../../lib/glossary";
-import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { colors, spacing, radii, motion, surface } from "../../lib/design-system";
 
 interface TermBodyProps {
   id: GlossaryTermId;
@@ -70,14 +70,14 @@ export function TermBody({ id, initiallyExpanded = false, onRelated }: TermBodyP
         <View style={styles.glyph}>
           <TermMark mark={entry.mark} size={22} />
         </View>
-        <AppText variant="serifBody" style={styles.short}>
+        <AppText variant="lead" style={styles.short}>
           {termText(t, id, "short")}
         </AppText>
       </View>
 
       {yours ? (
         <Animated.View entering={reduced ? undefined : FadeInDown.delay(80)} style={styles.yours}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("glossary.ui.yoursTitle")}
           </AppText>
           <AppText variant="body" color={colors.text.primary}>
@@ -95,8 +95,8 @@ export function TermBody({ id, initiallyExpanded = false, onRelated }: TermBodyP
               style={styles.block}
             >
               <View style={styles.blockHead}>
-                <Ionicons name={d.icon} size={14} color={colors.gold[300]} />
-                <AppText variant="labelLong" color={colors.text.gold}>
+                <Ionicons name={d.icon} size={14} color={colors.star[300]} />
+                <AppText variant="labelLong" color={colors.text.accent}>
                   {t(`glossary.ui.${d.titleKey}`)}
                 </AppText>
               </View>
@@ -112,13 +112,13 @@ export function TermBody({ id, initiallyExpanded = false, onRelated }: TermBodyP
         scaleTo={0.97}
         accessibilityRole="button"
       >
-        <AppText variant="heading" color={colors.gold[300]}>
+        <AppText variant="heading" color={colors.star[300]}>
           {expanded ? t("glossary.ui.showLess") : t("glossary.ui.goDeeper")}
         </AppText>
         <Ionicons
           name={expanded ? "chevron-up" : "chevron-down"}
           size={16}
-          color={colors.gold[300]}
+          color={colors.star[300]}
         />
       </PressableScale>
 
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.glow.goldSoft,
+    backgroundColor: colors.glow.starSoft,
   },
   detail: {
     gap: spacing.lg,
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.pill,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
   },

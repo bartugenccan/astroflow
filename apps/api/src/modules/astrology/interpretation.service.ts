@@ -66,11 +66,10 @@ import {
   affirmationStub,
 } from './prompts/interpretation.stubs';
 import { safeError } from '../../common/logging/safe-error';
-import { trackAiCalls } from '../../common/ai/ai-call-tracker';
-import { currentDeviceId } from '../../common/context/request-context';
+import { ownedReading } from '../../common/ai/owned-reading-cache';
 
 /** Bump when prompts/persona change so caches invalidate. */
-const CACHE_VERSION = 'v10';
+const CACHE_VERSION = 'v11';
 
 type InterpretationKind =
   | 'PLACEMENT'
@@ -767,44 +766,17 @@ export class InterpretationService {
     return this.cached(kind, locale, rawKey, build);
   }
 
-  private async cached<T>(
+  private cached<T>(
     kind: InterpretationKind,
     locale: Locale,
     rawKey: string,
     build: () => Promise<T>,
   ): Promise<T> {
-    const cacheKey = this.hash(`${CACHE_VERSION}|${locale}|${rawKey}`);
-    try {
-      const hit = await this.prisma.interpretation.findUnique({ where: { cacheKey } });
-      if (hit) return hit.content as T;
-    } catch (err) {
-      this.logger.warn(`cache read failed: ${safeError(err)}`);
-    }
-
-    // No key: the result is templated text — serve it, never store it.
-    if (!this.ai.available) return build();
-    const { value: content, failed } = await trackAiCalls(build);
-    // An AI call failed while building, so (part of) this is stub text: serve, don't cache.
-    if (failed) return content;
-
-    try {
-      await this.prisma.interpretation.upsert({
-        where: { cacheKey },
-        create: {
-          cacheKey,
-          kind,
-          locale,
-          content: content as object,
-          model: this.ai.model,
-          // Device-specific readings are tagged so the device's data deletion removes them.
-          deviceId: this.ownerOf(rawKey),
-        },
-        update: {},
-      });
-    } catch (err) {
-      this.logger.warn(`cache write failed: ${safeError(err)}`);
-    }
-    return content;
+    return ownedReading(
+      { prisma: this.prisma, ai: this.ai, logger: this.logger },
+      { version: CACHE_VERSION, kind, locale, rawKey },
+      build,
+    );
   }
 
   /** Generate a single `{text}` result via the provider, or the stub on failure/no-key. */
@@ -854,11 +826,5 @@ export class InterpretationService {
 
   private hash(input: string): string {
     return createHash('sha256').update(input).digest('hex');
-  }
-
-  /** The current device, if this cache key is specific to it. */
-  private ownerOf(rawKey: string): string | null {
-    const deviceId = currentDeviceId();
-    return deviceId && rawKey.includes(deviceId) ? deviceId : null;
   }
 }

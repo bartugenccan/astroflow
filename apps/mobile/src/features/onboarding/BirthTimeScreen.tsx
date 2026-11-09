@@ -80,7 +80,7 @@ export function BirthTimeScreen() {
           animate={{ opacity: 1 }}
           style={styles.noonNote}
         >
-          <AppText variant="serifBody" center color={colors.text.secondary}>
+          <AppText variant="lead" center color={colors.text.secondary}>
             {t("onboarding.unknownTimeNote")}
           </AppText>
         </MotiView>
@@ -90,7 +90,7 @@ export function BirthTimeScreen() {
         <Ionicons
           name={unknown ? "checkbox" : "square-outline"}
           size={20}
-          color={unknown ? colors.gold[300] : colors.text.tertiary}
+          color={unknown ? colors.star[300] : colors.text.tertiary}
         />
         <AppText variant="body" color={colors.text.secondary} style={styles.unknownText}>
           {t("onboarding.unknownTime")}

@@ -7,7 +7,7 @@ import { useTranslation } from "../i18n";
 import { NatalChartData, TransitReport } from "../services/types";
 import { GlyphGroup } from "./Glyph";
 import { SIGNS, absLongitude } from "../lib/zodiac";
-import { colors, fonts } from "../lib/design-system";
+import { colors, fonts, surface } from "../lib/design-system";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHART_SIZE = SCREEN_WIDTH - 56;
@@ -114,7 +114,7 @@ export function TransitWheel({ natal, report }: Props) {
               cy={CENTER}
               r={OUTER_RADIUS}
               fill="none"
-              stroke={colors.gold[400]}
+              stroke={colors.star[400]}
               strokeWidth={1}
               opacity={0.5}
             />
@@ -123,7 +123,7 @@ export function TransitWheel({ natal, report }: Props) {
               cy={CENTER}
               r={ZODIAC_INNER}
               fill="none"
-              stroke={colors.gold[600]}
+              stroke={colors.star[600]}
               strokeWidth={0.6}
               opacity={0.4}
             />
@@ -148,7 +148,7 @@ export function TransitWheel({ natal, report }: Props) {
               cy={CENTER}
               r={INNER_RADIUS}
               fill="none"
-              stroke={colors.gold[600]}
+              stroke={colors.star[600]}
               strokeWidth={0.7}
               opacity={0.4}
             />
@@ -225,13 +225,13 @@ export function TransitWheel({ natal, report }: Props) {
               y1={CENTER}
               x2={polar(CENTER, CENTER, OUTER_RADIUS + 12, 0).x}
               y2={polar(CENTER, CENTER, OUTER_RADIUS + 12, 0).y}
-              stroke={colors.gold[300]}
+              stroke={colors.star[300]}
               strokeWidth={1.4}
             />
             <SvgText
               x={polar(CENTER, CENTER, OUTER_RADIUS + 22, 0).x}
               y={polar(CENTER, CENTER, OUTER_RADIUS + 22, 0).y + 4}
-              fill={colors.gold[300]}
+              fill={colors.star[300]}
               fontSize={9}
               fontFamily={fonts.sansSemiBold}
               textAnchor="middle"
@@ -243,7 +243,7 @@ export function TransitWheel({ natal, report }: Props) {
               cx={CENTER}
               cy={CENTER}
               r={3}
-              fill={colors.gold[300]}
+              fill={colors.star[300]}
               opacity={0.7}
             />
           </Svg>
@@ -297,7 +297,7 @@ export function TransitWheel({ natal, report }: Props) {
                     cx={pos.x}
                     cy={pos.y}
                     r={3.5}
-                    fill={colors.ink[900]}
+                    fill={surface.card}
                     stroke={colors.moon}
                     strokeWidth={0.8}
                   />
@@ -329,8 +329,8 @@ export function TransitWheel({ natal, report }: Props) {
                     cx={pos.x}
                     cy={pos.y}
                     r={4.5}
-                    fill={colors.ink[900]}
-                    stroke={colors.gold[300]}
+                    fill={surface.card}
+                    stroke={colors.star[300]}
                     strokeWidth={1}
                   />
                   <GlyphGroup
@@ -338,7 +338,7 @@ export function TransitWheel({ natal, report }: Props) {
                     x={pos.x}
                     y={pos.y - 13}
                     size={14}
-                    color={colors.gold[200]}
+                    color={colors.star[200]}
                   />
                   {m.retrograde ? (
                     <GlyphGroup

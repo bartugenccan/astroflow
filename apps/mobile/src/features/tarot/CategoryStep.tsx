@@ -6,7 +6,7 @@ import { GoldButton } from "../../components/ui/GoldButton";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { EnterView } from "../../lib/motion";
 import { TranslationKey, useTranslation } from "../../i18n";
-import { colors, fonts, radii, spacing } from "../../lib/design-system";
+import { colors, fonts, radii, spacing, surface } from "../../lib/design-system";
 import type { TarotCategory } from "../../services/types";
 import type { SavedTarotReading } from "../../store/useTarotStore";
 import { TAROT_CATEGORIES, tarotCardInfo } from "./deck";
@@ -45,7 +45,7 @@ export function CategoryStep({ initialCategory, initialQuestion, today, atLimit,
       keyboardShouldPersistTaps="handled"
     >
       <EnterView style={styles.header}>
-        <AppText variant="label" color={colors.text.gold}>
+        <AppText variant="label" color={colors.text.accent}>
           {t("tarot.eyebrow")}
         </AppText>
         <AppText variant="title">{t("tarot.title")}</AppText>
@@ -63,7 +63,7 @@ export function CategoryStep({ initialCategory, initialQuestion, today, atLimit,
               ))}
             </View>
             <View style={styles.todayText}>
-              <AppText variant="label" color={colors.text.gold}>
+              <AppText variant="label" color={colors.text.accent}>
                 {t("tarot.todayReading")}
               </AppText>
               <AppText variant="heading" numberOfLines={1}>
@@ -74,7 +74,7 @@ export function CategoryStep({ initialCategory, initialQuestion, today, atLimit,
                 {t("tarot.todayReadingOpen")}
               </AppText>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.gold[300]} />
+            <Ionicons name="chevron-forward" size={18} color={colors.star[300]} />
           </PressableScale>
         </EnterView>
       ) : null}
@@ -100,7 +100,7 @@ export function CategoryStep({ initialCategory, initialQuestion, today, atLimit,
                   <Ionicons
                     name={CATEGORY_ICON[c]}
                     size={20}
-                    color={active ? colors.text.onGold : colors.gold[300]}
+                    color={active ? colors.text.onAccent : colors.star[300]}
                   />
                 </View>
                 <AppText variant="heading" numberOfLines={1}>
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   todayCards: { flexDirection: "row" },
   todayCard: {
@@ -187,11 +187,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[900],
+    backgroundColor: surface.card,
   },
   tileActive: {
-    borderColor: colors.gold[400],
-    backgroundColor: colors.ink[700],
+    borderColor: colors.star[400],
+    backgroundColor: surface.raised,
   },
   icon: {
     width: 36,
@@ -200,13 +200,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.xs,
-    backgroundColor: colors.ink[700],
+    backgroundColor: surface.raised,
     borderWidth: 1,
     borderColor: colors.border.hairline,
   },
   iconActive: {
-    backgroundColor: colors.gold[400],
-    borderColor: colors.gold[400],
+    backgroundColor: colors.star[400],
+    borderColor: colors.star[400],
   },
   questionBlock: { gap: spacing.sm },
   input: {
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
     fontSize: 16,

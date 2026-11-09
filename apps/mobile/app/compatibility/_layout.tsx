@@ -1,5 +1,5 @@
 import { Stack } from "expo-router";
-import { colors } from "../../src/lib/design-system";
+import { colors, surface } from "../../src/lib/design-system";
 
 export default function CompatibilityLayout() {
   return (
@@ -7,7 +7,7 @@ export default function CompatibilityLayout() {
       screenOptions={{
         headerShown: false,
         animation: "slide_from_right",
-        contentStyle: { backgroundColor: colors.ink[950] },
+        contentStyle: { backgroundColor: surface.base },
       }}
     />
   );

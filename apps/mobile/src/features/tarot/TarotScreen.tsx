@@ -6,7 +6,7 @@ import { PressableScale } from "../../components/ui/PressableScale";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { EnterView } from "../../lib/motion";
 import { useTranslation } from "../../i18n";
-import { colors, spacing } from "../../lib/design-system";
+import { colors, spacing, surface } from "../../lib/design-system";
 import type { TarotCategory, TarotDrawnCard } from "../../services/types";
 import { FREE_DAILY_TAROT, useAppStore } from "../../store/useAppStore";
 import { tarotToday, useTarotStore } from "../../store/useTarotStore";
@@ -119,7 +119,7 @@ export function TarotScreen() {
           <Ionicons
             name={soundOn ? "volume-medium-outline" : "volume-mute-outline"}
             size={20}
-            color={soundOn ? colors.gold[300] : colors.text.tertiary}
+            color={soundOn ? colors.star[300] : colors.text.tertiary}
           />
         </PressableScale>
       </View>
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
   },

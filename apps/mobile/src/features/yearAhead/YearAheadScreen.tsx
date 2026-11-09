@@ -57,7 +57,7 @@ export function YearAheadScreen() {
       >
         <BackButton />
         <EnterView style={styles.headerRow}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("yearAhead.eyebrow")}
           </AppText>
           {/* The technique's real name is the headline — it's what people
@@ -68,7 +68,7 @@ export function YearAheadScreen() {
             </AppText>
             <TermInfo term="solarReturn" size={18} />
           </View>
-          <AppText variant="heading" color={colors.gold[200]}>
+          <AppText variant="heading" color={colors.star[200]}>
             {t("yearAhead.title")}
           </AppText>
         </EnterView>
@@ -78,7 +78,7 @@ export function YearAheadScreen() {
         <EnterView index={1}>
           <HairlineCard style={styles.whatCard}>
             <View style={styles.whatHead}>
-              <Ionicons name="sunny-outline" size={18} color={colors.gold[300]} />
+              <Ionicons name="sunny-outline" size={18} color={colors.star[300]} />
               <AppText variant="heading" color={colors.text.primary}>
                 {t("yearAhead.whatTitle")}
               </AppText>
@@ -89,10 +89,10 @@ export function YearAheadScreen() {
               style={styles.learnMore}
               scaleTo={0.96}
             >
-              <AppText variant="heading" color={colors.gold[300]} style={styles.learnMoreText}>
+              <AppText variant="heading" color={colors.star[300]} style={styles.learnMoreText}>
                 {t("yearAhead.learnMore")}
               </AppText>
-              <Ionicons name="arrow-forward" size={14} color={colors.gold[300]} />
+              <Ionicons name="arrow-forward" size={14} color={colors.star[300]} />
             </PressableScale>
           </HairlineCard>
         </EnterView>
@@ -115,7 +115,7 @@ export function YearAheadScreen() {
           <HairlineCard style={styles.errorCard}>
             <AppText variant="body">{t("yearAhead.error")}</AppText>
             <PressableScale onPress={year.reload} style={styles.learnMore}>
-              <AppText variant="heading" color={colors.gold[300]} style={styles.learnMoreText}>
+              <AppText variant="heading" color={colors.star[300]} style={styles.learnMoreText}>
                 {t("common.retry")}
               </AppText>
             </PressableScale>
@@ -140,7 +140,7 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
     <>
       {/* The window this reading covers, and the birthday that opens it. */}
       <EnterView index={2} style={styles.windowBox}>
-        <AppText variant="numeric" color={colors.gold[300]} center>
+        <AppText variant="numeric" color={colors.star[300]} center>
           {formatDayMonthYear(locale, data.start)} —{" "}
           {formatDayMonthYear(locale, data.end)}
         </AppText>
@@ -155,7 +155,7 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
       <EnterView index={3} style={styles.section}>
         <SectionHeader eyebrow={t("yearAhead.aboutTitle")} />
         <HairlineCard style={styles.headlineCard}>
-          <AppText variant="serifBody" color={colors.text.primary}>
+          <AppText variant="lead" color={colors.text.primary}>
             {data.headline}
           </AppText>
           <AppText variant="body">{data.overview}</AppText>
@@ -189,7 +189,7 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
                 <View style={styles.turningRow}>
                   <AppText
                     variant="numeric"
-                    color={colors.gold[300]}
+                    color={colors.star[300]}
                     style={styles.turningMonth}
                     numberOfLines={1}
                   >
@@ -214,13 +214,13 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
         style={styles.section}
       >
         <PressableScale onPress={onToggleWhy} style={styles.whyToggle} scaleTo={0.95}>
-          <AppText variant="label" color={colors.gold[300]}>
+          <AppText variant="label" color={colors.star[300]}>
             {whyOpen ? t("yearAhead.hideWhy") : t("yearAhead.showWhy")}
           </AppText>
           <Ionicons
             name={whyOpen ? "chevron-up" : "chevron-down"}
             size={14}
-            color={colors.gold[300]}
+            color={colors.star[300]}
           />
         </PressableScale>
 
@@ -335,7 +335,7 @@ function ChartDetail({
             <View style={styles.chipRow}>
               {chart.houseEmphasis.slice(0, 3).map((h) => (
                 <View key={h.house} style={styles.chip}>
-                  <AppText variant="bodySmall" color={colors.gold[300]}>
+                  <AppText variant="bodySmall" color={colors.star[300]}>
                     {primaryHouseTag(locale, h.house)}
                   </AppText>
                 </View>

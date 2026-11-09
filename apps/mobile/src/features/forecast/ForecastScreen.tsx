@@ -86,7 +86,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
         {headerSlot}
 
         <EnterView index={0} style={styles.headerRow}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("forecast.eyebrow")}
           </AppText>
           <AppText variant="title" style={styles.titleText}>
@@ -144,11 +144,11 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                     haptic="light"
                     accessibilityRole="button"
                   >
-                    <Ionicons name="lock-closed" size={14} color={colors.gold[300]} />
-                    <AppText variant="bodySmall" color={colors.gold[300]} style={styles.lockText}>
+                    <Ionicons name="lock-closed" size={14} color={colors.star[300]} />
+                    <AppText variant="bodySmall" color={colors.star[300]} style={styles.lockText}>
                       {t("bestDays.lockedHint")}
                     </AppText>
-                    <Ionicons name="chevron-forward" size={14} color={colors.gold[300]} />
+                    <Ionicons name="chevron-forward" size={14} color={colors.star[300]} />
                   </PressableScale>
                 ) : null}
               </>
@@ -173,7 +173,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
             <>
               <EnterView>
                 <HairlineCard>
-                  <AppText variant="serifBody">{forecast.data.overview}</AppText>
+                  <AppText variant="lead">{forecast.data.overview}</AppText>
                 </HairlineCard>
               </EnterView>
 
@@ -189,7 +189,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                     {forecast.data.themes.map((th, i) => (
                       <EnterView key={th.area} index={i + 1}>
                         <HairlineCard style={styles.themeCard}>
-                          <AppText variant="label" color={colors.text.gold}>
+                          <AppText variant="label" color={colors.text.accent}>
                             {t(`lifeAreas.${th.area}` as TranslationKey)}
                           </AppText>
                           <AppText variant="body" color={colors.text.primary} style={styles.themeText}>
@@ -209,7 +209,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                   <HairlineCard style={styles.keyDates}>
                     {forecast.data.keyDates.map((kd, i) => (
                       <EnterView key={`${kd.date}-${i}`} index={i} style={styles.keyDateRow}>
-                        <AppText variant="numeric" color={colors.gold[300]} style={styles.keyDateDate}>
+                        <AppText variant="numeric" color={colors.star[300]} style={styles.keyDateDate}>
                           {formatDay(kd.date, locale, false)}
                         </AppText>
                         <AppText variant="body" style={styles.keyDateLabel}>
@@ -256,7 +256,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                       value={score}
                       delay={delay}
                       variant="heading"
-                      color={colors.gold[300]}
+                      color={colors.star[300]}
                     />
                   </View>
                   <ScoreBar value={score} delay={delay} />
@@ -291,7 +291,7 @@ function Chip({ label, active, onPress }: { label: string; active: boolean; onPr
       accessibilityRole="button"
       accessibilityState={{ selected: active }}
     >
-      <AppText variant="bodySmall" color={active ? colors.gold[200] : colors.text.tertiary}>
+      <AppText variant="bodySmall" color={active ? colors.star[200] : colors.text.tertiary}>
         {label}
       </AppText>
     </PressableScale>
@@ -342,8 +342,8 @@ const styles = StyleSheet.create({
     borderColor: colors.border.hairline,
   },
   chipActive: {
-    borderColor: colors.gold[400],
-    backgroundColor: colors.glow.goldSoft,
+    borderColor: colors.star[400],
+    backgroundColor: colors.glow.starSoft,
   },
   loaderBox: {
     alignItems: "center",

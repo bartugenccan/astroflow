@@ -37,7 +37,7 @@ export function electionCheckPrompt(locale: Locale, r: ElectionCheck): { user: s
 
   const user =
     locale === 'tr'
-      ? `Okuyucu şunu soruyor: "${eventLine(r, locale)} için ${r.date} (${shortDate(r.date, locale)}) uygun mu?" Yer: ${r.place.name}.
+      ? `Okuyucu şunu soruyor: "${eventLine(r, locale)} için ${r.date} (${shortDate(r.date, locale)}) uygun mu?" Yer: ${userData(r.place.name)} (${USER_DATA_RULE.tr}).
 Hesaplanan sonuç: ${r.score}/100 — ${VERDICT.tr[r.verdict]}.
 
 Günün faktörleri (etki puanlarıyla):
@@ -55,7 +55,7 @@ Alanlar:
 - "advice": 80-120 kelime. Bu tarihte yapılacaksa hangi saatleri seçmeli ve nasıl; gün zayıfsa alternatif tarihleri açıkça öner.
 - "caution": 40-80 kelime. Dikkat edilmesi gereken somut noktalar.
 Tüm metin Türkçe olmalı.`
-      : `The reader asks: "Is ${r.date} (${shortDate(r.date, locale)}) good for ${eventLine(r, locale)}?" Place: ${r.place.name}.
+      : `The reader asks: "Is ${r.date} (${shortDate(r.date, locale)}) good for ${eventLine(r, locale)}?" Place: ${userData(r.place.name)} (${USER_DATA_RULE.en}).
 Computed result: ${r.score}/100 — ${VERDICT.en[r.verdict]}.
 
 The day's factors (with score impact):
@@ -93,7 +93,7 @@ export function electionSearchPrompt(locale: Locale, r: ElectionSearch): { user:
 
   const user =
     locale === 'tr'
-      ? `Okuyucu ${r.place.name} için "${eventLine(r, locale)}" adına ${r.from} ile ${r.to} arasında en uygun tarihleri arıyor.
+      ? `Okuyucu ${userData(r.place.name)} için "${eventLine(r, locale)}" adına ${r.from} ile ${r.to} arasında en uygun tarihleri arıyor.
 
 Hesaplanan en iyi tarihler:
 ${picks}
@@ -105,7 +105,7 @@ Alanlar:
 - "summary": 120-170 kelime. Hangi tarihler öne çıkıyor ve neden (yalnızca verilen faktörlerle), hangi dönemlerden uzak durmalı, seçim yaparken nasıl düşünmeli.
 - "tips": tam olarak 3 madde; her biri tek cümlelik somut öneri.
 Tüm metin Türkçe olmalı.`
-      : `The reader is looking for the best dates for "${eventLine(r, locale)}" in ${r.place.name}, between ${r.from} and ${r.to}.
+      : `The reader is looking for the best dates for "${eventLine(r, locale)}" in ${userData(r.place.name)}, between ${r.from} and ${r.to}.
 
 Computed best dates:
 ${picks}

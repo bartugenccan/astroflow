@@ -7,7 +7,9 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   Platform,
+  Alert,
 } from "react-native";
+import type { ScrollViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -23,6 +25,8 @@ import Animated, {
   useReducedMotion,
   cancelAnimation,
 } from "react-native-reanimated";
+import { AsterMascot } from "../../components/aster/AsterMascot";
+import { useMascotStore } from "../../store/useMascotStore";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { PressableScale } from "../../components/ui/PressableScale";
@@ -34,7 +38,7 @@ import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore, FREE_DAILY_MESSAGES } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
-import { colors, spacing, radii, fonts, motion } from "../../lib/design-system";
+import { colors, spacing, radii, fonts, motion, surface } from "../../lib/design-system";
 
 /** Springy rise for a freshly-sent / freshly-received bubble. */
 const bubbleEnter = FadeInDown.springify()
@@ -55,10 +59,11 @@ export function CompanionScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const mascot = useMascotStore((s) => s.state);
   const [whyOpen, setWhyOpen] = useState<Record<string, boolean>>({});
   const [paywall, setPaywall] = useState(false);
   const [kbShown, setKbShown] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   // History loaded on open appears in place; only new bubbles spring in.
   const historyIds = useRef<Set<string>>(new Set());
 
@@ -101,7 +106,6 @@ export function CompanionScreen() {
     }
     setInput("");
     setSending(true);
-    recordMessage();
     const userMsg: ChatMessage = {
       id: `u-${Date.now()}`,
       role: "user",
@@ -111,6 +115,8 @@ export function CompanionScreen() {
     setMessages((m) => [...m, userMsg]);
     try {
       const reply = await astrologyApi.sendMessage(dto, clean, locale);
+      // Only an answered message counts against the free daily allowance.
+      recordMessage();
       setMessages((m) => [
         ...m,
         {
@@ -123,7 +129,10 @@ export function CompanionScreen() {
         },
       ]);
     } catch {
-      // leave the user message; they can retry
+      // Drop the unanswered bubble and give the text back so a retry is one tap.
+      setMessages((m) => m.filter((x) => x.id !== userMsg.id));
+      setInput((cur) => cur || clean);
+      Alert.alert(t("companion.name"), t("companion.sendFailed"));
     } finally {
       setSending(false);
       requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
@@ -138,9 +147,19 @@ export function CompanionScreen() {
       <View style={styles.topBar}>
         {/* Companion slides up from the bottom, so it dismisses with a close. */}
         <BackButton icon="close" />
-        <AppText variant="heading" numberOfLines={1} style={styles.topTitle}>
-          {t("companion.name")}
-        </AppText>
+        <View style={styles.topCenter}>
+          {/* Aster is the companion's face: it talks while a reply is being written. */}
+          <AsterMascot
+            stage={Math.max(1, mascot?.stage ?? 1)}
+            mood={mascot?.mood === "sleepy" ? "happy" : mascot?.mood ?? "happy"}
+            accessories={mascot?.equipped ?? []}
+            action={sending ? "talk" : "idle"}
+            size={44}
+          />
+          <AppText variant="heading" numberOfLines={1}>
+            {t("companion.name")}
+          </AppText>
+        </View>
         <View style={styles.topSpacer} />
       </View>
 
@@ -157,12 +176,23 @@ export function CompanionScreen() {
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         >
           {messages.length === 0 && !sending ? (
-            <EnterView delay={120}>
-              <AppText variant="serifBody" center color={colors.text.secondary} style={styles.empty}>
+            <EnterView delay={120} style={styles.emptyAster}>
+              <AsterMascot
+                stage={Math.max(1, mascot?.stage ?? 1)}
+                mood="happy"
+                accessories={mascot?.equipped ?? []}
+                action="talk"
+                size={140}
+              />
+              <AppText variant="lead" center color={colors.text.secondary} style={styles.empty}>
                 {t("companion.emptyChat")}
               </AppText>
             </EnterView>
           ) : null}
+          {/* Aster is an AI: say so where the conversation happens. */}
+          <AppText variant="label" center color={colors.text.tertiary}>
+            {t("aiConsent.footnote")}
+          </AppText>
 
           {messages.map((m) => {
             const isUser = m.role === "user";
@@ -174,7 +204,7 @@ export function CompanionScreen() {
                 style={isUser ? styles.userRow : styles.asterRow}
               >
                 <View style={isUser ? styles.userBubble : styles.asterBubble}>
-                  <AppText variant="body" color={isUser ? colors.text.onGold : colors.text.primary}>
+                  <AppText variant="body" color={isUser ? colors.text.onAccent : colors.text.primary}>
                     {m.content}
                   </AppText>
                   {m.why ? (
@@ -190,9 +220,9 @@ export function CompanionScreen() {
                         <Ionicons
                           name={whyOpen[m.id] ? "chevron-up" : "chevron-down"}
                           size={12}
-                          color={colors.gold[300]}
+                          color={colors.star[300]}
                         />
-                        <AppText variant="labelLong" color={colors.gold[300]} style={styles.shrink}>
+                        <AppText variant="labelLong" color={colors.star[300]} style={styles.shrink}>
                           {whyOpen[m.id] ? t("companion.hideWhy") : t("companion.showWhy")}
                         </AppText>
                       </PressableScale>
@@ -243,7 +273,7 @@ export function CompanionScreen() {
             accessibilityLabel={t("companion.send")}
             style={styles.sendBtn}
           >
-            <Ionicons name="arrow-up" size={20} color={colors.text.onGold} />
+            <Ionicons name="arrow-up" size={20} color={colors.text.onAccent} />
           </PressableScale>
         </View>
       </KeyboardAvoidingView>
@@ -303,9 +333,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.sm,
   },
-  topTitle: {
+  topCenter: {
     flex: 1,
-    textAlign: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+  },
+  emptyAster: {
+    alignItems: "center",
+    gap: spacing.md,
   },
   topSpacer: {
     width: 32,
@@ -327,7 +364,7 @@ const styles = StyleSheet.create({
   asterRow: { alignItems: "flex-start" },
   userBubble: {
     maxWidth: "84%",
-    backgroundColor: colors.gold[400],
+    backgroundColor: colors.star[400],
     borderRadius: radii.lg,
     borderBottomRightRadius: radii.sm,
     paddingHorizontal: spacing.lg,
@@ -335,7 +372,7 @@ const styles = StyleSheet.create({
   },
   asterBubble: {
     maxWidth: "88%",
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderRadius: radii.lg,
     borderBottomLeftRadius: radii.sm,
     borderWidth: 1,
@@ -357,7 +394,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: colors.gold[300],
+    backgroundColor: colors.star[300],
   },
   dotStatic: {
     opacity: 0.7,
@@ -381,7 +418,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border.hairline,
-    backgroundColor: colors.ink[900],
+    backgroundColor: surface.card,
   },
   input: {
     flex: 1,
@@ -390,7 +427,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
@@ -402,7 +439,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.pill,
-    backgroundColor: colors.gold[400],
+    backgroundColor: colors.star[400],
     alignItems: "center",
     justifyContent: "center",
   },

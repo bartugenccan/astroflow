@@ -1,5 +1,6 @@
 import React, { forwardRef } from "react";
 import { View, StyleSheet } from "react-native";
+import type { ViewInstance } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { AppText } from "../../components/ui/AppText";
 import { Glyph } from "../../components/Glyph";
@@ -8,7 +9,7 @@ import { StarDivider } from "../../components/ui/StarDivider";
 import { ScoreRing } from "../../components/ScoreRing";
 import { useTranslation } from "../../i18n";
 import { DailyInsight } from "../../services/types";
-import { colors, gradients, fonts, spacing, radii } from "../../lib/design-system";
+import { colors, gradients, fonts, spacing, radii, surface } from "../../lib/design-system";
 
 // Logical card size (9:16). Captured at 3× → 1080×1920 PNG.
 export const CARD_W = 360;
@@ -34,7 +35,7 @@ export type ShareCardData =
  * the app (AppText fonts + SVG Glyphs), so captureRef renders it faithfully —
  * NOT Skia, which wouldn't capture the text/glyph layers.
  */
-export const ShareableCard = forwardRef<View, { data: ShareCardData }>(
+export const ShareableCard = forwardRef<ViewInstance, { data: ShareCardData }>(
   function ShareableCard({ data }, ref) {
     const { t, locale } = useTranslation();
 
@@ -68,7 +69,7 @@ export const ShareableCard = forwardRef<View, { data: ShareCardData }>(
 
         {/* Watermark — the growth surface */}
         <View style={styles.watermark}>
-          <Glyph name="Sun" size={18} color={colors.gold[300]} />
+          <Glyph name="Sun" size={18} color={colors.star[300]} />
           <AppText style={styles.brand} numberOfLines={1}>
             {t("share.watermark")}
           </AppText>
@@ -154,7 +155,7 @@ function BigThreeContent({
         {rows.map((r) => (
           <View key={r.glyph} style={styles.bigThreeRow}>
             <View style={styles.glyphRing}>
-              <Glyph name={r.glyph} size={30} color={colors.gold[300]} />
+              <Glyph name={r.glyph} size={30} color={colors.star[300]} />
             </View>
             <View style={styles.b3Text}>
               <AppText style={styles.b3Label} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     width: CARD_W,
     height: CARD_H,
     overflow: "hidden",
-    backgroundColor: colors.ink[950],
+    backgroundColor: surface.base,
   },
   frame: {
     ...StyleSheet.absoluteFill,
@@ -228,7 +229,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.sansSemiBold,
     fontSize: 12,
     letterSpacing: 2,
-    color: colors.gold[300],
+    color: colors.star[300],
     textAlign: "center",
   },
   date: {
@@ -242,14 +243,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    fontFamily: fonts.serif,
+    fontFamily: fonts.heading,
     fontSize: 30,
     lineHeight: 36,
     color: colors.text.primary,
     textAlign: "center",
   },
   summary: {
-    fontFamily: fonts.serifItalic,
+    fontFamily: fonts.roundedItalic,
     fontSize: 18,
     lineHeight: 27,
     color: colors.text.secondary,
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   b3Sign: {
-    fontFamily: fonts.serif,
+    fontFamily: fonts.heading,
     fontSize: 24,
     color: colors.text.primary,
   },
@@ -298,9 +299,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   brand: {
-    fontFamily: fonts.serif,
+    fontFamily: fonts.heading,
     fontSize: 18,
-    color: colors.gold[300],
+    color: colors.star[300],
     letterSpacing: 0.5,
   },
   tagline: {

@@ -31,7 +31,7 @@ export function PlacementRow({ planet, onPress }: Props) {
     >
       <View style={styles.left}>
         <View style={styles.glyph}>
-          <Glyph name={planet.name} size={24} color={colors.gold[200]} />
+          <Glyph name={planet.name} size={24} color={colors.star[200]} />
         </View>
         <View style={styles.text}>
           <View style={styles.titleRow}>

@@ -83,8 +83,8 @@ export function SolarReturnCard() {
       >
         <RunningLightBorder intense={soon} cardStyle={styles.card}>
           <View style={styles.eyebrowRow}>
-            <Ionicons name="sunny" size={14} color={colors.gold[300]} />
-            <AppText variant="label" color={colors.text.gold} style={styles.shrink}>
+            <Ionicons name="sunny" size={14} color={colors.star[300]} />
+            <AppText variant="label" color={colors.text.accent} style={styles.shrink}>
               {t("ahead.srEyebrow")}
             </AppText>
             <TermInfo term="solarReturn" size={15} />
@@ -98,7 +98,7 @@ export function SolarReturnCard() {
               delay={250}
               center={
                 days === 0 ? (
-                  <Ionicons name="gift-outline" size={24} color={colors.gold[200]} />
+                  <Ionicons name="gift-outline" size={24} color={colors.star[200]} />
                 ) : (
                   <CountUp value={days} delay={250} variant="title" color={colors.text.primary} />
                 )
@@ -108,7 +108,7 @@ export function SolarReturnCard() {
               <AppText variant="title" style={styles.title}>
                 {t("ahead.srTitle")}
               </AppText>
-              <AppText variant="heading" color={colors.gold[200]} style={styles.days}>
+              <AppText variant="heading" color={colors.star[200]} style={styles.days}>
                 {headline}
               </AppText>
             </View>
@@ -119,10 +119,10 @@ export function SolarReturnCard() {
           </AppText>
 
           <View style={styles.cta}>
-            <AppText variant="heading" color={colors.text.onGold} style={styles.ctaText}>
+            <AppText variant="heading" color={colors.text.onAccent} style={styles.ctaText}>
               {t("ahead.srCta")}
             </AppText>
-            <Ionicons name="arrow-forward" size={16} color={colors.text.onGold} />
+            <Ionicons name="arrow-forward" size={16} color={colors.text.onAccent} />
           </View>
         </RunningLightBorder>
       </PressableScale>
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
-    backgroundColor: colors.gold[400],
+    backgroundColor: colors.star[400],
   },
   ctaText: {
     fontSize: 15,

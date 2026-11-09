@@ -7,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import type { ScrollViewInstance } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
@@ -22,7 +23,7 @@ import { searchCitiesRemote } from "../../services/geocoding";
 import { astrologyApi } from "../../services/astrologyApi";
 import { City } from "../../services/types";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, fonts } from "../../lib/design-system";
+import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
 
 const MONTHS: Record<string, string[]> = {
   en: [
@@ -83,7 +84,7 @@ export function AddPersonScreen() {
   // The place search sits at the bottom of a long form. When it's focused we
   // scroll it to the top of the viewport so the field and its results stay
   // above the keyboard, however few results there are.
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const placeY = useRef(0);
   const revealPlace = () => {
     // Wait a beat for the keyboard to start opening and the view to resize.
@@ -203,7 +204,7 @@ export function AddPersonScreen() {
         >
           {/* Name */}
           <EnterView index={0} style={styles.field}>
-            <AppText variant="label" color={colors.text.gold}>
+            <AppText variant="label" color={colors.text.accent}>
               {t("compatibility.nameLabel")}
             </AppText>
             <TextInput
@@ -218,7 +219,7 @@ export function AddPersonScreen() {
 
           {/* Date */}
           <EnterView index={1} style={styles.field}>
-            <AppText variant="label" color={colors.text.gold}>
+            <AppText variant="label" color={colors.text.accent}>
               {t("compatibility.birthDateQ")}
             </AppText>
             <View style={styles.wheelRow}>
@@ -245,7 +246,7 @@ export function AddPersonScreen() {
 
           {/* Time */}
           <EnterView index={2} style={styles.field}>
-            <AppText variant="label" color={colors.text.gold}>
+            <AppText variant="label" color={colors.text.accent}>
               {t("compatibility.birthTimeQ")}
             </AppText>
             {!unknown ? (
@@ -277,7 +278,7 @@ export function AddPersonScreen() {
               <Ionicons
                 name={unknown ? "checkbox" : "square-outline"}
                 size={20}
-                color={unknown ? colors.gold[300] : colors.text.tertiary}
+                color={unknown ? colors.star[300] : colors.text.tertiary}
               />
               <AppText
                 variant="body"
@@ -292,7 +293,7 @@ export function AddPersonScreen() {
           {/* Place */}
           <View onLayout={(e) => (placeY.current = e.nativeEvent.layout.y)}>
             <EnterView index={3} style={styles.field}>
-              <AppText variant="label" color={colors.text.gold}>
+              <AppText variant="label" color={colors.text.accent}>
                 {t("compatibility.birthPlaceQ")}
               </AppText>
               <View style={styles.searchField}>
@@ -406,7 +407,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
@@ -432,7 +433,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     paddingHorizontal: spacing.lg,
   },
   searchInput: {
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
   },

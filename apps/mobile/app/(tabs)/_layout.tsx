@@ -3,13 +3,13 @@ import { Tabs } from "expo-router";
 import { CelestialTabBar } from "../../src/components/CelestialTabBar";
 import { CelestialBackground } from "../../src/components/CelestialBackground";
 import { BackgroundProvided } from "../../src/components/ScreenWrapper";
-import { colors } from "../../src/lib/design-system";
+import { colors, surface } from "../../src/lib/design-system";
 
 /**
- * Five destinations: Today (what the sky is doing now + the day's guidance),
- * For You (your chart, questions, affirmations, compatibility), Tarot (a
- * three-card spread with detailed readings), Future (Solar Return + forecasts)
- * and Profile.
+ * Five destinations: Today (Aster, the day's quests, guidance and sky),
+ * Manifest (intentions, affirmations, rituals — everything that grows Aster),
+ * Tarot (a three-card spread), Sky (chart, future, compatibility, ask) and
+ * Profile.
  *
  * One star field sits behind all five tabs and the scenes are transparent, so
  * switching tabs never re-mounts a Skia canvas (a re-mounted canvas stayed
@@ -31,9 +31,9 @@ export default function TabsLayout() {
           }}
         >
           <Tabs.Screen name="index" options={{ title: "Today" }} />
-          <Tabs.Screen name="you" options={{ title: "For You" }} />
+          <Tabs.Screen name="manifest" options={{ title: "Manifest" }} />
           <Tabs.Screen name="tarot" options={{ title: "Tarot" }} />
-          <Tabs.Screen name="ahead" options={{ title: "Future" }} />
+          <Tabs.Screen name="sky" options={{ title: "Sky" }} />
           <Tabs.Screen name="profile" options={{ title: "Profile" }} />
         </Tabs>
       </BackgroundProvided.Provider>
@@ -42,6 +42,6 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.ink[950] },
+  root: { flex: 1, backgroundColor: surface.base },
   scene: { backgroundColor: "transparent" },
 });

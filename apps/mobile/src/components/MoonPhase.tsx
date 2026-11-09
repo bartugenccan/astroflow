@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Canvas, Circle, Group, Path, Skia } from "@shopify/react-native-skia";
-import { colors } from "../lib/design-system";
+import { colors, surface } from "../lib/design-system";
 
 interface MoonPhaseProps {
   size?: number;
@@ -47,14 +47,12 @@ export function MoonPhase({ size = 28, date }: MoonPhaseProps) {
 
   // Terminator: offset a shadow disc across the face based on phase.
   const shadowPath = useMemo(() => {
-    const p = Skia.Path.Make();
     // fraction of face lit: 0 at new, 1 at full
     const lit = 1 - Math.abs(phase - 0.5) * 2;
     // waxing (phase<0.5) lights the right side; waning lights the left.
     const waxing = phase < 0.5;
     const offset = (1 - lit) * r * (waxing ? 1 : -1);
-    p.addCircle(cx + offset, cy, r);
-    return p;
+    return Skia.Path.Circle(cx + offset, cy, r);
   }, [phase, cx, cy, r]);
 
   return (
@@ -63,16 +61,12 @@ export function MoonPhase({ size = 28, date }: MoonPhaseProps) {
       <Circle cx={cx} cy={cy} r={r} color={colors.moon} />
       {/* Shadow, clipped to the moon face */}
       <Group
-        clip={(() => {
-          const c = Skia.Path.Make();
-          c.addCircle(cx, cy, r);
-          return c;
-        })()}
+        clip={Skia.Path.Circle(cx, cy, r)}
       >
-        <Path path={shadowPath} color={colors.ink[800]} opacity={0.92} />
+        <Path path={shadowPath} color={surface.sheet} opacity={0.92} />
       </Group>
       {/* Rim */}
-      <Circle cx={cx} cy={cy} r={r - 0.5} style="stroke" strokeWidth={0.5} color={colors.gold[600]} opacity={0.4} />
+      <Circle cx={cx} cy={cy} r={r - 0.5} style="stroke" strokeWidth={0.5} color={colors.star[600]} opacity={0.4} />
     </Canvas>
   );
 }

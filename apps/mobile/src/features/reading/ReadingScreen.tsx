@@ -1,5 +1,6 @@
+import { runAfterInteractions } from "../../lib/afterInteractions";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, ScrollView, InteractionManager } from "react-native";
+import { StyleSheet, View, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { LinearTransition, useReducedMotion } from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
@@ -89,7 +90,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
   useEffect(() => {
     if (!dto) return;
     let cancelled = false;
-    const task = InteractionManager.runAfterInteractions(() => {
+    const task = runAfterInteractions(() => {
       if (!cancelled) void prefetchHouses(dto, locale);
     });
     return () => {
@@ -126,7 +127,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
           <HairlineCard elevated style={styles.hero}>
             <View style={styles.heroHeader}>
               <View style={styles.headLeft}>
-                <AppText variant="label" color={colors.text.gold} style={styles.shrink}>
+                <AppText variant="label" color={colors.text.accent} style={styles.shrink}>
                   {t("reading.bigThreeTitle")}
                 </AppText>
                 <TermInfo term="bigThree" size={14} />
@@ -149,7 +150,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
               onRetry={bigThree.reload}
               retryLabel={t("reading.retry")}
             >
-              <AppText variant="serifBody">{bigThree.data?.text}</AppText>
+              <AppText variant="lead">{bigThree.data?.text}</AppText>
             </Section>
           </HairlineCard>
         </EnterView>
@@ -161,7 +162,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
             {context.data ? (
               <View style={styles.chips}>
                 <View style={styles.chip}>
-                  <AppText variant="labelLong" color={colors.gold[300]} style={styles.shrink}>
+                  <AppText variant="labelLong" color={colors.star[300]} style={styles.shrink}>
                     {context.data.sect === "day"
                       ? t("reading.dayChart")
                       : t("reading.nightChart")}
@@ -169,7 +170,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
                   <TermInfo term="dayNightChart" size={14} />
                 </View>
                 <View style={styles.chip}>
-                  <AppText variant="labelLong" color={colors.gold[300]} style={styles.shrink}>
+                  <AppText variant="labelLong" color={colors.star[300]} style={styles.shrink}>
                     {t("reading.saturnReturn", { age: context.data.saturnReturnAge })}
                   </AppText>
                   <TermInfo term="saturnReturn" size={14} />
@@ -182,7 +183,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
               onRetry={context.reload}
               retryLabel={t("reading.retry")}
             >
-              <AppText variant="serifBody">{context.data?.text}</AppText>
+              <AppText variant="lead">{context.data?.text}</AppText>
             </Section>
           </HairlineCard>
         </EnterView>
@@ -197,7 +198,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
               onRetry={overview.reload}
               retryLabel={t("reading.retry")}
             >
-              <AppText variant="serifBody">{overview.data?.text}</AppText>
+              <AppText variant="lead">{overview.data?.text}</AppText>
             </Section>
           </HairlineCard>
         </EnterView>
@@ -262,7 +263,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
             {nodes.data ? (
               <View style={styles.nodeRow}>
                 <View style={styles.nodeItem}>
-                  <Glyph name="NorthNode" size={22} color={colors.gold[300]} />
+                  <Glyph name="NorthNode" size={22} color={colors.star[300]} />
                   <AppText variant="labelLong" color={colors.text.tertiary} center>
                     {t("reading.northNode")}
                   </AppText>
@@ -295,7 +296,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
               onRetry={nodes.reload}
               retryLabel={t("reading.retry")}
             >
-              <AppText variant="serifBody">{nodes.data?.text}</AppText>
+              <AppText variant="lead">{nodes.data?.text}</AppText>
             </Section>
           </HairlineCard>
         </View>
@@ -341,8 +342,8 @@ function Section({
   if (error)
     return (
       <PressableScale style={styles.retry} onPress={onRetry} accessibilityRole="button">
-        <Ionicons name="refresh" size={16} color={colors.gold[300]} />
-        <AppText variant="body" color={colors.gold[300]}>
+        <Ionicons name="refresh" size={16} color={colors.star[300]} />
+        <AppText variant="body" color={colors.star[300]}>
           {retryLabel}
         </AppText>
       </PressableScale>

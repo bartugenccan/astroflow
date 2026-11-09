@@ -13,7 +13,7 @@ import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { Glyph } from "../../components/Glyph";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { EnterView } from "../../lib/motion";
-import { colors, motion, radii, spacing } from "../../lib/design-system";
+import { colors, motion, radii, spacing, surface } from "../../lib/design-system";
 import { formatDayMonthYear } from "../../lib/dates";
 import { TranslationKey, useTranslation } from "../../i18n";
 import { useAppStore } from "../../store/useAppStore";
@@ -60,7 +60,7 @@ export function ReportsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <BackButton />
         <EnterView style={styles.header}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("reports.eyebrow")}
           </AppText>
           <AppText variant="title">{t("reports.title")}</AppText>
@@ -80,7 +80,7 @@ export function ReportsScreen() {
               <HairlineCard style={[styles.kindCard, focus === kind && styles.kindCardFocus]}>
                 <View style={styles.kindHead}>
                   <View style={styles.kindGlyph}>
-                    <Glyph name={glyph} size={22} color={colors.gold[300]} />
+                    <Glyph name={glyph} size={22} color={colors.star[300]} />
                   </View>
                   <View style={styles.flex}>
                     <AppText variant="heading">{t(kind === "natal" ? "reports.natalTitle" : "reports.transitTitle")}</AppText>
@@ -88,7 +88,7 @@ export function ReportsScreen() {
                       {t("reports.pages", { n: pages })}
                     </AppText>
                   </View>
-                  {!isPremium ? <Ionicons name="lock-closed" size={16} color={colors.gold[300]} /> : null}
+                  {!isPremium ? <Ionicons name="lock-closed" size={16} color={colors.star[300]} /> : null}
                 </View>
                 <AppText variant="bodySmall">{t(kind === "natal" ? "reports.natalDesc" : "reports.transitDesc")}</AppText>
                 {job ? (
@@ -99,7 +99,7 @@ export function ReportsScreen() {
                     onPress={() => onCreate(kind)}
                     loading={creating === kind}
                     disabled={creating !== null && creating !== kind}
-                    icon={<Ionicons name="document-text-outline" size={18} color={colors.text.onGold} />}
+                    icon={<Ionicons name="document-text-outline" size={18} color={colors.text.onPrimary} />}
                   />
                 )}
               </HairlineCard>
@@ -108,7 +108,7 @@ export function ReportsScreen() {
         })}
 
         <EnterView index={3} style={styles.listHeader}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("reports.myReports")}
           </AppText>
         </EnterView>
@@ -185,7 +185,7 @@ function JobProgress({ job }: { job: ReportMeta }) {
         <AppText variant="bodySmall" color={colors.text.primary} style={styles.flex}>
           {stage}
         </AppText>
-        <AppText variant="numeric" color={colors.text.gold}>
+        <AppText variant="numeric" color={colors.text.accent}>
           {t("reports.progress", { done: job.progress, total: job.total || "…" })}
         </AppText>
       </View>
@@ -216,7 +216,7 @@ function ReportRow({ meta, locale, busy, saved, onOpen, onRetry, onDelete }: Rep
     <HairlineCard style={styles.row}>
       <View style={styles.kindHead}>
         <View style={styles.kindGlyph}>
-          <Glyph name={meta.kind === "natal" ? "Sun" : "Saturn"} size={18} color={failed ? colors.text.tertiary : colors.gold[300]} />
+          <Glyph name={meta.kind === "natal" ? "Sun" : "Saturn"} size={18} color={failed ? colors.text.tertiary : colors.star[300]} />
         </View>
         <View style={styles.flex}>
           <AppText variant="heading">{kindTitle(t, meta.kind)}</AppText>
@@ -240,7 +240,7 @@ function ReportRow({ meta, locale, busy, saved, onOpen, onRetry, onDelete }: Rep
           variant={saved ? "solid" : "ghost"}
           label={saved ? t("reports.open") : t("reports.remake")}
           onPress={onOpen}
-          icon={<Ionicons name={saved ? "share-outline" : "refresh"} size={18} color={saved ? colors.text.onGold : colors.gold[300]} />}
+          icon={<Ionicons name={saved ? "share-outline" : "refresh"} size={18} color={saved ? colors.text.onPrimary : colors.star[300]} />}
         />
       )}
     </HairlineCard>
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
   kindCardFocus: {
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   kindHead: {
     flexDirection: "row",
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[900],
+    backgroundColor: surface.card,
   },
   job: {
     gap: spacing.sm,
@@ -304,13 +304,13 @@ const styles = StyleSheet.create({
   track: {
     height: 8,
     borderRadius: radii.pill,
-    backgroundColor: colors.ink[700],
+    backgroundColor: surface.raised,
     overflow: "hidden",
   },
   fill: {
     height: "100%",
     borderRadius: radii.pill,
-    backgroundColor: colors.gold[400],
+    backgroundColor: colors.star[400],
   },
   listHeader: {
     marginTop: spacing.lg,

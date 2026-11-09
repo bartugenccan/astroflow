@@ -100,7 +100,7 @@ export function IntentionDetailScreen() {
           <EnterView style={styles.statsRow}>
             <HairlineCard style={styles.statCard}>
               <View style={styles.statNumRow}>
-                <Ionicons name="flame" size={20} color={colors.gold[300]} />
+                <Ionicons name="flame" size={20} color={colors.star[300]} />
                 <CountUp
                   value={intention.streak.currentStreak}
                   delay={200}
@@ -146,7 +146,7 @@ export function IntentionDetailScreen() {
           <EnterView index={1} style={styles.section}>
             <SectionHeader eyebrow={t("intentions.affirmationLabel")} />
             <HairlineCard elevated>
-              <AppText variant="serifBody" center>
+              <AppText variant="lead" center>
                 “{intention.affirmation}”
               </AppText>
             </HairlineCard>
@@ -165,7 +165,7 @@ export function IntentionDetailScreen() {
               <GoldButton
                 label={t("intentions.checkInCta")}
                 onPress={() => setChecking(true)}
-                icon={<Ionicons name="add" size={18} color={colors.text.onGold} />}
+                icon={<Ionicons name="add" size={18} color={colors.text.onPrimary} />}
               />
             </EnterView>
           )}
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   statNum: {
     fontSize: 34,
     lineHeight: 40,
-    color: colors.gold[200],
+    color: colors.star[200],
   },
   section: {
     gap: spacing.md,

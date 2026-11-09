@@ -13,10 +13,12 @@ import {
   intentionSuggestionsStub,
 } from '../astrology/prompts/interpretation.stubs';
 import { MemoryService } from '../companion/memory.service';
-import { IntentionStreakService } from './intention-streak.service';
+import { IntentionStreakService, StreakView } from './intention-streak.service';
+import { MascotDelta, MascotService } from '../mascot/mascot.service';
 import { CreateIntentionDto } from './dto/create-intention.dto';
 import { CheckInDto } from './dto/checkin.dto';
 import { safeError } from '../../common/logging/safe-error';
+import { localToday } from '../../common/context/request-context';
 
 type LifeArea = 'love' | 'career' | 'money' | 'energy';
 
@@ -39,14 +41,16 @@ export class IntentionsService {
     private readonly interpretation: InterpretationService,
     private readonly memory: MemoryService,
     private readonly streaks: IntentionStreakService,
+    private readonly mascot: MascotService,
   ) {}
 
   private area(category: string, provided?: LifeArea): LifeArea {
     return provided ?? CATEGORY_AREA[category?.toLowerCase()] ?? 'energy';
   }
 
+  /** The user's local day — check-ins and daily progress follow their calendar, not UTC. */
   private today(): string {
-    return new Date().toISOString().slice(0, 10);
+    return localToday();
   }
 
   async create(deviceId: string, dto: CreateIntentionDto, locale: Locale) {
@@ -74,7 +78,9 @@ export class IntentionsService {
       },
     });
     await this.memory.remember(deviceId, 'goal', dto.goalText);
-    return this.withProgress(intention, deviceId);
+    // Setting an intention feeds Aster — and the very first one hatches the egg.
+    const mascot = await this.mascot.awardSafely(deviceId, 'INTENTION_CREATE', '', { hatch: true });
+    return { ...(await this.withProgress(intention, deviceId)), mascot };
   }
 
   async list(deviceId: string) {
@@ -209,15 +215,26 @@ export class IntentionsService {
     const count = await this.prisma.intentionCheckIn.count({
       where: { intentionId: id, date: today },
     });
-    let streak = await this.currentStreak(id);
+    let streak: StreakView = await this.streaks.read(deviceId, id, today);
     let milestoneName: string | null = null;
     let dayCompleted = false;
     // Target first met exactly now → advance streak.
     if (count === intention.dailyTarget) {
       const res = await this.streaks.recordDayCompleted(deviceId, id, today);
-      streak = { currentStreak: res.currentStreak, longestStreak: res.longestStreak };
+      streak = {
+        currentStreak: res.currentStreak,
+        longestStreak: res.longestStreak,
+        shieldsUsed: streak.shieldsUsed + res.shieldsUsed,
+      };
       milestoneName = res.milestoneName;
       dayCompleted = true;
+    }
+
+    // Feed Aster: the rep itself, the completed day, and any milestone.
+    const deltas: (MascotDelta | null)[] = [await this.mascot.awardSafely(deviceId, 'CHECKIN')];
+    if (dayCompleted) deltas.push(await this.mascot.awardSafely(deviceId, 'DAY_COMPLETE', id));
+    if (milestoneName) {
+      deltas.push(await this.mascot.awardSafely(deviceId, 'MILESTONE', `${id}:${milestoneName}`));
     }
 
     return {
@@ -226,6 +243,7 @@ export class IntentionsService {
       dayCompleted,
       streak,
       milestoneName,
+      mascot: mergeDeltas(deltas),
     };
   }
 
@@ -249,11 +267,6 @@ export class IntentionsService {
 
   // ─── helpers ───────────────────────────────────────────────────────────────
 
-  private async currentStreak(intentionId: string): Promise<{ currentStreak: number; longestStreak: number }> {
-    const s = await this.prisma.intentionStreak.findUnique({ where: { intentionId } });
-    return { currentStreak: s?.currentStreak ?? 0, longestStreak: s?.longestStreak ?? 0 };
-  }
-
   private async withProgress(
     intention: { id: string; dailyTarget: number } & Record<string, unknown>,
     deviceId: string,
@@ -261,7 +274,7 @@ export class IntentionsService {
     const today = this.today();
     const [count, streak] = await Promise.all([
       this.prisma.intentionCheckIn.count({ where: { intentionId: intention.id, date: today } }),
-      this.currentStreak(intention.id),
+      this.streaks.read(deviceId, intention.id, today),
     ]);
     return {
       ...intention,
@@ -277,6 +290,21 @@ interface CreateSuggestionsInput {
   latitude: number;
   longitude: number;
   unknownTime?: boolean;
+}
+
+/** Several awards from one action → one delta (summed gains, final state). */
+function mergeDeltas(deltas: (MascotDelta | null)[]): MascotDelta | null {
+  const real = deltas.filter((d): d is MascotDelta => d !== null);
+  if (real.length === 0) return null;
+  const last = real[real.length - 1];
+  return {
+    ...last,
+    xpGained: real.reduce((n, d) => n + d.xpGained, 0),
+    stardustGained: real.reduce((n, d) => n + d.stardustGained, 0),
+    previousStage: real[0].previousStage,
+    leveledUp: last.stage > real[0].previousStage,
+    hatched: real.some((d) => d.hatched),
+  };
 }
 
 function clampConviction(n?: number): number | null {

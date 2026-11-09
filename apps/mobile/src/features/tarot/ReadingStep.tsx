@@ -9,7 +9,7 @@ import { ShimmerLines } from "../../components/ui/Shimmer";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { EnterView } from "../../lib/motion";
 import { TranslationKey, useTranslation } from "../../i18n";
-import { colors, fonts, radii, spacing } from "../../lib/design-system";
+import { colors, fonts, radii, spacing, surface } from "../../lib/design-system";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import type { TarotCardReading, TarotDrawnCard, TarotSpread, TarotSynthesis } from "../../services/types";
 import { TAROT_CARD_RATIO } from "./cardImages";
@@ -58,12 +58,12 @@ export function ReadingStep({ spread, freshDraw, onFlip, onNewReading }: Props) 
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <EnterView style={styles.header}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("tarot.eyebrow")} · {categoryName}
           </AppText>
           <AppText variant="title">{synthesis.data?.title ?? t("tarot.title")}</AppText>
           {spread.question ? (
-            <AppText variant="serifBody" color={colors.text.secondary}>
+            <AppText variant="lead" color={colors.text.secondary}>
               “{spread.question}”
             </AppText>
           ) : null}
@@ -168,7 +168,7 @@ function CardChapter({
     <EnterView index={index} style={styles.chapter}>
       <View style={styles.divider}>
         <View style={styles.rule} />
-        <AppText variant="label" color={colors.text.gold}>
+        <AppText variant="label" color={colors.text.accent}>
           {index + 1} · {reading?.positionName ?? fallbackPosition}
         </AppText>
         <View style={styles.rule} />
@@ -197,13 +197,13 @@ function CardChapter({
 
       {reading ? (
         <>
-          <AppText variant="serifBody" center color={colors.text.primary}>
+          <AppText variant="lead" center color={colors.text.primary}>
             {reading.headline}
           </AppText>
           <View style={styles.keywords}>
             {reading.keywords.map((k) => (
               <View key={k} style={styles.keyword}>
-                <AppText variant="bodySmall" color={colors.gold[200]}>
+                <AppText variant="bodySmall" color={colors.star[200]}>
                   {k}
                 </AppText>
               </View>
@@ -212,7 +212,7 @@ function CardChapter({
           <HairlineCard style={styles.sections}>
             {SECTIONS.map((key, i) => (
               <View key={key} style={[styles.section, i > 0 && styles.sectionRule]}>
-                <AppText variant="label" color={colors.text.gold}>
+                <AppText variant="label" color={colors.text.accent}>
                   {t(`tarot.sections.${key}` as TranslationKey)}
                 </AppText>
                 <AppText variant="body" color={colors.text.primary} style={styles.sectionBody}>
@@ -245,7 +245,7 @@ function SynthesisCard({ part, onRetry }: { part: Part<TarotSynthesis>; onRetry:
     <EnterView style={styles.chapter}>
       <View style={styles.divider}>
         <View style={styles.rule} />
-        <AppText variant="label" color={colors.text.gold}>
+        <AppText variant="label" color={colors.text.accent}>
           {t("tarot.synthesisEyebrow")}
         </AppText>
         <View style={styles.rule} />
@@ -257,22 +257,22 @@ function SynthesisCard({ part, onRetry }: { part: Part<TarotSynthesis>; onRetry:
             {s.story}
           </AppText>
           <View style={styles.sectionRule} />
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("tarot.guidance")}
           </AppText>
           {s.guidance.map((g, i) => (
             <View key={i} style={styles.guidanceRow}>
-              <Ionicons name="sparkles" size={14} color={colors.gold[300]} style={styles.guidanceIcon} />
+              <Ionicons name="sparkles" size={14} color={colors.star[300]} style={styles.guidanceIcon} />
               <AppText variant="body" color={colors.text.primary} style={styles.guidanceText}>
                 {g}
               </AppText>
             </View>
           ))}
           <View style={styles.affirmation}>
-            <AppText variant="label" color={colors.text.gold}>
+            <AppText variant="label" color={colors.text.accent}>
               {t("tarot.affirmation")}
             </AppText>
-            <AppText variant="serifBody" color={colors.gold[200]}>
+            <AppText variant="lead" color={colors.star[200]}>
               {s.affirmation}
             </AppText>
           </View>
@@ -295,9 +295,9 @@ function OrientationPill({ reversed }: { reversed: boolean }) {
       <Ionicons
         name={reversed ? "arrow-down" : "arrow-up"}
         size={12}
-        color={reversed ? colors.semantic.challenging : colors.gold[300]}
+        color={reversed ? colors.semantic.challenging : colors.star[300]}
       />
-      <AppText variant="bodySmall" color={reversed ? colors.semantic.challenging : colors.gold[300]}>
+      <AppText variant="bodySmall" color={reversed ? colors.semantic.challenging : colors.star[300]}>
         {reversed ? t("tarot.reversed") : t("tarot.upright")}
       </AppText>
     </View>
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   bigCard: {
     alignSelf: "center",
-    shadowColor: colors.gold[400],
+    shadowColor: colors.star[400],
     shadowOpacity: 0.25,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 6 },
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 6,
     borderRadius: radii.pill,
-    backgroundColor: colors.ink[700],
+    backgroundColor: surface.raised,
     borderWidth: 1,
     borderColor: colors.border.hairline,
   },
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     padding: spacing.lg,
     borderRadius: radii.md,
-    backgroundColor: colors.glow.goldSoft,
+    backgroundColor: colors.glow.starSoft,
     gap: spacing.xs,
   },
   zoom: {

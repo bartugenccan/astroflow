@@ -11,9 +11,10 @@ import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { StarBurst } from "./StarBurst";
 import { useMotion } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
+import { useMascotStore } from "../../store/useMascotStore";
 import { CheckInResult } from "../../services/types";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, fonts } from "../../lib/design-system";
+import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
 
 interface CheckInSheetProps {
   visible: boolean;
@@ -54,6 +55,11 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
       );
       setResult(r);
       onResult(r);
+      // Feed Aster: celebrations (Işık, level-up, milestone, shield) queue app-wide.
+      useMascotStore.getState().applyDelta(r.mascot, {
+        milestoneName: r.milestoneName,
+        shieldsUsed: r.streak.shieldsUsed,
+      });
       if (r.dayCompleted) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
@@ -75,19 +81,19 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
               transition={m.spring("mystic")}
               style={styles.celebrate}
             >
-              <Ionicons name="sparkles" size={22} color={colors.gold[200]} />
-              <AppText variant="heading" color={colors.gold[200]} style={styles.shrink}>
+              <Ionicons name="sparkles" size={22} color={colors.star[200]} />
+              <AppText variant="heading" color={colors.star[200]} style={styles.shrink}>
                 {t("intentions.dayComplete")}
               </AppText>
               <StarBurst playKey={1} radius={80} />
             </MotiView>
           ) : null}
 
-          <AppText variant="serifBody">{result.response}</AppText>
+          <AppText variant="lead">{result.response}</AppText>
 
           {result.strongerPhrasing ? (
             <View style={styles.stronger}>
-              <AppText variant="label" color={colors.text.gold}>
+              <AppText variant="label" color={colors.text.accent}>
                 {t("intentions.strongerPhrasing")}
               </AppText>
               <AppText variant="body" color={colors.text.primary} style={styles.strongerText}>
@@ -106,7 +112,7 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
         </View>
       ) : (
         <View style={styles.inputWrap}>
-          <AppText variant="serifBody" center>
+          <AppText variant="lead" center>
             “{affirmation}”
           </AppText>
 
@@ -118,7 +124,7 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
           </View>
 
           <View style={styles.noteBlock}>
-            <AppText variant="labelLong" color={colors.text.gold}>
+            <AppText variant="labelLong" color={colors.text.accent}>
               {t("intentions.noteLabel")}
             </AppText>
             <TextInput
@@ -164,7 +170,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     padding: spacing.lg,
     color: colors.text.primary,
     fontFamily: fonts.sans,
@@ -193,7 +199,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairline,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   strongerText: {
     fontStyle: "italic",

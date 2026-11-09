@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json* ./
 COPY apps/api/package.json apps/api/package.json
+COPY packages/shared/package.json packages/shared/package.json
 RUN npm ci --workspaces --include-workspace-root
 
 # ---- build: prisma generate + nest build ----------------------------------
@@ -17,12 +18,13 @@ COPY . .
 RUN npx prisma generate --schema apps/api/prisma/schema.prisma
 RUN npm run build --workspace apps/api
 
-# ---- migrate: prisma CLI is a dev dependency, so migrations run from here ---
-# Deploy step (before starting a new runtime):
+# ---- migrate: standalone migration image (hosts without a pre-deploy hook) --
 #   docker build -f apps/api/Dockerfile --target migrate -t astroflow-api-migrate .
 #   docker run --rm -e DATABASE_URL=... astroflow-api-migrate
+# Prisma 7 reads the database URL from apps/api/prisma.config.ts, so run from there.
 FROM build AS migrate
-CMD ["npx", "prisma", "migrate", "deploy", "--schema", "apps/api/prisma/schema.prisma"]
+WORKDIR /app/apps/api
+CMD ["npx", "prisma", "migrate", "deploy"]
 
 # ---- prod-deps: runtime node_modules without dev tooling --------------------
 FROM build AS prod-deps
@@ -41,15 +43,19 @@ COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
 COPY --from=build --chown=app:app /app/apps/api/dist ./apps/api/dist
 COPY --from=prod-deps --chown=app:app /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build --chown=app:app /app/apps/api/prisma ./apps/api/prisma
+COPY --from=build --chown=app:app /app/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY --from=build --chown=app:app /app/package.json ./package.json
 
 USER app
 EXPOSE 3000
 
-# Konteyner saglik kontrolu; Railway/Render healthcheck'i de /api/v1/health'e bakar.
+# Konteyner saglik kontrolu: /health/ready veritabanini da yoklar (DB yoksa 503).
+# Railway/Render healthcheck yolu: /api/v1/health/ready
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-# Migration'lar ayri 'migrate' hedefiyle uygulanir (yukari bak); bu imaj sadece API'yi calistirir.
+# Migration'lar: Railway bu imajda deploy oncesi `cd apps/api && npx prisma migrate deploy`
+# calistirir (railway.json preDeployCommand; prisma CLI artik runtime bagimliligi).
+# Pre-deploy kancasi olmayan host'larda ayri 'migrate' hedefini kullan (yukari bak).
 # nest build ciktisi dist/src/ altindadir (generated/ prisma istemcisi de derlendigi icin).
 CMD ["node", "apps/api/dist/src/main.js"]

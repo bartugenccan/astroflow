@@ -1,3 +1,5 @@
+// Sentry first: it instruments http/express/nest as they load.
+import './instrument';
 import { NestFactory } from '@nestjs/core';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -18,7 +20,8 @@ async function bootstrap() {
   app.useBodyParser('json', { limit: '100kb' });
   app.useBodyParser('urlencoded', { limit: '100kb', extended: false });
   // Behind a load balancer the client IP (used by rate limits) comes from X-Forwarded-For.
-  app.set('trust proxy', config.get('TRUST_PROXY'));
+  // A hop count, never `true`: only the proxies we run in front of the API are trusted.
+  app.set('trust proxy', config.get<number>('TRUST_PROXY') ?? 0);
 
   // The mobile app doesn't need CORS at all; only listed web origins get it.
   const origins = (config.get<string>('CORS_ORIGINS') ?? '')

@@ -17,7 +17,7 @@ import { HousePlacement, PlanetPlacement, Aspect } from "../services/types";
 import { GlyphGroup } from "./Glyph";
 import { PressableScale } from "./ui/PressableScale";
 import { useTranslation, TranslationKey } from "../i18n";
-import { colors, fonts, motion } from "../lib/design-system";
+import { colors, fonts, motion, surface } from "../lib/design-system";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CHART_SIZE = SCREEN_WIDTH - 56;
@@ -168,8 +168,8 @@ export function AstroMap({
           <Svg width={CHART_SIZE} height={CHART_SIZE} viewBox={`0 0 ${CHART_SIZE} ${CHART_SIZE}`}>
             {/* Rings */}
             <Circle cx={CENTER} cy={CENTER} r={OUTER_RADIUS + 8} fill="none" stroke={colors.border.hairline} strokeWidth={0.5} />
-            <Circle cx={CENTER} cy={CENTER} r={OUTER_RADIUS} fill="none" stroke={colors.gold[400]} strokeWidth={1} opacity={0.5} />
-            <Circle cx={CENTER} cy={CENTER} r={INNER_RADIUS} fill="none" stroke={colors.gold[600]} strokeWidth={0.8} opacity={0.4} />
+            <Circle cx={CENTER} cy={CENTER} r={OUTER_RADIUS} fill="none" stroke={colors.star[400]} strokeWidth={1} opacity={0.5} />
+            <Circle cx={CENTER} cy={CENTER} r={INNER_RADIUS} fill="none" stroke={colors.star[600]} strokeWidth={0.8} opacity={0.4} />
             <Circle cx={CENTER} cy={CENTER} r={PLANET_ORBIT_RADIUS} fill="none" stroke={colors.border.inner} strokeWidth={0.5} />
 
             {/* House slices */}
@@ -197,13 +197,13 @@ export function AstroMap({
             })}
 
             {/* Ascendant marker */}
-            <Line x1={CENTER} y1={CENTER} x2={ascTip.x} y2={ascTip.y} stroke={colors.gold[300]} strokeWidth={1.6} />
-            <SvgText x={ascLabel.x} y={ascLabel.y + 4} fill={colors.gold[300]} fontSize={10} fontFamily={fonts.sansSemiBold} textAnchor="middle">
+            <Line x1={CENTER} y1={CENTER} x2={ascTip.x} y2={ascTip.y} stroke={colors.star[300]} strokeWidth={1.6} />
+            <SvgText x={ascLabel.x} y={ascLabel.y + 4} fill={colors.star[300]} fontSize={10} fontFamily={fonts.sansSemiBold} textAnchor="middle">
               {t("chart.ascShort")}
             </SvgText>
 
             {/* Center medallion */}
-            <Circle cx={CENTER} cy={CENTER} r={3} fill={colors.gold[300]} opacity={0.7} />
+            <Circle cx={CENTER} cy={CENTER} r={3} fill={colors.star[300]} opacity={0.7} />
           </Svg>
         </Animated.View>
 
@@ -320,10 +320,10 @@ function PlanetMarker({
         {selected ? <SelectedPulse reduced={reduced} /> : null}
         <Svg width={MARKER} height={MARKER} viewBox={`0 0 ${MARKER} ${MARKER}`}>
           {selected ? (
-            <Circle cx={MARKER_C} cy={MARKER_C} r={14} fill={colors.gold[300]} opacity={0.18} />
+            <Circle cx={MARKER_C} cy={MARKER_C} r={14} fill={colors.star[300]} opacity={0.18} />
           ) : null}
-          <Circle cx={MARKER_C} cy={MARKER_C} r={4.5} fill={colors.ink[900]} stroke={colors.gold[300]} strokeWidth={1} />
-          <GlyphGroup name={planet.name} x={MARKER_C} y={MARKER_C - 13} size={14} color={colors.gold[200]} />
+          <Circle cx={MARKER_C} cy={MARKER_C} r={4.5} fill={surface.card} stroke={colors.star[300]} strokeWidth={1} />
+          <GlyphGroup name={planet.name} x={MARKER_C} y={MARKER_C - 13} size={14} color={colors.star[200]} />
           {planet.retrograde ? (
             <GlyphGroup name="Retrograde" x={MARKER_C} y={MARKER_C + 13} size={10} color={colors.semantic.challenging} />
           ) : null}
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.gold[300],
+    borderColor: colors.star[300],
     left: MARKER_C - 14,
     top: MARKER_C - 14,
   },

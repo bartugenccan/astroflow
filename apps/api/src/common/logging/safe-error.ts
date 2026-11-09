@@ -7,12 +7,19 @@ export function safeError(err: unknown): string {
   if (!(err instanceof Error)) return 'UnknownError';
   const code = (err as { code?: unknown }).code;
   const name = typeof code === 'string' ? `${err.name}(${code})` : err.name;
-  const first = err.message.split('\n').find((l) => l.trim()) ?? '';
-  const scrubbed = first
-    // uuids, emails and long digit runs are identifiers, not diagnostics
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<id>')
-    .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '<email>')
-    .replace(/\d{6,}/g, '<n>')
-    .slice(0, 200);
+  const scrubbed = scrubMessage(err.message);
   return scrubbed ? `${name}: ${scrubbed}` : name;
+}
+
+/** First non-empty line, identifiers masked, capped. Shared with Sentry's beforeSend. */
+export function scrubMessage(message: string): string {
+  const first = message.split('\n').find((l) => l.trim()) ?? '';
+  return (
+    first
+      // uuids, emails and long digit runs are identifiers, not diagnostics
+      .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '<id>')
+      .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '<email>')
+      .replace(/\d{6,}/g, '<n>')
+      .slice(0, 200)
+  );
 }

@@ -78,18 +78,18 @@ export function HouseRow({ dto, house, locale }: Props) {
       >
         <View style={styles.header}>
           <View style={styles.num}>
-            <AppText variant="numeric" color={colors.gold[300]}>
+            <AppText variant="numeric" color={colors.star[300]}>
               {house.house}
             </AppText>
           </View>
-          <Glyph name={house.sign} size={20} color={colors.gold[200]} />
+          <Glyph name={house.sign} size={20} color={colors.star[200]} />
           <View style={styles.meta}>
             <AppText variant="heading" color={colors.text.primary}>
               {houseLabel(t, locale, house.house)} · {signName}
             </AppText>
             {primaryTag ? (
               <View style={styles.tag}>
-                <AppText variant="label" color={colors.gold[300]}>
+                <AppText variant="label" color={colors.star[300]}>
                   {primaryTag}
                 </AppText>
               </View>
@@ -156,7 +156,7 @@ function HouseReading({
           <View style={styles.themesRow}>
             {tags.map((tag) => (
               <View key={tag} style={styles.themeChip}>
-                <AppText variant="label" color={colors.gold[300]}>
+                <AppText variant="label" color={colors.star[300]}>
                   {tag}
                 </AppText>
               </View>
@@ -174,13 +174,13 @@ function HouseReading({
           style={styles.retry}
           accessibilityRole="button"
         >
-          <Ionicons name="refresh" size={16} color={colors.gold[300]} />
-          <AppText variant="body" color={colors.gold[300]}>
+          <Ionicons name="refresh" size={16} color={colors.star[300]} />
+          <AppText variant="body" color={colors.star[300]}>
             {t("reading.retry")}
           </AppText>
         </PressableScale>
       ) : (
-        <AppText variant="serifBody">{data?.text}</AppText>
+        <AppText variant="lead">{data?.text}</AppText>
       )}
     </View>
   );

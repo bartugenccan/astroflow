@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { StyleSheet, View, ScrollView, Alert } from "react-native";
+import React, { useEffect, useState } from "react";
+import { StyleSheet, View, ScrollView, Alert, Linking } from "react-native";
+import Constants from "expo-constants";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
@@ -10,12 +11,32 @@ import { LangSwitch } from "../../components/ui/LangSwitch";
 import { BigThree } from "../../components/BigThree";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { BirthDetailsSheet } from "./BirthDetailsSheet";
+import { AccountSheet } from "../account/AccountSheet";
+import { ACCOUNTS_ENABLED, refreshAccount } from "../../services/auth/account";
 import { astrologyApi } from "../../services/astrologyApi";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
 import { deleteMyData, wipeAllLocalData } from "../../services/dataWipe";
 import { colors, spacing } from "../../lib/design-system";
+import { GoldToggle } from "../../components/ui/GoldToggle";
+import { ReminderTimeSheet } from "./ReminderTimeSheet";
+import { requestReminderPermission } from "../../services/notifications";
+import { legalUrl, type LegalPage } from "../../services/config";
+import type { TranslationKey } from "../../i18n";
+
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
+
+const LEGAL_ROWS: {
+  key: TranslationKey;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  page: LegalPage | null;
+}[] = [
+  { key: "profile.aiNotice", icon: "sparkles-outline", page: null },
+  { key: "profile.privacy", icon: "shield-checkmark-outline", page: "privacy" },
+  { key: "profile.terms", icon: "document-text-outline", page: "terms" },
+  { key: "profile.support", icon: "help-buoy-outline", page: "support" },
+];
 
 export function ProfileScreen() {
   const { t, locale } = useTranslation();
@@ -25,6 +46,14 @@ export function ProfileScreen() {
   const isPremium = useAppStore((s) => s.isPremium);
   const setLocale = useAppStore((s) => s.setLocale);
   const setBirthProfile = useAppStore((s) => s.setBirthProfile);
+
+  const account = useAppStore((s) => s.account);
+  const [accountOpen, setAccountOpen] = useState(false);
+
+  // The link may have changed on another phone (method added/removed, account deleted).
+  useEffect(() => {
+    refreshAccount().catch(() => undefined);
+  }, []);
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -44,9 +73,12 @@ export function ProfileScreen() {
       });
       // Re-cast the chart from the corrected date/time; keep display-only fields.
       setBirthProfile({ ...p, placeName: profile.placeName, unknownTime: profile.unknownTime });
+      closeEditor();
+    } catch {
+      // Keep the sheet open so the edit isn't lost; the user can retry.
+      Alert.alert(t("profile.saveFailedTitle"), t("profile.saveFailed"));
     } finally {
       setSaving(false);
-      closeEditor();
     }
   };
 
@@ -81,6 +113,34 @@ export function ProfileScreen() {
       },
     ]);
   };
+
+  // Reminders: permission is asked only when one is switched on. Scheduling
+  // itself follows the stored settings (ReminderBridge in the root layout).
+  const reminders = useAppStore((s) => s.reminders);
+  const setReminders = useAppStore((s) => s.setReminders);
+  const [timeOpen, setTimeOpen] = useState(false);
+  const reminderTime = `${String(reminders.hour).padStart(2, "0")}:${String(reminders.minute).padStart(2, "0")}`;
+
+  const toggleReminder = async (kind: "daily" | "intention", on: boolean) => {
+    if (!on) {
+      setReminders({ [kind]: false });
+      return;
+    }
+    const permission = await requestReminderPermission().catch(() => "denied" as const);
+    if (permission === "granted") {
+      setReminders({ [kind]: true });
+    } else if (permission === "blocked") {
+      Alert.alert(t("profile.remindersBlockedTitle"), t("profile.remindersBlockedBody"), [
+        { text: t("profile.cancel"), style: "cancel" },
+        { text: t("profile.openSettings"), onPress: () => Linking.openSettings().catch(() => undefined) },
+      ]);
+    }
+  };
+
+  const openLegal = (page: LegalPage) => {
+    Linking.openURL(legalUrl(page, locale)).catch(() => undefined);
+  };
+  const aiNoticeText = `${t("aiConsent.entertainmentBody")}\n\n${t("aiConsent.dataBody")}`;
 
   const birthRows = profile
     ? [
@@ -134,6 +194,24 @@ export function ProfileScreen() {
           />
         </EnterView>
 
+        {/* Account: optional sign-in so data survives a new phone. */}
+        {ACCOUNTS_ENABLED ? (
+          <EnterView index={3} style={styles.section}>
+            <SectionHeader eyebrow={t("account.sectionTitle")} />
+            <NavCard
+              icon={account ? "shield-checkmark-outline" : "cloud-upload-outline"}
+              title={account ? t("account.linkedTitle") : t("account.secureTitle")}
+              subtitle={
+                account
+                  ? (account.email ??
+                    account.providers.map((p) => (p === "apple" ? "Apple" : p === "google" ? "Google" : t("account.providerEmail"))).join(", "))
+                  : t("account.secureSub")
+              }
+              onPress={() => setAccountOpen(true)}
+            />
+          </EnterView>
+        ) : null}
+
         {/* Birth details */}
         <EnterView index={4} style={styles.section}>
           <SectionHeader eyebrow={t("profile.birthDataTitle")} />
@@ -142,7 +220,7 @@ export function ProfileScreen() {
               const inner = (
                 <View style={styles.dataRow}>
                   <View style={styles.dataLeft}>
-                    <Ionicons name={row.icon} size={18} color={colors.gold[300]} />
+                    <Ionicons name={row.icon} size={18} color={colors.star[300]} />
                     <AppText variant="body" color={colors.text.secondary} numberOfLines={1}>
                       {row.label}
                     </AppText>
@@ -196,13 +274,45 @@ export function ProfileScreen() {
             <View style={styles.sep} />
             <View style={styles.settingRow}>
               <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
-                {t("profile.notifications")}
+                {t("profile.reminderDaily")}
               </AppText>
-              <View style={styles.comingSoon}>
-                <AppText variant="label" color={colors.text.tertiary}>
-                  {t("profile.comingSoon")}
-                </AppText>
-              </View>
+              <GoldToggle
+                value={reminders.daily}
+                onChange={(on) => toggleReminder("daily", on)}
+                accessibilityLabel={t("profile.reminderDaily")}
+              />
+            </View>
+            {reminders.daily ? (
+              <>
+                <View style={styles.sep} />
+                <PressableScale
+                  onPress={() => setTimeOpen(true)}
+                  scaleTo={0.98}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t("profile.reminderTime")}: ${reminderTime}`}
+                >
+                  <View style={styles.settingRow}>
+                    <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                      {t("profile.reminderTime")}
+                    </AppText>
+                    <AppText variant="body" color={colors.star[300]}>
+                      {reminderTime}
+                    </AppText>
+                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+                  </View>
+                </PressableScale>
+              </>
+            ) : null}
+            <View style={styles.sep} />
+            <View style={styles.settingRow}>
+              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                {t("profile.reminderIntention")}
+              </AppText>
+              <GoldToggle
+                value={reminders.intention}
+                onChange={(on) => toggleReminder("intention", on)}
+                accessibilityLabel={t("profile.reminderIntention")}
+              />
             </View>
             {isPremium ? (
               <>
@@ -212,8 +322,8 @@ export function ProfileScreen() {
                     {t("paywall.premiumBadge")}
                   </AppText>
                   <View style={styles.premiumBadge}>
-                    <Ionicons name="sparkles" size={12} color={colors.gold[200]} />
-                    <AppText variant="label" color={colors.gold[200]}>
+                    <Ionicons name="sparkles" size={12} color={colors.star[200]} />
+                    <AppText variant="label" color={colors.star[200]}>
                       {t("paywall.premiumBadge")}
                     </AppText>
                   </View>
@@ -226,14 +336,45 @@ export function ProfileScreen() {
                 {t("profile.version")}
               </AppText>
               <AppText variant="body" color={colors.text.tertiary}>
-                1.0.0
+                {APP_VERSION}
               </AppText>
             </View>
           </HairlineCard>
         </EnterView>
 
+        {/* Help & legal — the store-required privacy/terms/support links. */}
+        <EnterView index={6} style={styles.section}>
+          <SectionHeader eyebrow={t("profile.legalTitle")} />
+          <HairlineCard>
+            {LEGAL_ROWS.map((row, i) => (
+              <View key={row.key}>
+                <PressableScale
+                  onPress={() =>
+                    row.page ? openLegal(row.page) : Alert.alert(t("profile.aiNotice"), aiNoticeText)
+                  }
+                  scaleTo={0.98}
+                  accessibilityRole={row.page ? "link" : "button"}
+                >
+                  <View style={styles.settingRow}>
+                    <Ionicons name={row.icon} size={18} color={colors.star[300]} />
+                    <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                      {t(row.key)}
+                    </AppText>
+                    <Ionicons
+                      name={row.page ? "open-outline" : "chevron-forward"}
+                      size={16}
+                      color={colors.text.tertiary}
+                    />
+                  </View>
+                </PressableScale>
+                {i < LEGAL_ROWS.length - 1 ? <View style={styles.sep} /> : null}
+              </View>
+            ))}
+          </HairlineCard>
+        </EnterView>
+
         {/* Start over */}
-        <EnterView index={6}>
+        <EnterView index={7}>
           <PressableScale
             onPress={confirmReset}
             scaleTo={0.96}
@@ -248,7 +389,7 @@ export function ProfileScreen() {
         </EnterView>
 
         {/* Delete my data — server and phone. Required by both stores, so always shown. */}
-        <EnterView index={7}>
+        <EnterView index={8}>
           <PressableScale
             onPress={confirmDelete}
             disabled={deleting}
@@ -263,6 +404,21 @@ export function ProfileScreen() {
           </PressableScale>
         </EnterView>
       </ScrollView>
+
+      <AccountSheet visible={accountOpen} onClose={() => setAccountOpen(false)} intent="secure" />
+
+      {timeOpen ? (
+        <ReminderTimeSheet
+          visible={timeOpen}
+          onClose={() => setTimeOpen(false)}
+          hour={reminders.hour}
+          minute={reminders.minute}
+          onSave={(hour, minute) => {
+            setReminders({ hour, minute });
+            setTimeOpen(false);
+          }}
+        />
+      ) : null}
 
       {profile ? (
         <BirthDetailsSheet
@@ -294,7 +450,7 @@ function NavCard({
     <PressableScale onPress={onPress} scaleTo={0.98} accessibilityRole="button">
       <HairlineCard style={styles.navRow}>
         <View style={styles.navIcon}>
-          <Ionicons name={icon} size={20} color={colors.gold[300]} />
+          <Ionicons name={icon} size={20} color={colors.star[300]} />
         </View>
         <View style={styles.navText}>
           <AppText variant="heading" numberOfLines={2}>
@@ -374,23 +530,16 @@ const styles = StyleSheet.create({
   shrink: {
     flexShrink: 1,
   },
-  comingSoon: {
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
-    borderRadius: 999,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-  },
   premiumBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: colors.gold[600],
+    borderColor: colors.star[600],
     borderRadius: 999,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    backgroundColor: colors.glow.goldSoft,
+    backgroundColor: colors.glow.starSoft,
   },
   navRow: {
     flexDirection: "row",

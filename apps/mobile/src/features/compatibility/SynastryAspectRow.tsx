@@ -17,7 +17,7 @@ import { SynastryTopAspect } from "../../services/types";
 import { aspectPhrase, aspectStrength } from "../../lib/astroLanguage";
 import { useExpandMotion } from "../reading/HouseRow";
 import { useTranslation, TranslationKey, TFunction } from "../../i18n";
-import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { colors, spacing, radii, motion, surface } from "../../lib/design-system";
 
 const NATURE_COLOR: Record<string, string> = {
   harmonic: colors.semantic.harmonic,
@@ -113,7 +113,7 @@ export function SynastryAspectRow({ aspect, otherName, delay = 0 }: SynastryAspe
             <Animated.View style={[styles.aspectLine, { backgroundColor: tint }, rightStyle]} />
           </View>
           <View style={styles.side}>
-            <Glyph name={aspect.planetB} size={22} color={colors.gold[300]} />
+            <Glyph name={aspect.planetB} size={22} color={colors.star[300]} />
             <AppText variant="bodySmall" center numberOfLines={2} style={styles.sideLabel}>
               {otherName} · {nameB}
             </AppText>
@@ -142,7 +142,7 @@ export function SynastryAspectRow({ aspect, otherName, delay = 0 }: SynastryAspe
           ) : null}
           {roleB ? (
             <Block
-              icon={<Glyph name={aspect.planetB} size={16} color={colors.gold[300]} />}
+              icon={<Glyph name={aspect.planetB} size={16} color={colors.star[300]} />}
               title={`${otherName} · ${nameB}`}
               body={roleB}
             />
@@ -260,6 +260,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderRadius: radii.md,
     borderLeftWidth: 2,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
 });

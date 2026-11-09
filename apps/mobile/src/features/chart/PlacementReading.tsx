@@ -54,13 +54,13 @@ export function PlacementReading({ reading, loading, error, onRetry, retrograde 
         <ShimmerLines lines={4} />
       ) : error && !reading ? (
         <PressableScale style={styles.retry} onPress={onRetry} accessibilityRole="button">
-          <Ionicons name="refresh" size={16} color={colors.gold[300]} />
-          <AppText variant="body" color={colors.gold[300]}>
+          <Ionicons name="refresh" size={16} color={colors.star[300]} />
+          <AppText variant="body" color={colors.star[300]}>
             {t("reading.retry")}
           </AppText>
         </PressableScale>
       ) : (
-        <AppText variant="serifBody" style={styles.text}>
+        <AppText variant="lead" style={styles.text}>
           {reading?.text ?? ""}
         </AppText>
       )}

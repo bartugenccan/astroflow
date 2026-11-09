@@ -13,7 +13,7 @@ export function SectionHeader({ eyebrow, title }: SectionHeaderProps) {
   return (
     <View style={styles.wrap}>
       {eyebrow ? (
-        <AppText variant="label" color={colors.text.gold}>
+        <AppText variant="label" color={colors.text.accent}>
           {eyebrow}
         </AppText>
       ) : null}

@@ -20,13 +20,15 @@ interface AppTextProps extends TextProps {
 const MAX_SCALE: Record<Variant, number> = {
   display: 1.2,
   title: 1.25,
-  serifBody: 1.35,
+  lead: 1.35,
   heading: 1.3,
   body: 1.4,
   bodySmall: 1.35,
   label: 1.15,
   labelLong: 1.25,
   numeric: 1.25,
+  button: 1.2,
+  stat: 1.2,
 };
 
 /**
@@ -53,7 +55,8 @@ export function AppText({
 }: AppTextProps) {
   const locale = useAppStore((s) => s.locale);
   const base = typography[variant];
-  const override: TextStyle = {};
+  // RN 0.88 style types are readonly; build the override as a mutable object.
+  const override: { -readonly [K in keyof TextStyle]?: TextStyle[K] } = {};
   if (color) override.color = color;
   if (center) override.textAlign = "center";
 

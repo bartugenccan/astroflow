@@ -10,7 +10,7 @@ import { BackButton } from "../../components/ui/BackButton";
 import { EnterView } from "../../lib/motion";
 import { useTranslation } from "../../i18n";
 import { GLOSSARY, GlossaryTermId, termText } from "../../lib/glossary";
-import { colors, spacing, radii, fonts } from "../../lib/design-system";
+import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
 import { TermBody } from "./TermBody";
 import { TermMark } from "./TermMark";
 
@@ -44,7 +44,7 @@ export function GlossaryScreen() {
       >
         <BackButton />
         <EnterView style={styles.header}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("glossary.ui.screenEyebrow")}
           </AppText>
           <AppText variant="title">{t("glossary.ui.screenTitle")}</AppText>
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     height: 48,
     borderRadius: radii.pill,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
     marginBottom: spacing.sm,
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
     alignItems: "center",

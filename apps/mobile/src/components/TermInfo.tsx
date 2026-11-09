@@ -17,7 +17,7 @@ interface TermInfoProps {
  * The small ⓘ that sits next to any piece of jargon. Tapping it opens the
  * app-wide glossary sheet on that term (short answer first, detail on demand).
  */
-export function TermInfo({ term, size = 15, color = colors.gold[300] }: TermInfoProps) {
+export function TermInfo({ term, size = 15, color = colors.star[300] }: TermInfoProps) {
   const openTerm = useUiStore((s) => s.openTerm);
   const { t } = useTranslation();
   return (

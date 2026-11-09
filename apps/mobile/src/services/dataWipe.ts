@@ -6,10 +6,22 @@ import { useOnboardingDraft } from "../store/useOnboardingDraft";
 import { useTarotStore } from "../store/useTarotStore";
 import { useElectionStore } from "../store/useElectionStore";
 import { useReportsStore } from "../store/useReportsStore";
+import { useMascotStore } from "../store/useMascotStore";
+import { useReflectionStore } from "../store/useReflectionStore";
 import { astrologyApi } from "./astrologyApi";
 import { clearInterpretationCache } from "./interpretationCache";
 import { resetDeviceToken } from "./deviceAuth";
 import { secureStorage } from "./secureStorage";
+import { cancelAllReminders } from "./notifications";
+
+/** Other persisted stores that live in the Keychain/Keystore (see each store's `name`). */
+const SECURE_STORE_KEYS = [
+  "astroflow-tarot",
+  "astroflow-election",
+  "astroflow-affirmations",
+  "astroflow-mascot",
+  "astroflow-reflections",
+];
 
 /**
  * "Delete my data": the server copy first (chat, memory, goals, saved people,
@@ -33,9 +45,14 @@ export async function deleteMyData(): Promise<void> {
  * onboarding stack.
  */
 export async function wipeAllLocalData({ keepIdentity }: { keepIdentity: boolean }): Promise<void> {
-  for (const folder of ["affirmations", "reports"]) {
+  // Reports lived in Documents before moving to the cache; clear both.
+  for (const [root, folder] of [
+    [Paths.document, "affirmations"],
+    [Paths.document, "reports"],
+    [Paths.cache, "reports"],
+  ] as const) {
     try {
-      const dir = new Directory(Paths.document, folder);
+      const dir = new Directory(root, folder);
       if (dir.exists) dir.delete();
     } catch {
       // Nothing saved yet, or already gone.
@@ -43,6 +60,7 @@ export async function wipeAllLocalData({ keepIdentity }: { keepIdentity: boolean
   }
 
   clearInterpretationCache();
+  await cancelAllReminders();
   if (!keepIdentity) await resetDeviceToken();
 
   useOnboardingDraft.getState().clear();
@@ -50,9 +68,11 @@ export async function wipeAllLocalData({ keepIdentity }: { keepIdentity: boolean
   useTarotStore.getState().reset();
   useElectionStore.getState().reset();
   useReportsStore.getState().reset();
+  useMascotStore.getState().reset();
+  useReflectionStore.getState().reset();
   useAppStore.getState().reset();
 
   // Last, so the stores' own persistence writes above can't restore anything.
-  await secureStorage.removeItem(APP_STORE_KEY);
+  for (const key of [APP_STORE_KEY, ...SECURE_STORE_KEYS]) await secureStorage.removeItem(key);
   await AsyncStorage.clear();
 }

@@ -2,7 +2,7 @@ import React, { memo } from "react";
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Svg, { Circle, Path, G } from "react-native-svg";
-import { colors } from "../../lib/design-system";
+import { colors, surface } from "../../lib/design-system";
 
 interface Props {
   width: number;
@@ -22,7 +22,7 @@ export const TarotCardBack = memo(function TarotCardBack({ width, height }: Prop
   return (
     <View style={[styles.card, { width, height, borderRadius: radius }]}>
       <LinearGradient
-        colors={[colors.ink[600], colors.ink[800], colors.ink[950]]}
+        colors={[surface.accent, surface.sheet, surface.base]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -35,20 +35,20 @@ export const TarotCardBack = memo(function TarotCardBack({ width, height }: Prop
       >
         <Svg width="100%" height="100%" viewBox="0 0 60 104" preserveAspectRatio="xMidYMid meet">
           <G opacity={0.9}>
-            <Circle cx={30} cy={52} r={21} stroke={colors.gold[400]} strokeWidth={0.8} fill="none" />
-            <Circle cx={30} cy={52} r={24} stroke={colors.gold[600]} strokeWidth={0.5} fill="none" strokeDasharray="1.5 2.5" />
-            <Path d={STAR8} fill={colors.gold[300]} />
+            <Circle cx={30} cy={52} r={21} stroke={colors.star[400]} strokeWidth={0.8} fill="none" />
+            <Circle cx={30} cy={52} r={24} stroke={colors.star[600]} strokeWidth={0.5} fill="none" strokeDasharray="1.5 2.5" />
+            <Path d={STAR8} fill={colors.star[300]} />
             <Path
               d="M32 13 A7 7 0 0 0 32 27 A9 9 0 0 1 32 13 Z"
-              fill={colors.gold[300]}
+              fill={colors.star[300]}
             />
-            <Circle cx={30} cy={92} r={1.6} fill={colors.gold[300]} />
-            <Circle cx={22} cy={92} r={0.9} fill={colors.gold[500]} />
-            <Circle cx={38} cy={92} r={0.9} fill={colors.gold[500]} />
-            <Circle cx={9} cy={10} r={0.9} fill={colors.gold[400]} />
-            <Circle cx={51} cy={10} r={0.9} fill={colors.gold[400]} />
-            <Circle cx={9} cy={94} r={0.9} fill={colors.gold[400]} />
-            <Circle cx={51} cy={94} r={0.9} fill={colors.gold[400]} />
+            <Circle cx={30} cy={92} r={1.6} fill={colors.star[300]} />
+            <Circle cx={22} cy={92} r={0.9} fill={colors.star[500]} />
+            <Circle cx={38} cy={92} r={0.9} fill={colors.star[500]} />
+            <Circle cx={9} cy={10} r={0.9} fill={colors.star[400]} />
+            <Circle cx={51} cy={10} r={0.9} fill={colors.star[400]} />
+            <Circle cx={9} cy={94} r={0.9} fill={colors.star[400]} />
+            <Circle cx={51} cy={94} r={0.9} fill={colors.star[400]} />
           </G>
         </Svg>
       </View>
@@ -60,8 +60,8 @@ const styles = StyleSheet.create({
   card: {
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: colors.gold[500],
-    backgroundColor: colors.ink[800],
+    borderColor: colors.star[500],
+    backgroundColor: surface.sheet,
   },
   inner: {
     flex: 1,

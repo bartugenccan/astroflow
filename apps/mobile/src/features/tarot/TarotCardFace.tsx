@@ -32,8 +32,8 @@ const styles = StyleSheet.create({
   frame: {
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: colors.gold[400],
-    backgroundColor: colors.gold[100],
+    borderColor: colors.star[400],
+    backgroundColor: colors.star[100],
   },
   reversed: {
     transform: [{ rotate: "180deg" }],

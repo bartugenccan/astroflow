@@ -1,112 +1,160 @@
 import { StyleSheet, TextStyle } from "react-native";
 
 /**
- * AstroFlow — "Celestial Gold" design system.
- * Deep ink-indigo night sky, champagne gold accents, fine constellation
- * linework. Serif display (Cormorant Garamond) + quiet sans (Manrope).
+ * AstroFlow — "Kozmik Şeker" (Cosmic Candy) design system.
+ *
+ * A playful night sky: deep plum-indigo base, candy-bright accents, chunky
+ * rounded type (Nunito) over a friendly sans (DM Sans). Every pressable
+ * surface has a solid, hard-offset "slab" under it (no blurry drop shadows) and
+ * physically pushes down when pressed. Aster, the star mascot, lives here.
+ *
+ * Token layers:
+ *   palette  — tone pairs (face + slab + on) for buttons, chips, cards.
+ *   surface  — background / card / sheet / raised fills.
+ *   colors   — semantic text, border, status, plus the `star` accent scale.
  */
 
 // ─── Font families ────────────────────────────────────────────────────────────
 export const fonts = {
-  serif: "CormorantGaramond_600SemiBold",
-  serifMedium: "CormorantGaramond_500Medium",
-  serifItalic: "CormorantGaramond_500Medium_Italic",
-  sans: "Manrope_400Regular",
-  sansMedium: "Manrope_500Medium",
-  sansSemiBold: "Manrope_600SemiBold",
-  sansBold: "Manrope_700Bold",
+  // Nunito — rounded, chunky voice for headings, numbers and buttons
+  display: "Nunito_900Black",
+  heading: "Nunito_800ExtraBold",
+  rounded: "Nunito_700Bold",
+  roundedItalic: "Nunito_700Bold_Italic",
+  // DM Sans — calm reading text
+  sans: "DMSans_400Regular",
+  sansMedium: "DMSans_500Medium",
+  sansSemiBold: "DMSans_600SemiBold",
+  sansBold: "DMSans_700Bold",
+} as const;
+
+// ─── Tone palette (face / slab / on) ──────────────────────────────────────────
+export type Tone = "primary" | "candy" | "star" | "mint" | "sky" | "danger" | "night" | "cloud";
+
+export const palette: Record<Tone, { face: string; slab: string; on: string; soft: string }> = {
+  /** Aster violet — brand, primary CTAs. */
+  primary: { face: "#7C4DFF", slab: "#5530C9", on: "#FFFFFF", soft: "rgba(124,77,255,0.18)" },
+  /** Candy pink — love, delight, secondary highlights. */
+  candy: { face: "#FF6FB5", slab: "#C9407F", on: "#2A0718", soft: "rgba(255,111,181,0.18)" },
+  /** Star gold — rewards, Işık, Yıldız Tozu. */
+  star: { face: "#FFC83D", slab: "#C99300", on: "#2B1A00", soft: "rgba(255,200,61,0.18)" },
+  /** Mint — success, check-ins, completed quests. */
+  mint: { face: "#2FD08A", slab: "#1E9A63", on: "#04261A", soft: "rgba(47,208,138,0.18)" },
+  /** Sky — calm, info, air. */
+  sky: { face: "#4CC9F0", slab: "#2A93B8", on: "#04222E", soft: "rgba(76,201,240,0.18)" },
+  /** Danger — destructive actions. */
+  danger: { face: "#FF5C6C", slab: "#C23545", on: "#FFFFFF", soft: "rgba(255,92,108,0.18)" },
+  /** Night — secondary/neutral buttons on the dark base. */
+  night: { face: "#33257A", slab: "#150E36", on: "#FFF8FF", soft: "rgba(255,248,255,0.08)" },
+  /** Cloud — light button (third-party sign-in, contrast moments). */
+  cloud: { face: "#FFF8FF", slab: "#BDB2E6", on: "#1A1240", soft: "rgba(255,248,255,0.18)" },
+};
+
+// ─── Surfaces ─────────────────────────────────────────────────────────────────
+export const surface = {
+  base: "#1A1240", // app background
+  card: "#261A5A", // cards
+  sheet: "#2B1F66", // bottom sheets
+  raised: "#33257A", // raised / pressed / inputs
+  accent: "#45349A", // indigo accent surface
+  slab: "#120C30", // hard shadow under night cards
+  outline: "#3D2D8A", // chunky 2px card border
 } as const;
 
 // ─── Colour tokens ────────────────────────────────────────────────────────────
 export const colors = {
-  // Night-sky scale, warm-black → indigo
-  ink: {
-    950: "#060810", // app base background
-    900: "#0A0E1C", // cards base
-    800: "#101731", // surface / sheet
-    700: "#182042", // raised / pressed
-    600: "#232E5C", // indigo accent surface
+  // Star gold accent scale (warm, sticker-bright): icons, eyebrows, rewards
+  star: {
+    100: "#FFF4D1",
+    200: "#FFE38A",
+    300: "#FFD25C", // accent — icons, active states, eyebrows
+    400: "#FFC83D", // fills, ring strokes
+    500: "#E8A912",
+    600: "#C99300",
   },
-  // Champagne gold scale
-  gold: {
-    100: "#F7F0DD", // highlight / sparkle cores
-    200: "#EFDFB8",
-    300: "#E7CD8F", // primary accent — icons, active states
-    400: "#D9B964", // buttons, ring strokes
-    500: "#C29C48", // pressed / darker stroke
-    600: "#96762F", // deep gold, subtle borders
-  },
-  moon: "#C9D1E4", // silver — moon glyph, secondary accent
+  moon: "#CFD6FF",
   text: {
-    primary: "#F3EFE4", // warm off-white
-    secondary: "rgba(243,239,228,0.68)",
-    tertiary: "rgba(243,239,228,0.42)",
-    gold: "#E7CD8F",
-    onGold: "#181129", // text on gold fills
+    primary: "#FFF8FF",
+    secondary: "rgba(255,248,255,0.78)",
+    tertiary: "rgba(255,248,255,0.58)",
+    accent: "#FFD25C",
+    onAccent: "#2B1A00",
+    onPrimary: "#FFFFFF",
+    violet: "#B9A2FF",
   },
-  // Aspect / status semantics
   semantic: {
-    harmonic: "#8FBF9F", // sage green
-    challenging: "#C98080", // muted rose
-    neutral: "#8E97B8", // slate blue
-    error: "#D98A8A",
+    harmonic: "#2FD08A",
+    challenging: "#FF7A8A",
+    neutral: "#9AA3D9",
+    error: "#FF6B7A",
   },
-  // Element coloring for zodiac signs in the wheel — muted metallics
   element: {
-    fire: "#D6976B",
-    earth: "#9FAE87",
-    air: "#A9B7D9",
-    water: "#7FA3B8",
+    fire: "#FF8A5B",
+    earth: "#8BD17C",
+    air: "#8FB8FF",
+    water: "#5CD6E6",
   },
   border: {
-    hairline: "rgba(231,205,143,0.14)", // signature gold hairline
-    hairlineStrong: "rgba(231,205,143,0.30)",
-    inner: "rgba(243,239,228,0.06)",
+    hairline: "rgba(185,162,255,0.18)",
+    hairlineStrong: "rgba(185,162,255,0.36)",
+    inner: "rgba(255,248,255,0.08)",
+    chunky: surface.outline,
   },
   glow: {
-    gold: "rgba(217,185,100,0.35)",
-    goldSoft: "rgba(217,185,100,0.16)",
+    star: "rgba(255,200,61,0.40)",
+    starSoft: "rgba(255,200,61,0.16)",
+    violet: "rgba(124,77,255,0.45)",
   },
 } as const;
 
+/** Life-area / category accent tones, used by chips and intention cards. */
+export const areaTone: Record<string, Tone> = {
+  love: "candy",
+  career: "sky",
+  money: "star",
+  energy: "mint",
+  strength: "primary",
+  reading: "sky",
+  calm: "mint",
+  confidence: "star",
+};
+
 // ─── Gradients ────────────────────────────────────────────────────────────────
 export const gradients = {
-  sky: ["#0A0E1C", "#060810"] as const, // vertical background
-  skyRadialCenter: "#141B38", // radial glow behind hero/chart
-  goldButton: ["#E7CD8F", "#C29C48"] as const,
-  goldShimmer: [
-    "rgba(231,205,143,0)",
-    "rgba(247,240,221,0.55)",
-    "rgba(231,205,143,0)",
+  sky: ["#261A5E", "#1A1240"] as const,
+  skyRadialCenter: "#3A2A8C",
+  nebula: ["rgba(124,77,255,0.35)", "rgba(255,111,181,0.10)", "rgba(26,18,64,0)"] as const,
+  primaryButton: ["#8F66FF", "#7C4DFF"] as const,
+  shimmer: [
+    "rgba(255,248,255,0)",
+    "rgba(255,248,255,0.45)",
+    "rgba(255,248,255,0)",
   ] as const,
 } as const;
 
 // ─── Typography ───────────────────────────────────────────────────────────────
 export const typography = StyleSheet.create({
-  // Cormorant serif — the mystical voice
   display: {
-    fontFamily: fonts.serif,
-    fontSize: 38,
-    lineHeight: 44,
-    letterSpacing: 0.2,
+    fontFamily: fonts.display,
+    fontSize: 34,
+    lineHeight: 40,
     color: colors.text.primary,
   } as TextStyle,
   title: {
-    fontFamily: fonts.serif,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: 0.2,
-    color: colors.text.primary,
-  } as TextStyle,
-  serifBody: {
-    fontFamily: fonts.serifItalic,
-    fontSize: 21,
+    fontFamily: fonts.heading,
+    fontSize: 26,
     lineHeight: 32,
     color: colors.text.primary,
   } as TextStyle,
-  // Manrope sans — UI text
+  /** Lead / quote text (affirmations, guidance). Rounded, not serif. */
+  lead: {
+    fontFamily: fonts.rounded,
+    fontSize: 19,
+    lineHeight: 27,
+    color: colors.text.primary,
+  } as TextStyle,
   heading: {
-    fontFamily: fonts.sansSemiBold,
+    fontFamily: fonts.heading,
     fontSize: 17,
     lineHeight: 22,
     color: colors.text.primary,
@@ -124,28 +172,42 @@ export const typography = StyleSheet.create({
     color: colors.text.tertiary,
   } as TextStyle,
   label: {
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 11,
-    lineHeight: 14,
-    letterSpacing: 1.8,
+    fontFamily: fonts.heading,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
     color: colors.text.tertiary,
   } as TextStyle,
-  // Sentence-length labels (questions, hints) — untracked, not uppercased, so
-  // they don't balloon in width the way `label` does in Turkish.
   labelLong: {
-    fontFamily: fonts.sansSemiBold,
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 0.4,
+    fontFamily: fonts.rounded,
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0.2,
     color: colors.text.tertiary,
   } as TextStyle,
   numeric: {
-    fontFamily: fonts.sansMedium,
+    fontFamily: fonts.heading,
     fontSize: 13,
     lineHeight: 16,
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
     color: colors.text.secondary,
+  } as TextStyle,
+  /** Chunky button label — uppercase, Duolingo-style. */
+  button: {
+    fontFamily: fonts.heading,
+    fontSize: 16,
+    lineHeight: 20,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: colors.text.primary,
+  } as TextStyle,
+  /** Big stat numbers (streaks, Işık). */
+  stat: {
+    fontFamily: fonts.display,
+    fontSize: 22,
+    lineHeight: 26,
+    color: colors.text.primary,
   } as TextStyle,
 });
 
@@ -162,41 +224,55 @@ export const spacing = {
 
 // ─── Radii ────────────────────────────────────────────────────────────────────
 export const radii = {
-  sm: 10,
+  sm: 12,
   md: 16,
-  lg: 24,
-  xl: 32,
+  lg: 20,
+  xl: 24,
   pill: 999,
+} as const;
+
+// ─── Depth (hard-offset slabs) ────────────────────────────────────────────────
+/** Height of the solid slab under a face. Pressing travels `depth - 1`. */
+export const depth = {
+  sm: 3,
+  md: 5,
+  lg: 6,
 } as const;
 
 // ─── Shadows / glows ──────────────────────────────────────────────────────────
 export const shadows = {
-  goldGlow: {
-    shadowColor: "#D9B964",
-    shadowOpacity: 0.35,
+  /** Soft glow for luminous things (Aster, stars) — never for buttons/cards. */
+  glow: {
+    shadowColor: "#FFC83D",
+    shadowOpacity: 0.45,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
+    elevation: 0,
   },
+  /** Hard offset: a crisp slab, no blur. */
   card: {
-    shadowColor: "#000",
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    shadowColor: surface.slab,
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 0,
   },
 } as const;
 
 // ─── Motion tokens ────────────────────────────────────────────────────────────
 export const motion = {
   spring: {
-    gentle: { damping: 18, stiffness: 120, mass: 1 }, // enter transitions
-    snappy: { damping: 14, stiffness: 220, mass: 0.8 }, // press feedback
-    slow: { damping: 24, stiffness: 80, mass: 1.2 }, // chart / large elements
-    mystic: { damping: 15, stiffness: 150, mass: 1.1 }, // soft overshoot — sheets materialize
+    gentle: { damping: 18, stiffness: 120, mass: 1 },
+    snappy: { damping: 14, stiffness: 260, mass: 0.7 },
+    slow: { damping: 24, stiffness: 80, mass: 1.2 },
+    mystic: { damping: 15, stiffness: 150, mass: 1.1 },
+    /** Overshooting pop — rewards, counters, mascot cheer. */
+    bouncy: { damping: 8, stiffness: 220, mass: 0.8 },
+    /** Squash & stretch recovery. */
+    squash: { damping: 6, stiffness: 300, mass: 0.6 },
   },
   duration: { fast: 160, base: 280, slow: 500, reveal: 1400 },
-  stagger: 70, // ms per list item
+  stagger: 60,
 } as const;
 
 // ─── Blur ─────────────────────────────────────────────────────────────────────

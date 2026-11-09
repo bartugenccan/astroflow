@@ -53,7 +53,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
     <View style={styles.root}>
       <EnterView style={styles.head}>
         <AppText variant="title">{r.event.label}</AppText>
-        <AppText variant="bodySmall" color={colors.gold[200]}>
+        <AppText variant="bodySmall" color={colors.star[200]}>
           {formatDayMonthYear(locale, r.from)} – {formatDayMonthYear(locale, r.to)} · {r.place.name}
         </AppText>
         {r.event.fromText ? (
@@ -68,7 +68,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
           <ReadingSection text={reading.data?.summary} loading={reading.loading} />
           {reading.data?.tips.map((tip, i) => (
             <View key={i} style={styles.tip}>
-              <Ionicons name="sparkles" size={14} color={colors.gold[300]} style={styles.tipIcon} />
+              <Ionicons name="sparkles" size={14} color={colors.star[300]} style={styles.tipIcon} />
               <AppText variant="body" color={colors.text.primary} style={styles.tipText}>
                 {tip}
               </AppText>
@@ -97,8 +97,8 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
                     <VerdictBadge verdict={p.verdict} />
                     {p.bestHour ? (
                       <View style={styles.hour}>
-                        <Ionicons name="time-outline" size={13} color={colors.gold[300]} />
-                        <AppText variant="bodySmall" color={colors.gold[200]}>
+                        <Ionicons name="time-outline" size={13} color={colors.star[300]} />
+                        <AppText variant="bodySmall" color={colors.star[200]}>
                           {p.bestHour.from}–{p.bestHour.to}
                         </AppText>
                       </View>
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   pickFirst: {
-    borderColor: colors.gold[400],
+    borderColor: colors.star[400],
   },
   rank: {
     width: 50,

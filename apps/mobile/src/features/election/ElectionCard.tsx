@@ -7,7 +7,7 @@ import { PressableScale } from "../../components/ui/PressableScale";
 import { RunningLightBorder } from "../../components/ui/RunningLightBorder";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
-import { colors, radii, spacing } from "../../lib/design-system";
+import { colors, radii, spacing, surface } from "../../lib/design-system";
 
 /**
  * Front door to Election, at the top of For You. Same running-light frame as
@@ -23,17 +23,17 @@ export function ElectionCard() {
   return (
     <RunningLightBorder cardStyle={styles.card}>
       <View style={styles.eyebrowRow}>
-        <Ionicons name="hourglass-outline" size={14} color={colors.gold[300]} />
-        <AppText variant="label" color={colors.text.gold} style={styles.shrink}>
+        <Ionicons name="hourglass-outline" size={14} color={colors.star[300]} />
+        <AppText variant="label" color={colors.text.accent} style={styles.shrink}>
           {t("election.eyebrow")}
         </AppText>
       </View>
 
       <View style={styles.row}>
         <View style={styles.icon}>
-          <Ionicons name="calendar" size={26} color={colors.gold[200]} />
+          <Ionicons name="calendar" size={26} color={colors.star[200]} />
           <View style={styles.spark}>
-            <Ionicons name="sparkles" size={12} color={colors.gold[100]} />
+            <Ionicons name="sparkles" size={12} color={colors.star[100]} />
           </View>
         </View>
         <AppText variant="title" style={styles.title}>
@@ -50,8 +50,8 @@ export function ElectionCard() {
           style={[styles.action, styles.primary]}
           accessibilityRole="button"
         >
-          <Ionicons name="help-circle-outline" size={17} color={colors.text.onGold} />
-          <AppText variant="heading" color={colors.text.onGold} style={styles.actionText} numberOfLines={1}>
+          <Ionicons name="help-circle-outline" size={17} color={colors.text.onAccent} />
+          <AppText variant="heading" color={colors.text.onAccent} style={styles.actionText} numberOfLines={1}>
             {t("election.modeCheck")}
           </AppText>
         </PressableScale>
@@ -61,8 +61,8 @@ export function ElectionCard() {
           style={[styles.action, styles.secondary]}
           accessibilityRole="button"
         >
-          <Ionicons name={isPremium ? "search" : "lock-closed"} size={15} color={colors.gold[300]} />
-          <AppText variant="heading" color={colors.gold[200]} style={styles.actionText} numberOfLines={1}>
+          <Ionicons name={isPremium ? "search" : "lock-closed"} size={15} color={colors.star[300]} />
+          <AppText variant="heading" color={colors.star[200]} style={styles.actionText} numberOfLines={1}>
             {t("election.modeSearch")}
           </AppText>
         </PressableScale>
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.glow.goldSoft,
+    backgroundColor: colors.glow.starSoft,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
   },
@@ -124,12 +124,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
   },
   primary: {
-    backgroundColor: colors.gold[400],
+    backgroundColor: colors.star[400],
   },
   secondary: {
     borderWidth: 1,
-    borderColor: colors.gold[400],
-    backgroundColor: colors.ink[800],
+    borderColor: colors.star[400],
+    backgroundColor: surface.sheet,
   },
   actionText: {
     fontSize: 14,

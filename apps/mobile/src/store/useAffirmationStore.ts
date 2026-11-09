@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "../services/secureStorage";
 import { Affirmation, AffirmationCategory, AffirmationDay } from "../services/types";
 
 export const AFFIRMATION_CATEGORIES: AffirmationCategory[] = [
@@ -122,7 +122,8 @@ export const useAffirmationStore = create<AffirmationState>()(
     }),
     {
       name: "astroflow-affirmations",
-      storage: createJSONStorage(() => AsyncStorage),
+      // Keychain/Keystore, not plain storage: custom affirmations are the user’s own words.
+      storage: createJSONStorage(() => secureStorage),
     },
   ),
 );

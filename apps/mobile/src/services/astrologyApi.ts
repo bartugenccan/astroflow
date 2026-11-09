@@ -45,6 +45,7 @@ import {
   TransitOverview,
   YearAhead,
 } from "./types";
+import { mockAward, mockResetMascot } from "./mascotApi";
 import { Locale } from "../i18n";
 import { generateNatalChart } from "./mock/natalChart";
 import { generateTransits, generateTransitReport } from "./mock/transits";
@@ -239,6 +240,7 @@ const mockAstrologyApi: AstrologyApi = {
   async getDailyInsight(dto, locale) {
     await delay();
     const chart = generateNatalChart(dto);
+    mockAward("SKY_READ");
     return insightFromChart(chart, locale);
   },
 
@@ -444,7 +446,7 @@ const mockAstrologyApi: AstrologyApi = {
       streak: { currentStreak: 0, longestStreak: 0 },
     };
     mockIntentions.unshift(intention);
-    return intention;
+    return { ...intention, mascot: mockAward("INTENTION_CREATE", "", { hatch: true }) };
   },
 
   async listIntentions() {
@@ -481,12 +483,23 @@ const mockAstrologyApi: AstrologyApi = {
       }
     }
     const reply = mockCheckInReply(input.conviction, input.userText, locale);
+    const deltas = [mockAward("CHECKIN")];
+    if (dayCompleted) deltas.push(mockAward("DAY_COMPLETE", id));
+    const last = deltas[deltas.length - 1];
     return {
       ...reply,
       progress: { count, target },
       dayCompleted,
       streak: intention?.streak ?? { currentStreak: dayCompleted ? 1 : 0, longestStreak: dayCompleted ? 1 : 0 },
       milestoneName: null,
+      mascot: {
+        ...last,
+        xpGained: deltas.reduce((n, d) => n + d.xpGained, 0),
+        stardustGained: deltas.reduce((n, d) => n + d.stardustGained, 0),
+        previousStage: deltas[0].previousStage,
+        leveledUp: last.stage > deltas[0].previousStage,
+        hatched: deltas.some((d) => d.hatched),
+      },
     };
   },
 
@@ -542,6 +555,7 @@ const mockAstrologyApi: AstrologyApi = {
     mockChat.splice(0);
     mockIntentions.splice(0);
     mockUnlocked.clear();
+    mockResetMascot();
   },
 
   // Election

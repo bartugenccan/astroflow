@@ -20,7 +20,7 @@ export function ReportCta({ kind }: { kind: ReportKind }) {
     >
       <HairlineCard style={styles.row}>
         <View style={styles.icon}>
-          <Ionicons name="document-text-outline" size={20} color={colors.gold[300]} />
+          <Ionicons name="document-text-outline" size={20} color={colors.star[300]} />
         </View>
         <View style={styles.text}>
           <AppText variant="heading" numberOfLines={2}>

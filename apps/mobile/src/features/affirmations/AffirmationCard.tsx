@@ -16,7 +16,7 @@ import { AppText } from "../../components/ui/AppText";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { StarBurst } from "../intentions/StarBurst";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { colors, spacing, radii, motion, surface } from "../../lib/design-system";
 
 interface AffirmationCardProps {
   text: string;
@@ -91,7 +91,7 @@ export function AffirmationCard({
     <View style={[styles.card, featured && styles.featured, done && styles.cardDone]}>
       {featured ? (
         <LinearGradient
-          colors={[colors.glow.goldSoft, "transparent"]}
+          colors={[colors.glow.starSoft, "transparent"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.wash}
@@ -101,7 +101,7 @@ export function AffirmationCard({
 
       <View style={styles.textRow}>
         <AppText
-          variant="serifBody"
+          variant="lead"
           color={colors.text.primary}
           style={[styles.text, featured && styles.textFeatured]}
         >
@@ -124,13 +124,13 @@ export function AffirmationCard({
       <View style={styles.actions}>
         {/* Repeat counter */}
         <PressableScale onPress={repeat} scaleTo={0.94} haptic="light" style={styles.repeatBtn}>
-          <Ionicons name="repeat" size={16} color={colors.gold[300]} />
-          <AppText variant="heading" color={colors.gold[300]} style={styles.small}>
+          <Ionicons name="repeat" size={16} color={colors.star[300]} />
+          <AppText variant="heading" color={colors.star[300]} style={styles.small}>
             {t("affirmations.ui.repeat")}
           </AppText>
           {reps > 0 ? (
             <Animated.View style={[styles.repsBadge, popStyle]}>
-              <AppText variant="numeric" color={colors.text.onGold}>
+              <AppText variant="numeric" color={colors.text.onAccent}>
                 {reps}
               </AppText>
             </Animated.View>
@@ -150,7 +150,7 @@ export function AffirmationCard({
             accessibilityLabel={isPlaying ? t("affirmations.ui.pause") : t("affirmations.ui.play")}
             accessibilityHint={t("affirmations.ui.deleteRecording")}
           >
-            <Ionicons name={isPlaying ? "pause" : "play"} size={18} color={colors.gold[200]} />
+            <Ionicons name={isPlaying ? "pause" : "play"} size={18} color={colors.star[200]} />
           </PressableScale>
         ) : null}
         <PressableScale
@@ -169,7 +169,7 @@ export function AffirmationCard({
           {isRecording ? (
             <Animated.View style={[styles.recDot, recStyle]} />
           ) : (
-            <Ionicons name="mic-outline" size={18} color={colors.gold[200]} />
+            <Ionicons name="mic-outline" size={18} color={colors.star[200]} />
           )}
         </PressableScale>
 
@@ -187,7 +187,7 @@ export function AffirmationCard({
             <Ionicons
               name={done ? "checkmark" : "checkmark-outline"}
               size={20}
-              color={done ? colors.text.onGold : colors.gold[200]}
+              color={done ? colors.text.onAccent : colors.star[200]}
             />
           </PressableScale>
           <StarBurst playKey={burst} radius={46} count={8} />
@@ -199,7 +199,7 @@ export function AffirmationCard({
           {t("affirmations.ui.recording")}
         </AppText>
       ) : done ? (
-        <AppText variant="bodySmall" color={colors.gold[300]}>
+        <AppText variant="bodySmall" color={colors.star[300]}>
           {t("affirmations.ui.doneToday")}
           {reps > 0 ? ` · ${t("affirmations.ui.repeatedToday", { n: reps })}` : ""}
         </AppText>
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderWidth: 1,
     borderColor: colors.border.hairline,
-    backgroundColor: colors.ink[900],
+    backgroundColor: surface.card,
     // No overflow clipping: the done-tick star burst flies past the edge.
   },
   wash: {
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   cardDone: {
-    borderColor: colors.gold[600],
+    borderColor: colors.star[600],
   },
   textRow: {
     flexDirection: "row",
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.gold[400],
+    backgroundColor: colors.star[400],
   },
   iconBtn: {
     width: BTN,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   iconBtnLive: {
     borderColor: colors.semantic.challenging,
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.semantic.challenging,
   },
   doneBtn: {
-    backgroundColor: colors.gold[400],
-    borderColor: colors.gold[400],
+    backgroundColor: colors.star[400],
+    borderColor: colors.star[400],
   },
 });

@@ -4,9 +4,9 @@ import {
   IsLongitude,
   IsOptional,
   IsString,
-  Matches,
   MaxLength,
 } from 'class-validator';
+import { IsCalendarDate, IsClockTime } from '../../../common/validation/calendar.validators';
 
 /** Payload to persist a second person for compatibility checks. */
 export class SavePersonDto {
@@ -19,10 +19,10 @@ export class SavePersonDto {
   @MaxLength(40)
   relationship?: string;
 
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'birthDate must be YYYY-MM-DD' })
+  @IsCalendarDate()
   birthDate: string;
 
-  @Matches(/^\d{2}:\d{2}$/, { message: 'birthTime must be HH:mm' })
+  @IsClockTime()
   birthTime: string;
 
   @IsLatitude()

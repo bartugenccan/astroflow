@@ -38,7 +38,7 @@ interface Props {
 
 const natureColor = (nature: string): string =>
   nature === "harmonic"
-    ? colors.gold[300]
+    ? colors.star[300]
     : nature === "challenging"
       ? colors.moon
       : colors.text.tertiary;
@@ -80,7 +80,7 @@ export function TransitMovementRow({ dto, movement, date, locale }: Props) {
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
       >
-        <Glyph name={movement.planet} size={24} color={colors.gold[200]} />
+        <Glyph name={movement.planet} size={24} color={colors.star[200]} />
         <View style={styles.meta}>
           <View style={styles.titleLine}>
             <AppText
@@ -169,7 +169,7 @@ function TransitReading({ dto, movement, date, locale }: Props) {
             return (
               <View key={`${a.natalPlanet}-${a.aspect}-${i}`} style={styles.aspectRow}>
                 <View style={styles.aspectGlyphs}>
-                  <Glyph name={movement.planet} size={14} color={colors.gold[200]} />
+                  <Glyph name={movement.planet} size={14} color={colors.star[200]} />
                   <Glyph name={a.aspect} size={13} color={natureColor(a.nature)} />
                   <Glyph name={a.natalPlanet} size={14} color={colors.moon} />
                 </View>
@@ -201,14 +201,14 @@ function TransitReading({ dto, movement, date, locale }: Props) {
         <ShimmerLines lines={4} />
       ) : error ? (
         <PressableScale onPress={reload} haptic="none" style={styles.retry}>
-          <Ionicons name="refresh" size={16} color={colors.gold[300]} />
-          <AppText variant="body" color={colors.gold[300]}>
+          <Ionicons name="refresh" size={16} color={colors.star[300]} />
+          <AppText variant="body" color={colors.star[300]}>
             {t("reading.retry")}
           </AppText>
         </PressableScale>
       ) : (
         <EnterView distance={6}>
-          <AppText variant="serifBody">{data?.text}</AppText>
+          <AppText variant="lead">{data?.text}</AppText>
         </EnterView>
       )}
     </View>

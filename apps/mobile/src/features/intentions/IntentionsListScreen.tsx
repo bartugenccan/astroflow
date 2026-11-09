@@ -21,7 +21,7 @@ export function IntentionsListScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <EnterView style={styles.header}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("intentions.eyebrow")}
           </AppText>
           <AppText variant="title">{t("intentions.title")}</AppText>

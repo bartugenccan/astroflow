@@ -32,23 +32,29 @@ export class AiBudgetService {
     this.global = config.get<number>('AI_DAILY_GLOBAL') ?? 20000;
   }
 
-  /** Count one generation for `deviceId` (and globally); throws once a cap is passed. */
+  /**
+   * Count one generation for `deviceId` (and globally); throws once a cap is passed.
+   * The device cap is checked first and a refused call never touches the global
+   * counter, so one token cannot exhaust everyone's budget by hammering its own cap.
+   */
   async consume(deviceId: string | undefined): Promise<void> {
     const day = new Date().toISOString().slice(0, 10);
     try {
+      if (deviceId) {
+        const deviceCount = await this.bump(day, deviceId);
+        if (deviceCount > this.perDevice) throw new AiBudgetExceeded('device');
+      }
       const globalCount = await this.bump(day, GLOBAL);
       if (globalCount > this.global) {
         if (globalCount === this.global + 1) this.logger.warn(`global AI budget reached (${this.global}/day)`);
         throw new AiBudgetExceeded('global');
       }
-      if (deviceId) {
-        const deviceCount = await this.bump(day, deviceId);
-        if (deviceCount > this.perDevice) throw new AiBudgetExceeded('device');
-      }
     } catch (err) {
       if (err instanceof AiBudgetExceeded) throw err;
-      // Counting must never take the feature down: if the DB hiccups, allow the call.
-      this.logger.warn(`AI budget check failed open: ${safeError(err)}`);
+      // Fail closed: without a working counter nothing bounds spend. The caller
+      // serves its templated stub, which is never cached.
+      this.logger.warn(`AI budget check failed closed: ${safeError(err)}`);
+      throw err;
     }
   }
 

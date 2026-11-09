@@ -1,3 +1,4 @@
+import { mt } from "../lib/motion";
 import React, { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View, Dimensions } from "react-native";
 import {
@@ -58,8 +59,7 @@ export function ChartReveal({ onComplete }: Props) {
   }, []);
 
   const ringPath = useMemo(() => {
-    const p = Skia.Path.Make();
-    p.addCircle(CENTER, CENTER, RING_R);
+    const p = Skia.Path.Circle(CENTER, CENTER, RING_R);
     return p;
   }, []);
 
@@ -97,7 +97,7 @@ export function ChartReveal({ onComplete }: Props) {
           path={ringPath}
           style="stroke"
           strokeWidth={1.4}
-          color={colors.gold[300]}
+          color={colors.star[300]}
           start={0}
           end={ringEnd}
         />
@@ -108,11 +108,11 @@ export function ChartReveal({ onComplete }: Props) {
           r={ORBIT_R}
           style="stroke"
           strokeWidth={0.5}
-          color={colors.gold[600]}
+          color={colors.star[600]}
           opacity={0.35}
         />
         <Group>
-          <Circle cx={CENTER} cy={CENTER} r={2.5} color={colors.gold[200]} />
+          <Circle cx={CENTER} cy={CENTER} r={2.5} color={colors.star[200]} />
         </Group>
       </Canvas>
 
@@ -130,10 +130,10 @@ export function ChartReveal({ onComplete }: Props) {
               opacity: show ? 1 : 0,
               scale: show ? 1 : 0.2,
             }}
-            transition={{ type: "spring", damping: 12, stiffness: 200 }}
+            transition={mt({ type: "spring", damping: 12, stiffness: 200 })}
             style={[styles.glyphWrap, { left: x - 11, top: y - 11 }]}
           >
-            <Glyph name={name} size={22} color={colors.gold[200]} />
+            <Glyph name={name} size={22} color={colors.star[200]} />
           </MotiView>
         );
       })}
@@ -160,7 +160,7 @@ function ConvergingStar({
       cx={cx}
       cy={cy}
       r={star.r}
-      color={star.gold ? colors.gold[200] : colors.text.primary}
+      color={star.gold ? colors.star[200] : colors.text.primary}
       opacity={opacity}
     />
   );

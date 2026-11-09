@@ -17,7 +17,7 @@ import type { ElectionEventId, ElectionPlace, ElectionQuery } from "../../servic
 import { useAppStore } from "../../store/useAppStore";
 import { useElectionStore } from "../../store/useElectionStore";
 import { TranslationKey, useTranslation } from "../../i18n";
-import { colors, fonts, radii, spacing } from "../../lib/design-system";
+import { colors, fonts, radii, spacing, surface } from "../../lib/design-system";
 import { PlaceSheet } from "./PlaceSheet";
 
 type Mode = "check" | "search";
@@ -125,7 +125,7 @@ export function ElectionFormScreen() {
         <BackButton />
 
         <EnterView style={styles.header}>
-          <AppText variant="label" color={colors.text.gold}>
+          <AppText variant="label" color={colors.text.accent}>
             {t("election.eyebrow")}
           </AppText>
           <AppText variant="title">{t("election.title")}</AppText>
@@ -170,7 +170,7 @@ export function ElectionFormScreen() {
                       accessibilityRole="radio"
                       accessibilityState={{ selected: active }}
                     >
-                      <AppText variant="bodySmall" color={active ? colors.text.onGold : colors.text.primary}>
+                      <AppText variant="bodySmall" color={active ? colors.text.onAccent : colors.text.primary}>
                         {t(`election.events.${id}` as TranslationKey)}
                       </AppText>
                     </PressableScale>
@@ -184,8 +184,8 @@ export function ElectionFormScreen() {
             scaleTo={0.96}
             style={[styles.chip, styles.customChip, custom && styles.chipActive]}
           >
-            <Ionicons name="create-outline" size={15} color={custom ? colors.text.onGold : colors.gold[300]} />
-            <AppText variant="bodySmall" color={custom ? colors.text.onGold : colors.gold[200]}>
+            <Ionicons name="create-outline" size={15} color={custom ? colors.text.onAccent : colors.star[300]} />
+            <AppText variant="bodySmall" color={custom ? colors.text.onAccent : colors.star[200]}>
               {t("election.custom")}
             </AppText>
           </PressableScale>
@@ -207,7 +207,7 @@ export function ElectionFormScreen() {
           <AppText variant="heading">{t("election.placeTitle")}</AppText>
           <PressableScale onPress={() => setPlaceOpen(true)} scaleTo={0.98}>
             <HairlineCard style={styles.placeCard}>
-              <Ionicons name="location" size={18} color={colors.gold[300]} />
+              <Ionicons name="location" size={18} color={colors.star[300]} />
               <View style={styles.placeText}>
                 <AppText variant="heading" numberOfLines={1}>
                   {place?.name ?? "—"}
@@ -216,7 +216,7 @@ export function ElectionFormScreen() {
                   {t("election.placeHint")}
                 </AppText>
               </View>
-              <AppText variant="bodySmall" color={colors.gold[300]}>
+              <AppText variant="bodySmall" color={colors.star[300]}>
                 {t("election.placeChange")}
               </AppText>
             </HairlineCard>
@@ -240,7 +240,7 @@ export function ElectionFormScreen() {
                   <WheelPicker items={months} selectedIndex={month - 1} onChange={(i) => setMonth(months[i].value)} width={84} />
                   <WheelPicker items={years} selectedIndex={year - ty} onChange={(i) => setYear(years[i].value)} width={92} />
                 </View>
-                <AppText variant="bodySmall" center color={dateValid ? colors.gold[200] : colors.semantic.error}>
+                <AppText variant="bodySmall" center color={dateValid ? colors.star[200] : colors.semantic.error}>
                   {formatDayMonthYear(locale, date)}
                 </AppText>
               </HairlineCard>
@@ -269,7 +269,7 @@ export function ElectionFormScreen() {
                     </View>
                   </View>
                 </View>
-                <AppText variant="bodySmall" center color={rangeValid ? colors.gold[200] : colors.semantic.error}>
+                <AppText variant="bodySmall" center color={rangeValid ? colors.star[200] : colors.semantic.error}>
                   {rangeValid
                     ? `${formatMonthYear(locale, ym(fromY, fromM))} – ${formatMonthYear(locale, ym(toY, toM))} · ${t("election.rangeNote")}`
                     : t("election.rangeInvalid")}
@@ -290,7 +290,7 @@ export function ElectionFormScreen() {
           onPress={onSubmit}
           icon={
             mode === "search" && !isPremium ? (
-              <Ionicons name="lock-closed" size={15} color={colors.text.onGold} />
+              <Ionicons name="lock-closed" size={15} color={colors.text.onAccent} />
             ) : undefined
           }
         />
@@ -306,7 +306,7 @@ export function ElectionFormScreen() {
                   <Ionicons
                     name={r.query.mode === "check" ? "calendar-outline" : "search-outline"}
                     size={16}
-                    color={colors.gold[300]}
+                    color={colors.star[300]}
                   />
                   <View style={styles.placeText}>
                     <AppText variant="heading" numberOfLines={1}>
@@ -363,23 +363,23 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   chipActive: {
-    backgroundColor: colors.gold[400],
-    borderColor: colors.gold[400],
+    backgroundColor: colors.star[400],
+    borderColor: colors.star[400],
   },
   customChip: {
     alignSelf: "flex-start",
     borderStyle: "dashed",
-    borderColor: colors.gold[500],
+    borderColor: colors.star[500],
   },
   input: {
     padding: spacing.lg,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
     fontSize: 16,

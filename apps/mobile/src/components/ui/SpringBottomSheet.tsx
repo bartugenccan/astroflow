@@ -1,3 +1,4 @@
+import { mt } from "../../lib/motion";
 import React, { useCallback, useEffect } from "react";
 import {
   View,
@@ -27,7 +28,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "./AppText";
 import { PressableScale } from "./PressableScale";
 import { useUiStore } from "../../store/useUiStore";
-import { colors, spacing, radii, motion, blurIntensity, shadows } from "../../lib/design-system";
+import { colors, spacing, radii, motion, blurIntensity, shadows, surface } from "../../lib/design-system";
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
@@ -181,7 +182,7 @@ export function SpringBottomSheet({
           <MotiView
             from={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ type: "timing", duration: 220 }}
+            transition={mt({ type: "timing", duration: 220 })}
           >
             {children}
           </MotiView>
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: SHEET_HEIGHT,
-    backgroundColor: colors.ink[900],
+    backgroundColor: surface.card,
     borderTopLeftRadius: radii.xl,
     borderTopRightRadius: radii.xl,
     borderTopWidth: 1,
@@ -229,10 +230,10 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.gold[300],
+    backgroundColor: colors.star[300],
     opacity: 0.85,
     marginBottom: spacing.sm,
-    ...shadows.goldGlow,
+    ...shadows.glow,
   },
   header: {
     flexDirection: "row",

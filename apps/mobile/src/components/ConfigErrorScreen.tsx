@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "./ui/AppText";
 import { useTranslation } from "../i18n";
-import { colors, spacing } from "../lib/design-system";
+import { colors, spacing, surface } from "../lib/design-system";
 
 /**
  * Shown by a release build that has no usable API URL (missing, or not https).
@@ -14,7 +14,7 @@ export function ConfigErrorScreen() {
   const { t } = useTranslation();
   return (
     <View style={styles.root}>
-      <Ionicons name="cloud-offline-outline" size={40} color={colors.gold[300]} />
+      <Ionicons name="cloud-offline-outline" size={40} color={colors.star[300]} />
       <AppText variant="title" center>
         {t("common.configErrorTitle")}
       </AppText>
@@ -32,6 +32,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.lg,
     padding: spacing.xxl,
-    backgroundColor: colors.ink[950],
+    backgroundColor: surface.base,
   },
 });

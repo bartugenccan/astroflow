@@ -7,7 +7,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { AppText } from "./AppText";
 import type { Locale } from "../../i18n";
-import { colors, radii, spacing, motion } from "../../lib/design-system";
+import { colors, radii, spacing, motion, surface } from "../../lib/design-system";
 
 const OPTIONS: Locale[] = ["en", "tr"];
 const LABELS: Record<Locale, string> = { en: "EN", tr: "TR" };
@@ -43,7 +43,7 @@ export function LangSwitch({ value, onChange }: Props) {
           >
             <AppText
               variant="label"
-              color={active ? colors.text.onGold : colors.text.secondary}
+              color={active ? colors.text.onAccent : colors.text.secondary}
             >
               {LABELS[opt]}
             </AppText>
@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     width: TRACK_WIDTH,
     height: 34,
     borderRadius: radii.pill,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
     flexDirection: "row",
@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
     width: THUMB_WIDTH - 2,
     height: 28,
     borderRadius: radii.pill,
-    backgroundColor: colors.gold[300],
+    backgroundColor: colors.star[300],
   },
   option: {
     flex: 1,

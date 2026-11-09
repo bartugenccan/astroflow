@@ -41,7 +41,7 @@ function renderShapes(shapes: GlyphShape[], c: string, sw: number): React.ReactN
   });
 }
 
-const DEFAULT_COLOR = colors.gold[300];
+const DEFAULT_COLOR = colors.star[300];
 
 interface GlyphProps {
   name: string;

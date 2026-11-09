@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   ForbiddenException,
@@ -33,12 +34,16 @@ import { SavePersonDto } from './dto/save-person.dto';
 import { bestDayReason } from './best-days.reasons';
 import { LifeArea } from './astrology.constants';
 import { Locale } from './interpretation.types';
+import { MascotService } from '../mascot/mascot.service';
 import { AiRoute } from '../../common/auth/route-tags';
 
 /**
  * Plain-language stand-ins for the houses, used to ground the year-ahead prompt
  * without handing the model a house number it would be tempted to repeat back.
  */
+/** Saved compatibility people per subject (the app lists them all at once). */
+const MAX_SAVED_PEOPLE = 50;
+
 const HOUSE_THEME_HINT: Record<number, string> = {
   1: 'how you show up and what you want to become',
   2: 'money, security and what you value',
@@ -66,6 +71,7 @@ export class AstrologyController {
     private readonly entitlement: DeviceEntitlementService,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly mascot: MascotService,
   ) {}
 
   @Post('natal')
@@ -201,7 +207,10 @@ export class AstrologyController {
       dto.longitude,
     );
     const date = new Date().toISOString().slice(0, 10);
-    return this.interpretation.getDailyInsight(chart, transits, deviceId, this.locale(locale), date);
+    const insight = await this.interpretation.getDailyInsight(chart, transits, deviceId, this.locale(locale), date);
+    // Reading today's sky feeds Aster (once per local day; never blocks the reading).
+    await this.mascot.awardSafely(deviceId, 'SKY_READ');
+    return insight;
   }
 
   // ─── Best days + forecast ─────────────────────────────────────────────────────
@@ -370,9 +379,13 @@ export class AstrologyController {
     @DeviceId() deviceId: string,
     @Query('feature') feature?: string,
   ) {
-    // No payment proof is checked here, so it must never grant anything in production.
+    // No payment proof is checked here, so it only works where it is switched on
+    // explicitly (local dev) and never in production, whatever the flag says.
     // During the beta everyone is Premium anyway (PREMIUM_BETA); real IAP replaces this.
-    if (this.config.get<string>('NODE_ENV') === 'production') {
+    if (
+      this.config.get<boolean>('ENABLE_STUB_UNLOCK') !== true ||
+      this.config.get<string>('NODE_ENV') === 'production'
+    ) {
       throw new ForbiddenException('Purchases are not available yet');
     }
     const ft = (Object.values(FeatureType) as string[]).includes(feature ?? '')
@@ -391,6 +404,9 @@ export class AstrologyController {
   @Post('people')
   @ApiOperation({ summary: 'Save a second person for compatibility checks' })
   async savePerson(@Body() dto: SavePersonDto, @DeviceId() deviceId: string) {
+    if ((await this.prisma.savedPerson.count({ where: { deviceId } })) >= MAX_SAVED_PEOPLE) {
+      throw new ConflictException('saved_people_limit');
+    }
     const time = dto.unknownTime ? '12:00' : dto.birthTime;
     const chart = this.adapter.getNatalChart(dto.birthDate, time, dto.latitude, dto.longitude);
     return this.prisma.savedPerson.create({

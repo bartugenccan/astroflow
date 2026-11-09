@@ -12,10 +12,11 @@ import { PressableScale } from "../../components/ui/PressableScale";
 import { BackButton } from "../../components/ui/BackButton";
 import { EnterView } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
+import { useMascotStore } from "../../store/useMascotStore";
 import { IntentionSuggestion, LifeArea } from "../../services/types";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, spacing, radii, fonts } from "../../lib/design-system";
+import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
 
 const PRESETS: { key: string; area: LifeArea }[] = [
   { key: "strength", area: "energy" },
@@ -66,6 +67,8 @@ export function CreateIntentionScreen() {
         { goalText: goal.trim(), category, lifeArea, dailyTarget: target },
         locale,
       );
+      // The first intention hatches Aster — the celebration plays over the detail screen.
+      useMascotStore.getState().applyDelta(intention.mascot);
       router.replace(`/intentions/${intention.id}` as Href);
     } catch {
       setSaving(false);
@@ -121,7 +124,7 @@ export function CreateIntentionScreen() {
 
         {/* Goal */}
         <EnterView index={1} style={styles.section}>
-          <AppText variant="labelLong" color={colors.text.gold}>
+          <AppText variant="labelLong" color={colors.text.accent}>
             {t("intentions.goalLabel")}
           </AppText>
           <TextInput
@@ -143,7 +146,7 @@ export function CreateIntentionScreen() {
               >
                 <AppText
                   variant="bodySmall"
-                  color={category === p.key ? colors.gold[200] : colors.text.tertiary}
+                  color={category === p.key ? colors.star[200] : colors.text.tertiary}
                 >
                   {t(`intentions.categories.${p.key}` as TranslationKey)}
                 </AppText>
@@ -154,7 +157,7 @@ export function CreateIntentionScreen() {
 
         {/* Target */}
         <EnterView index={2} style={styles.section}>
-          <AppText variant="labelLong" color={colors.text.gold}>
+          <AppText variant="labelLong" color={colors.text.accent}>
             {t("intentions.targetLabel")}
           </AppText>
           <DotRating value={target} onChange={setTarget} count={5} />
@@ -195,8 +198,8 @@ const styles = StyleSheet.create({
   suggestions: { gap: spacing.md },
   suggestion: { gap: spacing.xs },
   suggestionActive: {
-    borderColor: colors.gold[400],
-    backgroundColor: colors.glow.goldSoft,
+    borderColor: colors.star[400],
+    backgroundColor: colors.glow.starSoft,
   },
   suggestionWhy: { marginTop: 2 },
   input: {
@@ -204,7 +207,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
@@ -224,7 +227,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border.hairline,
   },
   presetActive: {
-    borderColor: colors.gold[400],
-    backgroundColor: colors.glow.goldSoft,
+    borderColor: colors.star[400],
+    backgroundColor: colors.glow.starSoft,
   },
 });

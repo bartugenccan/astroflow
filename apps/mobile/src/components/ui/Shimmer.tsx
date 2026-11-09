@@ -1,3 +1,4 @@
+import { mt } from "../../lib/motion";
 import React from "react";
 import { StyleSheet, View, DimensionValue } from "react-native";
 import { MotiView } from "moti";
@@ -21,8 +22,8 @@ export function ShimmerLines({ lines = 3, widths }: ShimmerLinesProps) {
           animate={{ opacity: 0.2 }}
           transition={
             reduced
-              ? { type: "timing", duration: 0 }
-              : { loop: true, type: "timing", duration: 900, delay: i * 120 }
+              ? mt({ type: "timing", duration: 0 })
+              : mt({ loop: true, type: "timing", duration: 900, delay: i * 120 })
           }
           style={[
             styles.line,
@@ -41,6 +42,6 @@ const styles = StyleSheet.create({
   line: {
     height: 14,
     borderRadius: 7,
-    backgroundColor: colors.gold[300],
+    backgroundColor: colors.star[300],
   },
 });

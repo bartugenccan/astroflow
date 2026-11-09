@@ -1,0 +1,27 @@
+# Docker build context = repo root (docker build -f apps/api/Dockerfile .)
+# Host node_modules must never reach the image: Windows/macOS native binaries
+# (bcrypt, prisma engines) would shadow the Linux ones installed by npm ci.
+**/node_modules
+**/dist
+apps/api/generated
+
+# Secrets never go into a build layer.
+**/.env
+**/.env.*
+!**/.env.example
+*.p8
+*.p12
+*.jks
+*.keystore
+google-play-service-account.json
+
+# Not needed to build the API.
+apps/mobile
+.git
+.github
+.expo
+.claude
+docs
+checklists
+coverage
+**/*.tsbuildinfo

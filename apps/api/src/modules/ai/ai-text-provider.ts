@@ -27,3 +27,8 @@ export interface AiTextProvider {
 
 /** DI token for the active AiTextProvider implementation. */
 export const AI_TEXT_PROVIDER = Symbol('AI_TEXT_PROVIDER');
+
+/** DI token for the raw vendor client (DeepSeek or Claude) behind the guards. */
+export const AI_VENDOR = Symbol('AI_VENDOR');
+
+export type AiVendorName = 'deepseek' | 'anthropic';

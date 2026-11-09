@@ -24,7 +24,7 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { AppText } from "../../components/ui/AppText";
 import { GoldButton } from "../../components/ui/GoldButton";
 import { TranslationKey, useTranslation } from "../../i18n";
-import { colors, motion, radii, spacing } from "../../lib/design-system";
+import { colors, motion, radii, spacing, surface } from "../../lib/design-system";
 import type { TarotCategory, TarotDrawnCard } from "../../services/types";
 import { TAROT_CARD_RATIO } from "./cardImages";
 import { FAN_STEP_DEG, FAN_VISIBLE_DEG, SPREAD_SIZE, TAROT_DECK } from "./deck";
@@ -444,7 +444,7 @@ function Slots({
               top: 0,
               width: g.slotW,
               height: g.slotH,
-              borderColor: i === picks ? colors.gold[300] : colors.border.hairlineStrong,
+              borderColor: i === picks ? colors.star[300] : colors.border.hairlineStrong,
             },
           ]}
         />
@@ -454,7 +454,7 @@ function Slots({
           key={`l${i}`}
           style={[styles.slotLabel, { left: x - g.slotW / 2 - 12, top: g.slotH + 6, width: g.slotW + 24 }]}
         >
-          <AppText variant="label" center numberOfLines={1} color={i < picks ? colors.text.gold : colors.text.tertiary}>
+          <AppText variant="label" center numberOfLines={1} color={i < picks ? colors.text.accent : colors.text.tertiary}>
             {labels[i]}
           </AppText>
         </View>
@@ -513,13 +513,13 @@ function SpinHint({
       ]}
     >
       <View style={styles.hintRow}>
-        <Ionicons name="chevron-back" size={16} color={colors.gold[200]} />
+        <Ionicons name="chevron-back" size={16} color={colors.star[200]} />
         <Animated.View style={[styles.hand, handStyle]}>
-          <Ionicons name="hand-left-outline" size={26} color={colors.gold[100]} />
+          <Ionicons name="hand-left-outline" size={26} color={colors.star[100]} />
         </Animated.View>
-        <Ionicons name="chevron-forward" size={16} color={colors.gold[200]} />
+        <Ionicons name="chevron-forward" size={16} color={colors.star[200]} />
       </View>
-      <AppText variant="bodySmall" center color={colors.gold[100]} style={styles.hintText}>
+      <AppText variant="bodySmall" center color={colors.star[100]} style={styles.hintText}>
         {label}
       </AppText>
     </Animated.View>
@@ -566,7 +566,7 @@ function SideCounter({
 
   const arrow = (
     <Animated.View style={arrowStyle}>
-      <Ionicons name={side === "left" ? "chevron-back" : "chevron-forward"} size={14} color={colors.gold[300]} />
+      <Ionicons name={side === "left" ? "chevron-back" : "chevron-forward"} size={14} color={colors.star[300]} />
     </Animated.View>
   );
 
@@ -803,7 +803,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: radii.pill,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
     borderWidth: 1,
     borderColor: colors.border.hairline,
   },

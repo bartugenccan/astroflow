@@ -7,7 +7,7 @@ import { HairlineCard } from "../../components/ui/HairlineCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { GuidanceTopic } from "../../services/types";
 import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, spacing, radii } from "../../lib/design-system";
+import { colors, spacing, radii, surface } from "../../lib/design-system";
 
 const TOPICS: GuidanceTopic[] = ["love", "work", "money", "decision", "person", "mood"];
 
@@ -26,7 +26,7 @@ export function CompanionPrompt({
 
   return (
     <View style={styles.wrap}>
-      <AppText variant="label" color={colors.text.gold}>
+      <AppText variant="label" color={colors.text.accent}>
         {t("companion.whatsOnYourMind")}
       </AppText>
 
@@ -51,7 +51,7 @@ export function CompanionPrompt({
 
       <PressableScale scaleTo={0.98} onPress={() => router.push("/companion" as Href)}>
         <HairlineCard style={styles.talkRow}>
-          <Ionicons name="sparkles-outline" size={18} color={colors.gold[300]} />
+          <Ionicons name="sparkles-outline" size={18} color={colors.star[300]} />
           <AppText variant="body" color={colors.text.secondary} style={styles.talkText}>
             {t("companion.talkCta")}
           </AppText>
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   talkRow: {
     flexDirection: "row",

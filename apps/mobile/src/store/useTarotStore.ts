@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { secureStorage } from "../services/secureStorage";
 import type { Locale } from "../i18n";
 import { TarotCardReading, TarotSpread, TarotSynthesis } from "../services/types";
 
@@ -55,7 +55,8 @@ export const useTarotStore = create<TarotState>()(
     }),
     {
       name: "astroflow-tarot",
-      storage: createJSONStorage(() => AsyncStorage),
+      // Keychain/Keystore, not plain storage: the reading answers the question the user typed.
+      storage: createJSONStorage(() => secureStorage),
       partialize: (s) => ({ soundOn: s.soundOn, lastReading: s.lastReading }),
     },
   ),

@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   },
   top: {
     borderWidth: 1.5,
-    borderColor: colors.gold[400],
-    ...shadows.goldGlow,
+    borderColor: colors.star[400],
+    ...shadows.glow,
   },
 });

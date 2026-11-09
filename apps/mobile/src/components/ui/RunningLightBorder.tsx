@@ -10,7 +10,7 @@ import {
   withTiming,
 } from "react-native-reanimated";
 import { BlurMask, Canvas, RoundedRect, SweepGradient, vec } from "@shopify/react-native-skia";
-import { colors, radii } from "../../lib/design-system";
+import { colors, radii, surface } from "../../lib/design-system";
 
 /** How far the glow may spill past the card edge. */
 const BLEED = 10;
@@ -18,7 +18,7 @@ const BLEED = 10;
 const RING_COLORS = [
   "rgba(150,118,47,0.15)",
   "rgba(247,240,221,0.95)",
-  colors.gold[400],
+  colors.star[400],
   "rgba(150,118,47,0.15)",
   "rgba(150,118,47,0.15)",
 ];
@@ -112,6 +112,6 @@ const styles = StyleSheet.create({
   },
   card: {
     margin: 1.5,
-    backgroundColor: colors.ink[900],
+    backgroundColor: surface.card,
   },
 });

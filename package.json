@@ -9,8 +9,15 @@
   "scripts": {
     "mobile": "npm run start --workspace=apps/mobile",
     "api": "npm run start:dev --workspace=apps/api",
+    "web": "npm run dev --workspace=apps/web",
     "mobile:ios": "npm run ios --workspace=apps/mobile",
-    "mobile:android": "npm run android --workspace=apps/api",
+    "mobile:android": "npm run android --workspace=apps/mobile",
     "lint": "npm run lint --workspaces"
+  },
+  "overrides": {
+    "multer": "2.5.0",
+    "@nestjs/platform-express": {
+      "multer": "2.5.0"
+    }
   }
 }

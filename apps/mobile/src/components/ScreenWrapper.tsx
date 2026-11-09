@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { SafeAreaView, Edge } from "react-native-safe-area-context";
 import { CelestialBackground } from "./CelestialBackground";
-import { colors } from "../lib/design-system";
+import { colors, surface } from "../lib/design-system";
 
 interface ScreenWrapperProps {
   children: React.ReactNode;
@@ -53,7 +53,7 @@ export function ScreenWrapper({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: colors.ink[950],
+    backgroundColor: surface.base,
   },
   rootClear: {
     flex: 1,

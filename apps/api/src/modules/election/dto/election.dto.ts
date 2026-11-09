@@ -9,6 +9,7 @@ import {
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+import { IsCalendarDate } from '../../../common/validation/calendar.validators';
 import { BirthInputDto } from '../../astrology/dto/birth-input.dto';
 import { ELECTION_EVENT_IDS, ElectionEventId } from '../election.types';
 
@@ -41,7 +42,7 @@ export class ElectionBaseDto extends BirthInputDto {
 }
 
 export class ElectionCheckDto extends ElectionBaseDto {
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'date must be YYYY-MM-DD' })
+  @IsCalendarDate()
   date: string;
 }
 

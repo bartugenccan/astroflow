@@ -17,12 +17,14 @@ import Animated, {
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { Glyph } from "../../components/Glyph";
+import { AsterMascot } from "../../components/aster/AsterMascot";
 import { GoldButton } from "../../components/ui/GoldButton";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
 import { useAppStore } from "../../store/useAppStore";
+import { syncProfileMeta } from "../../services/auth/account";
 import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, spacing, radii } from "../../lib/design-system";
+import { colors, spacing, radii, palette, surface } from "../../lib/design-system";
 
 interface Slide {
   eyebrow: TranslationKey;
@@ -31,6 +33,8 @@ interface Slide {
   icon: keyof typeof Ionicons.glyphMap;
   /** Optional bullet list shown under the body (`glyph` is a Glyph name). */
   points?: { glyph: string; key: TranslationKey }[];
+  /** Show Aster's egg instead of the icon. */
+  aster?: boolean;
 }
 
 const SLIDES: Slide[] = [
@@ -53,12 +57,20 @@ const SLIDES: Slide[] = [
     body: "tour.s4Body",
     icon: "information-circle-outline",
   },
+  {
+    eyebrow: "aster.meet.eyebrow",
+    title: "aster.meet.title",
+    body: "aster.meet.body",
+    icon: "star",
+    aster: true,
+  },
 ];
 
 /**
- * Four swipeable cards between the chart reveal and the app: what a birth
+ * Five swipeable cards between the chart reveal and the app: what a birth
  * chart is, what the daily sky does, where the yearly birthday chart lives,
- * and that every unknown word has an ⓘ. Skippable at any point; finishing
+ * that every unknown word has an ⓘ, and meeting Aster (still an egg — the
+ * first intention hatches it). Skippable at any point; finishing
  * (or skipping) is what completes onboarding.
  */
 export function TourScreen() {
@@ -93,6 +105,8 @@ export function TourScreen() {
     // crossfades from onboarding into the tabs.
     completeOnboarding(name.trim() || "Traveler", profile);
     clearDraft();
+    // Name + birth place label go next to the server chart, so a later sign-in restores them.
+    syncProfileMeta();
   };
 
   const last = page === SLIDES.length - 1;
@@ -154,7 +168,7 @@ export function TourScreen() {
           onPress={next}
           icon={
             last ? undefined : (
-              <Ionicons name="arrow-forward" size={18} color={colors.text.onGold} />
+              <Ionicons name="arrow-forward" size={18} color={colors.text.onPrimary} />
             )
           }
         />
@@ -203,11 +217,17 @@ function SlideView({
 
   return (
     <View style={[styles.slide, { width }]}>
-      <Animated.View style={[styles.iconOrb, iconStyle]}>
-        <Ionicons name={slide.icon} size={56} color={colors.gold[200]} />
-      </Animated.View>
+      {slide.aster ? (
+        <Animated.View style={iconStyle}>
+          <AsterMascot stage={0} mood="sleepy" size={170} />
+        </Animated.View>
+      ) : (
+        <Animated.View style={[styles.iconOrb, iconStyle]}>
+          <Ionicons name={slide.icon} size={56} color={colors.star[200]} />
+        </Animated.View>
+      )}
       <Animated.View style={[styles.textBlock, textStyle]}>
-        <AppText variant="label" color={colors.text.gold} center>
+        <AppText variant="label" color={colors.text.accent} center>
           {t(slide.eyebrow)}
         </AppText>
         <AppText
@@ -227,7 +247,7 @@ function SlideView({
             {slide.points.map((p) => (
               <View key={p.key} style={styles.point}>
                 <View style={styles.pointGlyph}>
-                  <Glyph name={p.glyph} size={18} color={colors.gold[200]} />
+                  <Glyph name={p.glyph} size={18} color={colors.star[200]} />
                 </View>
                 <AppText variant="body" color={colors.text.primary} style={styles.pointText}>
                   {t(p.key)}
@@ -283,9 +303,9 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.glow.goldSoft,
+    backgroundColor: palette.primary.face,
+    borderBottomWidth: 7,
+    borderBottomColor: palette.primary.slab,
   },
   textBlock: {
     gap: spacing.md,
@@ -305,7 +325,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border.hairline,
-    backgroundColor: colors.ink[900],
+    backgroundColor: surface.card,
   },
   pointGlyph: {
     width: 32,
@@ -313,7 +333,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.ink[800],
+    backgroundColor: surface.sheet,
   },
   pointText: {
     flex: 1,
@@ -332,6 +352,6 @@ const styles = StyleSheet.create({
   dot: {
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.gold[300],
+    backgroundColor: colors.star[300],
   },
 });

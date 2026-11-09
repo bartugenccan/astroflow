@@ -60,20 +60,20 @@ export function GuidanceSheet({ topic, dto, onClose }: GuidanceSheetProps) {
       ) : (
         <View style={styles.answer}>
           <EnterView index={0}>
-            <AppText variant="serifBody">{answer.takeaway}</AppText>
+            <AppText variant="lead">{answer.takeaway}</AppText>
           </EnterView>
 
           {answer.actions.length > 0 ? (
             <View style={styles.actions}>
               <EnterView index={1}>
-                <AppText variant="label" color={colors.text.gold}>
+                <AppText variant="label" color={colors.text.accent}>
                   {t("companion.actionsTitle")}
                 </AppText>
               </EnterView>
               {answer.actions.map((a, i) => (
                 <EnterView key={i} index={i + 2} style={styles.actionRow}>
                   <View style={styles.bullet}>
-                    <Ionicons name="sparkles" size={12} color={colors.gold[300]} />
+                    <Ionicons name="sparkles" size={12} color={colors.star[300]} />
                   </View>
                   <AppText variant="body" color={colors.text.primary} style={styles.actionText}>
                     {a}
@@ -95,9 +95,9 @@ export function GuidanceSheet({ topic, dto, onClose }: GuidanceSheetProps) {
               <Ionicons
                 name={whyOpen ? "chevron-up" : "chevron-down"}
                 size={12}
-                color={colors.gold[300]}
+                color={colors.star[300]}
               />
-              <AppText variant="labelLong" color={colors.gold[300]} style={styles.shrink}>
+              <AppText variant="labelLong" color={colors.star[300]} style={styles.shrink}>
                 {whyOpen ? t("companion.hideWhy") : t("companion.showWhy")}
               </AppText>
             </PressableScale>

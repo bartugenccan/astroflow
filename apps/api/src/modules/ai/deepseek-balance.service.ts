@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as Sentry from '@sentry/nestjs';
 import { safeError } from '../../common/logging/safe-error';
 
 /** How long a balance reading is trusted. */
@@ -15,6 +16,8 @@ interface BalanceResponse {
  * generation pauses (callers serve templated text, which is never cached), so
  * an empty balance degrades gracefully instead of producing a stream of
  * failed, retried calls. The amount itself is only ever logged server-side.
+ * When another vendor is active (AI_PROVIDER) there is no prepaid balance to
+ * guard — Claude spend is capped in the Console — so it always admits.
  */
 @Injectable()
 export class DeepSeekBalanceService {
@@ -22,6 +25,7 @@ export class DeepSeekBalanceService {
   private readonly url: string;
   private readonly apiKey: string;
   private readonly min: number;
+  private readonly active: boolean;
   private cached: { ok: boolean; at: number } | null = null;
   private inflight: Promise<boolean> | null = null;
 
@@ -31,10 +35,12 @@ export class DeepSeekBalanceService {
     this.url = `${base.replace(/\/v\d+\/?$/, '').replace(/\/$/, '')}/user/balance`;
     this.apiKey = config.get<string>('DEEPSEEK_API_KEY', '');
     this.min = config.get<number>('DEEPSEEK_MIN_BALANCE') ?? 0.2;
+    this.active = config.get<string>('AI_PROVIDER', 'anthropic') === 'deepseek';
   }
 
   /** True when there is enough balance to generate. Fails open if the balance can't be read. */
   async hasBalance(): Promise<boolean> {
+    if (!this.active) return true;
     if (!this.apiKey) return false;
     if (this.cached && Date.now() - this.cached.at < TTL_MS) return this.cached.ok;
     this.inflight ??= this.fetchBalance().finally(() => {
@@ -57,6 +63,10 @@ export class DeepSeekBalanceService {
         this.logger.warn(
           `DeepSeek balance low (${Number.isFinite(total) ? total : '?'} < ${this.min}) — AI generation paused`,
         );
+        // Alert once per transition into "paused", not on every 5-minute re-check.
+        if (this.cached?.ok !== false) {
+          Sentry.captureMessage('DeepSeek balance low — AI generation paused', 'error');
+        }
       }
       this.cached = { ok, at: Date.now() };
       return ok;

@@ -3,40 +3,58 @@ import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { Stack, SplashScreen } from "expo-router";
+import { Stack, SplashScreen, useNavigationContainerRef } from "expo-router";
 import { useFonts } from "expo-font";
 import {
-  CormorantGaramond_500Medium,
-  CormorantGaramond_600SemiBold,
-  CormorantGaramond_500Medium_Italic,
-} from "@expo-google-fonts/cormorant-garamond";
+  Nunito_700Bold,
+  Nunito_700Bold_Italic,
+  Nunito_800ExtraBold,
+  Nunito_900Black,
+} from "@expo-google-fonts/nunito";
 import {
-  Manrope_400Regular,
-  Manrope_500Medium,
-  Manrope_600SemiBold,
-  Manrope_700Bold,
-} from "@expo-google-fonts/manrope";
+  DMSans_400Regular,
+  DMSans_500Medium,
+  DMSans_600SemiBold,
+  DMSans_700Bold,
+} from "@expo-google-fonts/dm-sans";
 import { useAppStore } from "../src/store/useAppStore";
-import { colors } from "../src/lib/design-system";
+import { colors, surface } from "../src/lib/design-system";
 import { TermSheet } from "../src/features/glossary/TermSheet";
 import { ConfigErrorScreen } from "../src/components/ConfigErrorScreen";
 import { API_CONFIG_ERROR } from "../src/services/config";
+import { initSentry, navigationIntegration, Sentry } from "../src/services/sentry";
+import { AppErrorBoundary } from "../src/components/AppErrorBoundary";
+import { ReminderBridge } from "../src/features/reminders/ReminderBridge";
+import { AiConsentScreen } from "../src/features/consent/AiConsentScreen";
+import { CelebrationHost } from "../src/features/aster/CelebrationHost";
 
+initSentry();
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+/** Any render error below the root lands here (and in Sentry) instead of a white screen. */
+export { AppErrorBoundary as ErrorBoundary };
+
+function RootLayout() {
+  const navigationRef = useNavigationContainerRef();
+  useEffect(() => {
+    if (navigationRef) navigationIntegration.registerNavigationContainer(navigationRef);
+  }, [navigationRef]);
+
   const [fontsLoaded, fontError] = useFonts({
-    CormorantGaramond_500Medium,
-    CormorantGaramond_600SemiBold,
-    CormorantGaramond_500Medium_Italic,
-    Manrope_400Regular,
-    Manrope_500Medium,
-    Manrope_600SemiBold,
-    Manrope_700Bold,
+    Nunito_700Bold,
+    Nunito_700Bold_Italic,
+    Nunito_800ExtraBold,
+    Nunito_900Black,
+    DMSans_400Regular,
+    DMSans_500Medium,
+    DMSans_600SemiBold,
+    DMSans_700Bold,
   });
 
   const hasHydrated = useAppStore((s) => s._hasHydrated);
   const hasOnboarded = useAppStore((s) => s.hasOnboarded);
+  const aiConsentAt = useAppStore((s) => s.aiConsentAt);
+  const acceptAiConsent = useAppStore((s) => s.acceptAiConsent);
 
   const ready = (fontsLoaded || fontError) && hasHydrated;
 
@@ -46,6 +64,18 @@ export default function RootLayout() {
 
   if (!ready) return null;
   if (API_CONFIG_ERROR) return <ConfigErrorScreen />;
+  // Onboarded without the AI notice (signed in on a new phone, or a build from
+  // before it existed): show it once before anything else.
+  if (hasOnboarded && !aiConsentAt) {
+    return (
+      <GestureHandlerRootView style={styles.root}>
+        <SafeAreaProvider>
+          <StatusBar style="light" />
+          <AiConsentScreen onAccept={acceptAiConsent} />
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -72,6 +102,7 @@ export default function RootLayout() {
             <Stack.Screen name="chart" />
             <Stack.Screen name="compatibility" />
             <Stack.Screen name="intentions" />
+            <Stack.Screen name="aster" />
             <Stack.Screen name="election" />
             <Stack.Screen name="glossary" />
             <Stack.Screen name="reports" />
@@ -83,12 +114,18 @@ export default function RootLayout() {
         </Stack>
         {/* App-wide glossary sheet, opened from any ⓘ. */}
         {hasOnboarded ? <TermSheet /> : null}
+        {/* Local reminders: schedule from settings, route taps. */}
+        {hasOnboarded ? <ReminderBridge /> : null}
+        {/* Aster's celebrations (hatching, growing, rewards) over everything. */}
+        {hasOnboarded ? <CelebrationHost /> : null}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
+export default Sentry.wrap(RootLayout);
+
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.ink[950] },
-  content: { backgroundColor: colors.ink[950] },
+  root: { flex: 1, backgroundColor: surface.base },
+  content: { backgroundColor: surface.base },
 });

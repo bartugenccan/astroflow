@@ -8,14 +8,17 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 
 interface DeviceRequest {
   headers: Record<string, string | string[] | undefined>;
+  /** The subject (data owner) — what every `deviceId` column holds. */
   deviceId?: string;
+  /** This install (revocation, logout). */
+  installId?: string;
 }
 
 /**
  * Global guard: every route needs a valid device token
  * (`Authorization: Bearer <token>`) unless marked `@Public()`. Sets
- * `req.deviceId` for `@DeviceId()`. Routes that authenticate users with their
- * own JWT guard are `@Public()` for this guard.
+ * `req.deviceId` (the subject) for `@DeviceId()` and `req.installId` for
+ * `@InstallId()`.
  */
 @Injectable()
 export class DeviceAuthGuard implements CanActivate {
@@ -45,9 +48,10 @@ export class DeviceAuthGuard implements CanActivate {
     const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null;
 
     if (token) {
-      const deviceId = await this.auth.verify(token);
-      if (!deviceId) throw new UnauthorizedException('Invalid or expired device token');
-      req.deviceId = deviceId;
+      const principal = await this.auth.verify(token);
+      if (!principal) throw new UnauthorizedException('Invalid or expired device token');
+      req.deviceId = principal.subjectId;
+      req.installId = principal.installId;
       return true;
     }
 
@@ -56,6 +60,7 @@ export class DeviceAuthGuard implements CanActivate {
       const legacy = (Array.isArray(raw) ? raw[0] : raw)?.trim();
       if (legacy && UUID.test(legacy)) {
         req.deviceId = legacy;
+        req.installId = legacy;
         return true;
       }
     }

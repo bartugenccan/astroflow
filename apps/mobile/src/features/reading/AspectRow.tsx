@@ -34,9 +34,9 @@ export function AspectRow({ aspect }: { aspect: AspectInterpretation }) {
       >
         <View style={styles.header}>
           <View style={styles.glyphs}>
-            <Glyph name={aspect.planet1} size={18} color={colors.gold[300]} />
+            <Glyph name={aspect.planet1} size={18} color={colors.star[300]} />
             <Glyph name={aspect.aspect} size={14} color={color} />
-            <Glyph name={aspect.planet2} size={18} color={colors.gold[300]} />
+            <Glyph name={aspect.planet2} size={18} color={colors.star[300]} />
           </View>
           <View style={styles.meta}>
             {/* Both planets are the reader's own, so neither is "yours". */}

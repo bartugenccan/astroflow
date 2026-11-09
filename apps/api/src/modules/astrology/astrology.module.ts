@@ -1,3 +1,4 @@
+import { MascotModule } from '../mascot/mascot.module';
 import { Module } from '@nestjs/common';
 import { AstrologyController } from './astrology.controller';
 import { AstrologyService } from './astrology.service';
@@ -13,7 +14,7 @@ import { AIModule } from '../ai/ai.module';
 import { DeviceEntitlementService } from '../../common/device/device-entitlement.service';
 
 @Module({
-  imports: [AIModule],
+  imports: [AIModule, MascotModule],
   controllers: [AstrologyController],
   providers: [
     AstrologyService,

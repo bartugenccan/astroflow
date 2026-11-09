@@ -1,3 +1,4 @@
+import { mt } from "../../lib/motion";
 import React from "react";
 import { StyleSheet, View, KeyboardAvoidingView, Platform } from "react-native";
 import { MotiView } from "moti";
@@ -52,7 +53,7 @@ export function OnboardingFrame({
           <MotiView
             from={{ opacity: 0, translateY: 12 }}
             animate={{ opacity: 1, translateY: 0 }}
-            transition={{ type: "timing", duration: 400 }}
+            transition={mt({ type: "timing", duration: 400 })}
             style={styles.head}
           >
             <AppText
@@ -78,7 +79,7 @@ export function OnboardingFrame({
           <MotiView
             from={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ type: "timing", duration: 400, delay: 250 }}
+            transition={mt({ type: "timing", duration: 400, delay: 250 })}
           >
             <GoldButton label={ctaLabel} onPress={onNext} disabled={nextDisabled} />
           </MotiView>

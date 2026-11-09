@@ -28,7 +28,10 @@ export async function renderReportPdf(meta: ReportMeta, data: ReportData): Promi
     margins: { left: 0, top: 0, right: 0, bottom: 0 },
   });
 
-  const dir = new Directory(Paths.document, "reports");
+  // Cache, not Documents: the PDF holds birth data and can be rebuilt from the
+  // server copy, so it stays out of iCloud/device backups. The OS may purge it;
+  // `reportPdfExists` covers that.
+  const dir = new Directory(Paths.cache, "reports");
   dir.create({ intermediates: true, idempotent: true });
   const day = meta.createdAt.slice(0, 10);
   const dest = new File(dir, `astroflow-${meta.kind}-${day}-${meta.id.slice(0, 8)}.pdf`);
