@@ -13,6 +13,7 @@ import {
   withTiming,
 } from "react-native-reanimated";
 import { motion } from "../../lib/design-system";
+import { useScreenActive } from "../ScreenActive";
 import type { AsterAction } from "./types";
 
 const EYE_RY = 9;
@@ -25,10 +26,13 @@ const sin = Easing.inOut(Easing.sin);
  *  - hatch: wobble with growing intensity, then a pop;
  *  - breathe: 4 s in · 4 s hold · 4 s out guided-breath loop;
  *  - talk: mouth flaps while idle-breathing.
- * Reduce-motion keeps Aster still (blinks and mouth included).
+ * Reduce-motion keeps Aster still (blinks and mouth included). So does a
+ * screen that isn't on top (another tab, or covered by a pushed screen): the
+ * loops stop there and pick up again when the screen comes back.
  */
 export function useAsterMotion(action: AsterAction, playKey: number) {
   const reduced = useReducedMotion();
+  const active = useScreenActive();
   const breath = useSharedValue(1);
   const floatY = useSharedValue(0);
   const jumpY = useSharedValue(0);
@@ -43,7 +47,7 @@ export function useAsterMotion(action: AsterAction, playKey: number) {
   useEffect(() => {
     cancelAnimation(breath);
     cancelAnimation(floatY);
-    if (reduced) {
+    if (reduced || !active) {
       breath.value = 1;
       floatY.value = 0;
       return;
@@ -82,7 +86,7 @@ export function useAsterMotion(action: AsterAction, playKey: number) {
       cancelAnimation(breath);
       cancelAnimation(floatY);
     };
-  }, [action, reduced, breath, floatY]);
+  }, [action, reduced, active, breath, floatY]);
 
   // One-shot actions, replayed whenever playKey changes.
   useEffect(() => {
@@ -126,7 +130,7 @@ export function useAsterMotion(action: AsterAction, playKey: number) {
 
   // Random blinks.
   useEffect(() => {
-    if (reduced || action === "sleep") {
+    if (reduced || !active || action === "sleep") {
       eyeRy.value = EYE_RY;
       return;
     }
@@ -140,12 +144,12 @@ export function useAsterMotion(action: AsterAction, playKey: number) {
     };
     timer = setTimeout(blink, 1200 + Math.random() * 1500);
     return () => clearTimeout(timer);
-  }, [action, reduced, eyeRy]);
+  }, [action, reduced, active, eyeRy]);
 
   // Talking mouth.
   useEffect(() => {
     cancelAnimation(mouthRy);
-    if (action !== "talk" || reduced) {
+    if (action !== "talk" || reduced || !active) {
       mouthRy.value = withTiming(3, { duration: 120 });
       return;
     }
@@ -154,7 +158,7 @@ export function useAsterMotion(action: AsterAction, playKey: number) {
       -1,
     );
     return () => cancelAnimation(mouthRy);
-  }, [action, reduced, mouthRy]);
+  }, [action, reduced, active, mouthRy]);
 
   const bodyStyle = useAnimatedStyle(() => ({
     transform: [

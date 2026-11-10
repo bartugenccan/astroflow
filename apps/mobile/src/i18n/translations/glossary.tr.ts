@@ -17,6 +17,7 @@ export const glossaryTr: typeof glossaryEn = {
     screenSub: "Uygulamada geçen her kelime, anlaşılır bir dille — istediğinde altındaki detayla birlikte.",
     searchPlaceholder: "Bir terim ara",
     noResults: "Bununla eşleşen bir terim yok.",
+    clearSearch: "Aramayı temizle",
     openGlossary: "Sözlük",
     openGlossarySub: "Tüm terimler, açıklamalarıyla",
   },

@@ -1,7 +1,7 @@
 import { Locale } from '../../astrology/interpretation.types';
 import { TarotCard, elementName, signName } from '../tarot.deck';
-import { CATEGORY_LABEL, TAROT_SPREADS } from '../tarot.spreads';
-import { TarotCategory, TarotContext, TarotDrawnCard } from '../tarot.types';
+import { CATEGORY_LABEL, spreadPositions } from '../tarot.spreads';
+import { TarotCategory, TarotContext, TarotDrawnCard, TarotSpread } from '../tarot.types';
 import { USER_DATA_RULE, userData } from '../../../common/ai/prompt-safety';
 
 const SYSTEM: Record<Locale, string> = {
@@ -26,9 +26,10 @@ function cardLine(card: TarotCard, reversed: boolean, locale: Locale): string {
 function spreadBlock(
   locale: Locale,
   category: TarotCategory,
+  spread: TarotSpread,
   cards: { card: TarotCard; drawn: TarotDrawnCard }[],
 ): string {
-  const positions = TAROT_SPREADS[category];
+  const positions = spreadPositions(category, spread);
   return cards
     .map(({ card, drawn }, i) => `${i + 1}. ${positions[i].name[locale]}: ${cardLine(card, drawn.reversed, locale)}`)
     .join('\n');
@@ -55,8 +56,16 @@ function contextBlock(locale: Locale, ctx: TarotContext, question?: string): str
   return lines.filter(Boolean).join('\n');
 }
 
+function spreadLabel(locale: Locale, spread: TarotSpread): string {
+  if (spread === 'decision') {
+    return locale === 'tr' ? 'Beş kartlık "Yol ayrımı" (karar) açılımı' : 'The five-card "Crossroads" decision spread';
+  }
+  return locale === 'tr' ? 'Üç kartlık açılım' : 'The three-card spread';
+}
+
 export interface TarotPromptInput {
   category: TarotCategory;
+  spread: TarotSpread;
   question?: string;
   cards: { card: TarotCard; drawn: TarotDrawnCard }[];
   ctx: TarotContext;
@@ -68,19 +77,19 @@ export function tarotCardPrompt(
   index: number,
 ): { user: string; schemaHint: string } {
   const { card, drawn } = input.cards[index];
-  const position = TAROT_SPREADS[input.category][index];
-  const spread = spreadBlock(locale, input.category, input.cards);
+  const position = spreadPositions(input.category, input.spread)[index];
+  const spread = spreadBlock(locale, input.category, input.spread, input.cards);
   const ctx = contextBlock(locale, input.ctx, input.question);
   const name = card.name[locale];
 
   const user =
     locale === 'tr'
-      ? `Konu: ${CATEGORY_LABEL[input.category].tr}. Üç kartlık açılım:
+      ? `Konu: ${CATEGORY_LABEL[input.category].tr}. ${spreadLabel(locale, input.spread)}:
 ${spread}
 
 ${ctx}
 
-Şimdi YALNIZCA ${index + 1}. kartı yorumla: "${name}"${drawn.reversed ? ' (TERS)' : ''}, "${position.name.tr}" pozisyonunda — bu pozisyon ${position.asks.tr} hakkındadır. Diğer iki karta gerektiğinde kısaca atıf yapabilirsin ama odak bu kart. Çok detaylı ve bu okuyucuya özel yaz.
+Şimdi YALNIZCA ${index + 1}. kartı yorumla: "${name}"${drawn.reversed ? ' (TERS)' : ''}, "${position.name.tr}" pozisyonunda — bu pozisyon ${position.asks.tr} hakkındadır. Diğer kartlara gerektiğinde kısaca atıf yapabilirsin ama odak bu kart. Çok detaylı ve bu okuyucuya özel yaz.
 
 Alanlar:
 - "headline": kartın bu açılımdaki mesajını özetleyen tek, akılda kalıcı cümle (en fazla 12 kelime).
@@ -91,12 +100,12 @@ Alanlar:
 - "shadow": 60-100 kelime. Bu kartın gölge yüzü: nelere dikkat etmeli, hangi tuzağa düşmemeli.
 - "advice": 60-100 kelime. Bu hafta uygulanabilecek 2-3 somut adım, akıcı bir paragraf halinde.
 Tüm metin Türkçe olmalı.`
-      : `Topic: ${CATEGORY_LABEL[input.category].en}. The three-card spread:
+      : `Topic: ${CATEGORY_LABEL[input.category].en}. ${spreadLabel(locale, input.spread)}:
 ${spread}
 
 ${ctx}
 
-Now interpret ONLY card ${index + 1}: "${name}"${drawn.reversed ? ' (REVERSED)' : ''}, in the "${position.name.en}" position — this position is about ${position.asks.en}. You may briefly reference the other two cards when useful, but the focus is this card. Be very detailed and specific to this reader.
+Now interpret ONLY card ${index + 1}: "${name}"${drawn.reversed ? ' (REVERSED)' : ''}, in the "${position.name.en}" position — this position is about ${position.asks.en}. You may briefly reference the other cards when useful, but the focus is this card. Be very detailed and specific to this reader.
 
 Fields:
 - "headline": one memorable sentence capturing this card's message in this spread (max 12 words).
@@ -119,7 +128,7 @@ export function tarotSynthesisPrompt(
   locale: Locale,
   input: TarotPromptInput,
 ): { user: string; schemaHint: string } {
-  const spread = spreadBlock(locale, input.category, input.cards);
+  const spread = spreadBlock(locale, input.category, input.spread, input.cards);
   const ctx = contextBlock(locale, input.ctx, input.question);
   const majors = input.cards.filter((c) => c.card.arcana === 'major').length;
   const reversed = input.cards.filter((c) => c.drawn.reversed).length;
@@ -127,7 +136,7 @@ export function tarotSynthesisPrompt(
 
   const user =
     locale === 'tr'
-      ? `Konu: ${CATEGORY_LABEL[input.category].tr}. Üç kartlık açılım:
+      ? `Konu: ${CATEGORY_LABEL[input.category].tr}. ${spreadLabel(locale, input.spread)}:
 ${spread}
 
 ${ctx}
@@ -140,7 +149,7 @@ Kartları tek tek değil, BİRLİKTE okuyarak açılımın bütün hikâyesini a
 - "guidance": tam olarak 3 madde; her biri tek cümlelik somut bir tavsiye.
 - "affirmation": açılımdan doğan, birinci tekil şahısla yazılmış tek cümlelik bir olumlama.
 Tüm metin Türkçe olmalı.`
-      : `Topic: ${CATEGORY_LABEL[input.category].en}. The three-card spread:
+      : `Topic: ${CATEGORY_LABEL[input.category].en}. ${spreadLabel(locale, input.spread)}:
 ${spread}
 
 ${ctx}

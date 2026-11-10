@@ -487,6 +487,30 @@ export interface Intention {
   natalHouse?: number | null;
   /** Present on create: what setting it did for Aster (first one hatches the egg). */
   mascot?: MascotDelta | null;
+  /** Report card; only on the single-manifest read. */
+  stats?: IntentionStats;
+}
+
+export interface IntentionStats {
+  daysActive: number;
+  checkIns: number;
+  practiceDays: number;
+  longestStreak: number;
+  /** Conviction (1–5) of the last check-ins, oldest first, at most 30. */
+  convictionTrend: number[];
+}
+
+/** Something the user noticed on the way to a manifest. */
+export interface IntentionSign {
+  id: string;
+  text: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface SignResult {
+  sign: IntentionSign;
+  mascot: MascotDelta | null;
 }
 
 export type StarState = "seed" | "spark" | "glowing" | "radiant";
@@ -558,6 +582,31 @@ export interface CheckInInput {
   transcript?: string;
 }
 
+// ─── Manifest practice (device-local record of what was practised) ─────────────
+
+/**
+ * The four guided manifest methods:
+ *   script    — write it on paper as if it already happened (a check-in with text)
+ *   read      — read the affirmation aloud, three times (an AFFIRMATION event)
+ *   369       — write the line 3× in the morning, 6× at noon, 9× in the evening
+ *               (each session is a check-in; three per day, like the CHECKIN cap)
+ *   visualize — a minute of breathing with Aster, then three lines of gratitude
+ *               (a BREATH event; the gratitude stays on the device)
+ */
+export type PracticeMethod = "script" | "read" | "369" | "visualize";
+
+/** The three 3-6-9 sessions of a local day. */
+export type PracticeSlot = "morning" | "noon" | "evening";
+
+/** What was practised on one local day. */
+export interface PracticeDay {
+  script?: boolean;
+  /** Times read aloud today. */
+  read?: number;
+  s369?: Partial<Record<PracticeSlot, boolean>>;
+  visualize?: boolean;
+}
+
 export interface CheckInResult {
   response: string;
   conviction: number;
@@ -619,6 +668,8 @@ export interface TarotSpread {
   category: TarotCategory;
   question?: string;
   cards: TarotDrawnCard[];
+  /** "three" (default) or the five-card "decision" spread (Glimmer). */
+  spread?: TarotSpreadKey;
 }
 
 export interface TarotCardReading {
@@ -888,7 +939,9 @@ export type MascotEventKind =
   | "SKY_CHECKIN"
   | "JOURNEY_RETURN"
   | "MANIFESTED"
-  | "ACCOUNT_LINKED";
+  | "ACCOUNT_LINKED"
+  | "SKY_LESSON"
+  | "SIGN_LOG";
 
 export type MascotMood = "sleepy" | "happy" | "glowing";
 export type AccessorySlot = "head" | "neck" | "hand" | "aura";
@@ -908,8 +961,10 @@ export interface MascotDelta {
 
 export interface MascotCatalogItem {
   id: string;
-  kind: "accessory" | "shield";
+  kind: "accessory" | "shield" | "pass";
   slot?: AccessorySlot;
+  /** For passes: the metered feature it tops up. */
+  pass?: PassFeature;
   price: number;
   minStage: number;
   owned: boolean;
@@ -922,6 +977,56 @@ export interface MascotAbility {
   unlocked: boolean;
   /** False while the ability is still "coming soon". */
   available: boolean;
+}
+
+/** Harita Yolu chapters, in path order. */
+export type SkyLessonKey =
+  | "bigThree"
+  | "chartMood"
+  | "personal"
+  | "housesSelf"
+  | "housesWorld"
+  | "aspects"
+  | "jupiterSaturn"
+  | "nodes";
+
+export type LessonStatus = "done" | "open" | "lockedPrev" | "lockedStage";
+
+export interface SkyPathChapter {
+  key: SkyLessonKey;
+  status: LessonStatus;
+  minStage: number;
+  /** Yıldız Tozu to open it before the stage; 0 = never sold. */
+  earlyPrice: number;
+  /** Bought early. */
+  early: boolean;
+}
+
+export type PassFeature = "tarot" | "chat";
+export type TarotSpreadKey = "three" | "decision";
+
+/** What the next stage opens, and the Işık still to earn for it. */
+export interface NextUnlocks {
+  stage: number;
+  lessons: SkyLessonKey[];
+  spreads: TarotSpreadKey[];
+  abilities: string[];
+  items: string[];
+  xpNeeded: number;
+}
+
+export interface LessonResult {
+  delta: MascotDelta;
+  state: MascotState;
+}
+
+export interface AsterLetter {
+  week: string;
+  greeting: string;
+  body: string;
+  highlight: string;
+  ahead: string;
+  createdAt: string;
 }
 
 export interface MascotState {
@@ -949,6 +1054,14 @@ export interface MascotState {
   /** Today's sky check-in, if done. */
   skyCheckIn: { sky: MoodSky; energy: number } | null;
   constellations: { found: number; total: number };
+  /** Harita Yolu: every chapter and where it stands. */
+  skyPath: SkyPathChapter[];
+  /** Premium tastes bought today (extra uses on top of the free allowance). */
+  passesToday: Partial<Record<PassFeature, number>>;
+  /** What the next stage opens; null at Nova or before hatching. */
+  nextUnlocks: NextUnlocks | null;
+  /** Nova look switched on (stage 5 only). */
+  novaLook: boolean;
 }
 
 export interface OrbitView {

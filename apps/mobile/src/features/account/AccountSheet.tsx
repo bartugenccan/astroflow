@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, StyleSheet, TextInput, View } from "react-native";
 import type { TextInputInstance } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as AppleAuthentication from "expo-apple-authentication";
-import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { FullScreenOverlay } from "../../components/ui/FullScreenOverlay";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PressableScale } from "../../components/ui/PressableScale";
+import { AsterCameo } from "../../components/ui/AsterCameo";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation, type TFunction, type TranslationKey } from "../../i18n";
 import { ApiError } from "../../services/httpAstrologyApi";
@@ -22,7 +23,7 @@ import {
   verifyEmailSignIn,
 } from "../../services/auth/account";
 import type { AuthProviderId, LinkResult } from "../../services/types";
-import { colors, fonts, radii, spacing, surface } from "../../lib/design-system";
+import { colors, depth, fonts, palette, radii, spacing, surface, typography } from "../../lib/design-system";
 
 const RESEND_SECONDS = 30;
 const CODE_LENGTH = 6;
@@ -155,7 +156,7 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
       : t("account.sheetTitle");
 
   return (
-    <SpringBottomSheet visible={visible} onClose={onClose} title={title}>
+    <FullScreenOverlay visible={visible} onClose={onClose} title={title}>
       <View style={styles.body}>
         {managing ? (
           <>
@@ -170,16 +171,17 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
                     {p === "email" && account?.email ? account.email : t(PROVIDER_LABEL[p])}
                   </AppText>
                   {linked.length > 1 ? (
-                    <PressableScale
+                    <ChunkyButton
+                      label={t("account.remove")}
                       onPress={() => run("remove", () => unlinkProvider(p))}
                       disabled={busy !== null}
-                      accessibilityRole="button"
+                      loading={busy === "remove"}
+                      variant="ghost"
+                      size="sm"
+                      uppercase={false}
+                      haptic="light"
                       accessibilityLabel={`${t("account.remove")}: ${t(PROVIDER_LABEL[p])}`}
-                    >
-                      <AppText variant="label" color={colors.text.tertiary}>
-                        {t("account.remove")}
-                      </AppText>
-                    </PressableScale>
+                    />
                   ) : null}
                 </View>
               ))}
@@ -192,9 +194,10 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
           </>
         ) : step === "choose" ? (
           <>
-            <AppText variant="body" color={colors.text.secondary}>
-              {intent === "signIn" ? t("account.signInBody") : t("account.sheetBody")}
-            </AppText>
+            <AsterCameo
+              text={intent === "signIn" ? t("account.signInBody") : t("account.sheetBody")}
+              size={64}
+            />
             {appleAvailable && !linked.includes("apple") ? (
               <AppleAuthentication.AppleAuthenticationButton
                 buttonType={
@@ -214,7 +217,7 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
               <ChunkyButton
                 label={t("account.google")}
                 variant="cloud"
-                icon={<Ionicons name="logo-google" size={18} color="#181129" />}
+                icon={<Ionicons name="logo-google" size={18} color={palette.cloud.on} />}
                 loading={busy === "google"}
                 disabled={busy !== null}
                 onPress={() => run("google", async () => done(await signInWithGoogle()))}
@@ -274,7 +277,13 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
             <AppText variant="body" color={colors.text.secondary}>
               {t("account.codeSent", { email: email.trim() })}
             </AppText>
-            <Pressable onPress={() => codeRef.current?.focus()} style={styles.codeRow} accessibilityRole="none">
+            <PressableScale
+              onPress={() => codeRef.current?.focus()}
+              style={styles.codeRow}
+              scaleTo={0.99}
+              haptic="none"
+              accessible={false}
+            >
               {Array.from({ length: CODE_LENGTH }, (_, i) => (
                 <View
                   key={i}
@@ -297,7 +306,7 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
                 style={styles.hiddenInput}
                 accessibilityLabel={t("account.verify")}
               />
-            </Pressable>
+            </PressableScale>
             {error ? <ErrorLine text={error} /> : null}
             <ChunkyButton
               label={t("account.verify")}
@@ -306,25 +315,30 @@ export function AccountSheet({ visible, onClose, intent }: AccountSheetProps) {
               disabled={code.length !== CODE_LENGTH}
             />
             <View style={styles.linksRow}>
-              <PressableScale
+              <ChunkyButton
+                label={resendIn > 0 ? t("account.resendIn", { seconds: resendIn }) : t("account.resend")}
                 onPress={resendIn > 0 ? () => undefined : sendCode}
                 disabled={resendIn > 0 || busy !== null}
-                accessibilityRole="button"
-              >
-                <AppText variant="label" color={resendIn > 0 ? colors.text.tertiary : colors.text.accent}>
-                  {resendIn > 0 ? t("account.resendIn", { seconds: resendIn }) : t("account.resend")}
-                </AppText>
-              </PressableScale>
-              <PressableScale onPress={() => setStep("email")} accessibilityRole="button">
-                <AppText variant="label" color={colors.text.accent}>
-                  {t("account.changeEmail")}
-                </AppText>
-              </PressableScale>
+                variant="ghost"
+                size="sm"
+                uppercase={false}
+                haptic="light"
+                style={styles.grow}
+              />
+              <ChunkyButton
+                label={t("account.changeEmail")}
+                onPress={() => setStep("email")}
+                variant="ghost"
+                size="sm"
+                uppercase={false}
+                haptic="light"
+                style={styles.grow}
+              />
             </View>
           </>
         )}
       </View>
-    </SpringBottomSheet>
+    </FullScreenOverlay>
   );
 }
 
@@ -348,38 +362,45 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    paddingVertical: spacing.md,
+    minHeight: 56,
+    paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
-    backgroundColor: surface.sheet,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
+    backgroundColor: surface.raised,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
   },
   appleButton: { height: 54 },
   input: {
     height: 56,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
-    fontSize: 17,
+    fontSize: typography.heading.fontSize,
   },
   codeRow: { flexDirection: "row", justifyContent: "space-between", gap: spacing.sm },
   codeBox: {
     flex: 1,
-    height: 58,
+    height: 60,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     alignItems: "center",
     justifyContent: "center",
   },
-  codeBoxActive: { borderColor: colors.star[300] },
-  codeBoxError: { borderColor: colors.semantic.error },
+  codeBoxActive: { borderColor: colors.star[300], borderBottomColor: palette.star.slab },
+  codeBoxError: { borderColor: colors.semantic.error, borderBottomColor: palette.danger.slab },
   hiddenInput: { position: "absolute", opacity: 0, width: "100%", height: "100%" },
-  linksRow: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing.xs },
+  linksRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.xs },
 });

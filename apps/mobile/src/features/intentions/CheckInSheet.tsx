@@ -1,20 +1,18 @@
 import React, { useState } from "react";
-import { StyleSheet, View, TextInput } from "react-native";
-import * as Haptics from "expo-haptics";
-import { MotiView } from "moti";
+import { StyleSheet, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { AppText } from "../../components/ui/AppText";
-import { DotRating } from "../../components/ui/DotRating";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
-import { StarBurst } from "./StarBurst";
-import { useMotion } from "../../lib/motion";
+import { SpeechBubble } from "../../components/ui/SpeechBubble";
+import { AsterMascot } from "../../components/aster/AsterMascot";
+import { EnterView } from "../../lib/motion";
+import { ConvictionPicker } from "./ConvictionPicker";
 import { astrologyApi } from "../../services/astrologyApi";
-import { useMascotStore } from "../../store/useMascotStore";
-import { CheckInResult } from "../../services/types";
+import { useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
+import type { CheckInResult } from "../../services/types";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
+import { colors, depth, palette, radii, spacing, surface, typography } from "../../lib/design-system";
 
 interface CheckInSheetProps {
   visible: boolean;
@@ -24,12 +22,18 @@ interface CheckInSheetProps {
   onResult: (r: CheckInResult) => void;
 }
 
+/**
+ * Check in on a wish: say the affirmation, set how bright it feels (1–5) on a
+ * star slider, add a note if you like, and Aster answers. The answer feeds
+ * Aster — Işık, level-ups, milestones and shields queue app-wide.
+ */
 export function CheckInSheet({ visible, onClose, intentionId, affirmation, onResult }: CheckInSheetProps) {
   const { t, locale } = useTranslation();
-  const m = useMotion();
+  const mascot = useMascotStore((s) => s.state);
   const [conviction, setConviction] = useState(0);
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
 
   const reset = () => {
@@ -37,6 +41,7 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
     setNote("");
     setResult(null);
     setSubmitting(false);
+    setFailed(false);
   };
 
   const close = () => {
@@ -47,6 +52,7 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
   const submit = async () => {
     if (conviction === 0 || submitting) return;
     setSubmitting(true);
+    setFailed(false);
     try {
       const r = await astrologyApi.checkInIntention(
         intentionId,
@@ -60,94 +66,94 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
         milestoneName: r.milestoneName,
         shieldsUsed: r.streak.shieldsUsed,
       });
-      if (r.dayCompleted) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      }
     } catch {
-      // stay on the input step so the user can retry
+      // Stay on the input step so the user can retry.
+      setFailed(true);
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <SpringBottomSheet visible={visible} onClose={close} title={t("intentions.checkInTitle")}>
+    <SpringBottomSheet visible={visible} onClose={close} title={t("wish.checkin.title")}>
       {result ? (
-        <View style={styles.replyWrap}>
+        <View style={styles.wrap}>
           {result.dayCompleted ? (
-            <MotiView
-              from={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={m.spring("mystic")}
-              style={styles.celebrate}
-            >
-              <Ionicons name="sparkles" size={22} color={colors.star[200]} />
+            // A quiet tick in place; the Işık arrives once, in the reward pill.
+            <EnterView scale style={styles.celebrate}>
+              <Ionicons name="checkmark-circle" size={22} color={colors.star[200]} />
               <AppText variant="heading" color={colors.star[200]} style={styles.shrink}>
-                {t("intentions.dayComplete")}
+                {t("wish.checkin.dayComplete")}
               </AppText>
-              <StarBurst playKey={1} radius={80} />
-            </MotiView>
+            </EnterView>
           ) : null}
 
-          <AppText variant="lead">{result.response}</AppText>
+          <EnterView index={1} style={styles.reply}>
+            <AsterMascot
+              stage={mascot?.stage ?? 1}
+              mood={mascot?.mood ?? "happy"}
+              accessories={mascot?.equipped ?? NO_EQUIPPED}
+              size={72}
+              action="cheer"
+            />
+            <SpeechBubble tail="left" style={styles.flex}>
+              <AppText variant="body" color={colors.text.primary}>
+                {result.response}
+              </AppText>
+            </SpeechBubble>
+          </EnterView>
 
           {result.strongerPhrasing ? (
-            <View style={styles.stronger}>
+            <EnterView index={2} style={styles.stronger}>
               <AppText variant="label" color={colors.text.accent}>
-                {t("intentions.strongerPhrasing")}
+                {t("wish.checkin.stronger")}
               </AppText>
-              <AppText variant="body" color={colors.text.primary} style={styles.strongerText}>
-                “{result.strongerPhrasing}”
-              </AppText>
-            </View>
+              <AppText variant="lead">“{result.strongerPhrasing}”</AppText>
+            </EnterView>
           ) : null}
 
-          {result.followUp ? (
-            <AppText variant="body" color={colors.text.secondary}>
-              {result.followUp}
-            </AppText>
-          ) : null}
+          {result.followUp ? <AppText variant="body">{result.followUp}</AppText> : null}
 
-          <ChunkyButton label={t("common.done")} onPress={close} style={{ marginTop: spacing.md }} />
+          <ChunkyButton label={t("wish.checkin.done")} onPress={close} />
         </View>
       ) : (
-        <View style={styles.inputWrap}>
+        <View style={styles.wrap}>
           <AppText variant="lead" center>
             “{affirmation}”
           </AppText>
 
-          <View style={styles.ratingBlock}>
-            <AppText variant="body" center color={colors.text.secondary}>
-              {t("intentions.convictionQ")}
-            </AppText>
-            <DotRating value={conviction} onChange={setConviction} />
-          </View>
+          <ConvictionPicker value={conviction} onChange={setConviction} />
 
-          <View style={styles.noteBlock}>
+          <View style={styles.block}>
             <AppText variant="labelLong" color={colors.text.accent}>
-              {t("intentions.noteLabel")}
+              {t("wish.checkin.noteLabel")}
             </AppText>
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder={t("intentions.notePlaceholder")}
+              placeholder={t("wish.checkin.notePlaceholder")}
               placeholderTextColor={colors.text.tertiary}
               style={styles.input}
               multiline
+              maxLength={500}
+              accessibilityLabel={t("wish.checkin.noteLabel")}
             />
           </View>
 
-          {submitting ? (
-            <View style={styles.loading}>
-              <CelestialLoader size="sm" />
-            </View>
-          ) : (
-            <ChunkyButton
-              label={t("intentions.submit")}
-              onPress={submit}
-              disabled={conviction === 0}
-            />
-          )}
+          {failed ? (
+            <AppText variant="bodySmall" color={colors.semantic.error} accessibilityLiveRegion="polite">
+              {t("wish.checkin.error")}
+            </AppText>
+          ) : null}
+
+          <ChunkyButton
+            label={t("wish.checkin.submit")}
+            variant="star"
+            onPress={submit}
+            loading={submitting}
+            disabled={conviction === 0}
+            icon={<Ionicons name="star" size={18} color={palette.star.on} />}
+          />
         </View>
       )}
     </SpringBottomSheet>
@@ -155,53 +161,31 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
 }
 
 const styles = StyleSheet.create({
-  inputWrap: {
-    gap: spacing.xl,
-  },
-  ratingBlock: {
-    gap: spacing.md,
-    alignItems: "center",
-  },
-  noteBlock: {
-    gap: spacing.sm,
-  },
-  input: {
-    minHeight: 80,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
-    padding: spacing.lg,
-    color: colors.text.primary,
-    fontFamily: fonts.sans,
-    fontSize: 15,
-    textAlignVertical: "top",
-  },
-  loading: {
-    alignItems: "center",
-    paddingVertical: spacing.md,
-  },
-  replyWrap: {
-    gap: spacing.lg,
-  },
-  shrink: {
-    flexShrink: 1,
-  },
-  celebrate: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-  },
+  wrap: { gap: spacing.xl },
+  block: { gap: spacing.md },
+  flex: { flex: 1 },
+  shrink: { flexShrink: 1 },
+  celebrate: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: spacing.sm },
+  reply: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
   stronger: {
     gap: spacing.xs,
     padding: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
-    backgroundColor: surface.sheet,
+    borderRadius: radii.lg,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.card,
   },
-  strongerText: {
-    fontStyle: "italic",
+  input: {
+    ...typography.body,
+    color: colors.text.primary,
+    minHeight: 80,
+    padding: spacing.lg,
+    borderRadius: radii.md,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    backgroundColor: surface.raised,
+    textAlignVertical: "top",
   },
 });

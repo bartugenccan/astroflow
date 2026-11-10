@@ -23,11 +23,12 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { useScreenActive } from "../../components/ScreenActive";
 import { TranslationKey, useTranslation } from "../../i18n";
-import { colors, motion, radii, spacing, surface } from "../../lib/design-system";
-import type { TarotCategory, TarotDrawnCard } from "../../services/types";
+import { colors, motion, palette, radii, spacing, surface } from "../../lib/design-system";
+import type { TarotCategory, TarotDrawnCard, TarotSpreadKey } from "../../services/types";
 import { TAROT_CARD_RATIO } from "./cardImages";
-import { FAN_STEP_DEG, FAN_VISIBLE_DEG, SPREAD_SIZE, TAROT_DECK } from "./deck";
+import { FAN_STEP_DEG, FAN_VISIBLE_DEG, TAROT_DECK, positionKey, spreadSize } from "./deck";
 import { DeckState, dealAll, freshDeck, shufflePass } from "./shuffle";
 import { TarotCardBack } from "./TarotCardBack";
 import type { TarotSounds } from "./useTarotSounds";
@@ -74,12 +75,13 @@ interface Geometry {
   slotCy: number;
 }
 
-function geometry(width: number): Geometry {
+function geometry(width: number, size: number): Geometry {
   const H = Math.max(100, Math.min(136, width * 0.34));
   const W = H * TAROT_CARD_RATIO;
   const pivotExtra = H * 0.18;
   const R = H / 2 + pivotExtra;
-  const slotScale = 0.82;
+  // Five slots need smaller cards to fit one row.
+  const slotScale = size > 3 ? 0.54 : 0.82;
   const slotW = W * slotScale;
   const slotH = H * slotScale;
   const slotsHeight = slotH + 28;
@@ -87,7 +89,7 @@ function geometry(width: number): Geometry {
   const topRadius = R + H / 2;
   const pivotY = slotsHeight + spacing.xl + lift + topRadius;
   const cx = width / 2;
-  const gap = spacing.lg;
+  const gap = size > 3 ? spacing.sm : spacing.lg;
   return {
     width,
     // Cards turned towards 90° lie almost flat, reaching half a card below the pivot.
@@ -105,7 +107,7 @@ function geometry(width: number): Geometry {
     slotScale,
     slotW,
     slotH,
-    slotCx: [cx - slotW - gap, cx, cx + slotW + gap],
+    slotCx: Array.from({ length: size }, (_, i) => cx + (i - (size - 1) / 2) * (slotW + gap)),
     slotCy: slotH / 2,
   };
 }
@@ -132,6 +134,8 @@ const fanZ = (angle: number) => {
 
 interface Props {
   category: TarotCategory;
+  /** The five-card decision spread, or the default three. */
+  spread?: TarotSpreadKey;
   sounds: TarotSounds;
   onComplete: (cards: TarotDrawnCard[]) => void;
   onChangeTheme: () => void;
@@ -145,9 +149,12 @@ interface Props {
  * screen: dragging sideways turns it around the pivot, the card at 12 o'clock
  * rises, and tapping any card draws it into the next of the three slots.
  */
-export function TarotTable({ category, sounds, onComplete, onChangeTheme }: Props) {
+export function TarotTable({ category, sounds, onComplete, onChangeTheme, spread }: Props) {
+  const size = spreadSize(spread);
   const { t } = useTranslation();
   const reduced = useReducedMotion();
+  /** Off view (another tab, or a screen on top): the riffle and its sound rest. */
+  const active = useScreenActive();
   const [g, setG] = useState<Geometry | null>(null);
   const [mode, setMode] = useState<Mode>("stack");
   const [picks, setPicks] = useState<number[]>([]);
@@ -178,7 +185,7 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme }: Prop
   }, [picks, picked]);
 
   useEffect(() => {
-    fanOpen.value = mode === "fan" && picks.length < SPREAD_SIZE ? 1 : 0;
+    fanOpen.value = mode === "fan" && picks.length < size ? 1 : 0;
   }, [mode, picks.length, fanOpen]);
 
   useEffect(
@@ -194,19 +201,30 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme }: Prop
 
   const onLayout = useCallback((e: LayoutChangeEvent) => {
     const w = Math.round(e.nativeEvent.layout.width);
-    setG((prev) => (prev && prev.width === w ? prev : geometry(w)));
+    setG((prev) => (prev && prev.width === w && prev.slotCx.length === size ? prev : geometry(w, size)));
   }, []);
 
   const startShuffle = useCallback(() => {
     deck.current = shufflePass(deck.current);
     setMode("shuffle");
-    sounds.startShuffle();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
+
+  // The riffle runs — sound, timer and haptics — only while the table is on
+  // view. Leaving mid-shuffle pauses it; coming back picks it up again.
+  useEffect(() => {
+    if (mode !== "shuffle" || !active) return;
+    sounds.startShuffle();
     shuffleTimer.current = setInterval(() => {
       deck.current = shufflePass(deck.current);
       Haptics.selectionAsync();
     }, CYCLE_MS);
-  }, [sounds]);
+    return () => {
+      if (shuffleTimer.current) clearInterval(shuffleTimer.current);
+      shuffleTimer.current = null;
+      sounds.stopShuffle();
+    };
+  }, [mode, active, sounds]);
 
   const stopShuffle = useCallback(() => {
     if (shuffleTimer.current) clearInterval(shuffleTimer.current);
@@ -235,13 +253,13 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme }: Prop
   const pick = useCallback(
     (index: number) => {
       const prev = picksRef.current;
-      if (prev.length >= SPREAD_SIZE || prev.includes(index)) return;
+      if (prev.length >= size || prev.includes(index)) return;
       const next = [...prev, index];
       picksRef.current = next;
       setPicks(next);
       sounds.playPick();
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      if (next.length === SPREAD_SIZE) {
+      if (next.length === size) {
         const drawn = next.map((i) => fan.current[i]);
         timers.current.push(
           setTimeout(() => setMode("gone"), 650),
@@ -249,7 +267,7 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme }: Prop
         );
       }
     },
-    [sounds, onComplete, reduced],
+    [sounds, onComplete, reduced, size],
   );
 
   const focusTick = useCallback(() => {
@@ -350,9 +368,12 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme }: Prop
   }, [g, fanOpen, spin, spinStart, spunOnce, picked, focused, pick, reduced]);
 
   const inHand = mode === "fan" || mode === "gone";
-  const choosing = mode === "fan" && picks.length < SPREAD_SIZE;
-  const positions = [0, 1, 2].map((i) =>
-    t(`tarot.positions.${category}.p${i}` as TranslationKey),
+  // A paused shuffle lets the 78 cards settle into the pile instead of
+  // riffling off screen (about 230 animated values every frame).
+  const cardMode: Mode = mode === "shuffle" && !active ? "stack" : mode;
+  const choosing = mode === "fan" && picks.length < size;
+  const positions = Array.from({ length: size }, (_, i) =>
+    t(positionKey(category, spread, i)),
   );
 
   return (
@@ -380,16 +401,16 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme }: Prop
                   key={i}
                   index={i}
                   g={g}
-                  mode={mode}
+                  mode={cardMode}
                   slot={picks.indexOf(i)}
                   spin={spin}
                   focused={focused}
                   reduced={reduced}
                 />
               ))}
-              <SpinHint g={g} visible={choosing && !hasSpun} reduced={reduced} label={t("tarot.spinHint")} />
-              <SideCounter g={g} side="left" count={hidden.left} visible={choosing} reduced={reduced} />
-              <SideCounter g={g} side="right" count={hidden.right} visible={choosing} reduced={reduced} />
+              <SpinHint g={g} visible={choosing && !hasSpun && active} reduced={reduced} label={t("tarot.spinHint")} />
+              <SideCounter g={g} side="left" count={hidden.left} visible={choosing && active} reduced={reduced} />
+              <SideCounter g={g} side="right" count={hidden.right} visible={choosing && active} reduced={reduced} />
             </>
           ) : null}
         </View>
@@ -452,7 +473,12 @@ function Slots({
       {g.slotCx.map((x, i) => (
         <View
           key={`l${i}`}
-          style={[styles.slotLabel, { left: x - g.slotW / 2 - 12, top: g.slotH + 6, width: g.slotW + 24 }]}
+          style={[
+            styles.slotLabel,
+            g.slotCx.length > 3
+              ? { left: x - g.slotW / 2 - 4, top: g.slotH + 6, width: g.slotW + 8 }
+              : { left: x - g.slotW / 2 - 12, top: g.slotH + 6, width: g.slotW + 24 },
+          ]}
         >
           <AppText variant="label" center numberOfLines={1} color={i < picks ? colors.text.accent : colors.text.tertiary}>
             {labels[i]}
@@ -731,12 +757,25 @@ const FanCard = React.memo(function FanCard({ index, g, mode, slot, spin, focuse
   return (
     <Animated.View
       pointerEvents="none"
+      // The face never changes while a card moves, only its transform: let the
+      // GPU keep it as a texture instead of redrawing gradient + SVG each frame.
+      renderToHardwareTextureAndroid
       style={[styles.card, { left: g.baseLeft, top: g.baseTop, width: g.W, height: g.H }, style]}
     >
-      <TarotCardBack width={g.W} height={g.H} />
+      {/* Kept inside the card's box: a hardware layer clips anything outside it. */}
+      <View style={[styles.cardSlab, { borderRadius: cardRadius(g.W) }]} />
+      <TarotCardBack width={g.W} height={g.H - CARD_SLAB} />
     </Animated.View>
   );
 });
+
+/** Depth of the hard slab under each card. */
+const CARD_SLAB = 3;
+
+/** Same corner as TarotCardBack draws, so the slab sits flush under it. */
+function cardRadius(width: number): number {
+  return Math.max(6, width * 0.09);
+}
 
 const styles = StyleSheet.create({
   root: {
@@ -752,17 +791,25 @@ const styles = StyleSheet.create({
   },
   card: {
     position: "absolute",
-    shadowColor: "#000",
-    shadowOpacity: 0.45,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
+  },
+  // A crisp slab under each card (no blur) so the deck reads as physical. A
+  // real view, not an iOS shadow: a shadow on a background-less view is
+  // re-rendered offscreen every frame, and 78 of them turning made the fan
+  // stutter (Android never drew the shadow at all).
+  cardSlab: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: CARD_SLAB,
+    bottom: 0,
+    backgroundColor: surface.slab,
   },
   slot: {
     position: "absolute",
     borderRadius: radii.sm,
-    borderWidth: 1,
+    borderWidth: 2,
     borderStyle: "dashed",
-    backgroundColor: "rgba(10,14,28,0.35)",
+    backgroundColor: palette.night.soft,
   },
   slotLabel: {
     position: "absolute",
@@ -780,9 +827,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radii.pill,
-    backgroundColor: "rgba(6,8,16,0.72)",
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
+    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
   },
   hand: {
     width: 30,
@@ -791,7 +838,7 @@ const styles = StyleSheet.create({
   hintText: {
     paddingHorizontal: spacing.sm,
     borderRadius: radii.sm,
-    backgroundColor: "rgba(6,8,16,0.72)",
+    backgroundColor: surface.sheet,
     overflow: "hidden",
   },
   counter: {

@@ -1,11 +1,13 @@
 import { createHash } from 'crypto';
-import { BadRequestException, Inject, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Inject, Injectable, Logger } from '@nestjs/common';
 import { InterpretationKind } from '../../../generated/prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AI_TEXT_PROVIDER, AiTextProvider } from '../ai/ai-text-provider';
 import { AstrologyAdapterService } from '../astrology/astrology-adapter.service';
 import { Locale } from '../astrology/interpretation.types';
 import { MemoryService } from '../companion/memory.service';
+import { MascotService } from '../mascot/mascot.service';
+import { SPREAD_SIZE } from './tarot.spreads';
 import { tarotCard } from './tarot.deck';
 import { TarotCardDto, TarotSpreadDto } from './dto/tarot-spread.dto';
 import {
@@ -33,6 +35,7 @@ export class TarotService {
     private readonly prisma: PrismaService,
     private readonly adapter: AstrologyAdapterService,
     private readonly memory: MemoryService,
+    private readonly mascot: MascotService,
   ) {}
 
   /** Detailed reading of one card of the spread. */
@@ -42,7 +45,7 @@ export class TarotService {
     const rawKey = `tarot-card|${this.spreadKey(deviceId, dto)}|${dto.index}`;
 
     const text = await this.cached('TAROT_CARD', locale, rawKey, async () => {
-      const stub = tarotCardStub(locale, dto.category, card, drawn, dto.index);
+      const stub = tarotCardStub(locale, dto.category, card, drawn, dto.index, input.spread);
       if (!this.ai.available) return stub;
       try {
         const { user, schemaHint } = tarotCardPrompt(locale, input, dto.index);
@@ -119,8 +122,19 @@ export class TarotService {
     if (new Set(ids).size !== ids.length) {
       throw new BadRequestException('A card cannot appear twice in one spread.');
     }
+    const spread = dto.spread ?? 'three';
+    if (dto.cards.length !== SPREAD_SIZE[spread]) {
+      throw new BadRequestException(`The ${spread} spread takes ${SPREAD_SIZE[spread]} cards.`);
+    }
+    if ('index' in dto && typeof dto.index === 'number' && dto.index >= dto.cards.length) {
+      throw new BadRequestException('No card at that position.');
+    }
+    if (spread !== 'three' && !(await this.mascot.spreadAllowed(deviceId, spread))) {
+      throw new ForbiddenException('This spread opens when Aster grows to Glimmer.');
+    }
     return {
       category: dto.category,
+      spread,
       question: dto.question?.trim() || undefined,
       cards: dto.cards.map((drawn) => ({ card: tarotCard(drawn.cardId), drawn })),
       ctx: await this.context(deviceId, dto),
@@ -153,7 +167,7 @@ export class TarotService {
     const date = new Date().toISOString().slice(0, 10);
     const cards = dto.cards.map((c) => `${c.cardId}${c.reversed ? 'R' : ''}`).join(',');
     const question = this.hash(dto.question?.trim().toLowerCase() ?? '').slice(0, 12);
-    return `${deviceId}|${date}|${dto.category}|${question}|${cards}`;
+    return `${deviceId}|${date}|${dto.category}|${dto.spread ?? 'three'}|${question}|${cards}`;
   }
 
   private hash(s: string): string {

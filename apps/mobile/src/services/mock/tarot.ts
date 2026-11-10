@@ -7,7 +7,12 @@ import { tarotCardInfo } from "../../features/tarot/deck";
 const cardName = (id: string, locale: Locale) => tarotCardInfo(id)?.name[locale] ?? id;
 
 const positionName = (spread: TarotSpread, index: number, locale: Locale) =>
-  translate(locale, `tarot.positions.${spread.category}.p${index}` as TranslationKey);
+  translate(
+    locale,
+    (spread.spread === "decision"
+      ? `tarot.positions.decision.p${index}`
+      : `tarot.positions.${spread.category}.p${index}`) as TranslationKey,
+  );
 
 export function mockTarotCard(spread: TarotSpread, index: number, locale: Locale): TarotCardReading {
   const drawn = spread.cards[index];

@@ -1,313 +1,321 @@
-import React, { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
-import { useRouter, type Href } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { runAfterTransition } from "../../lib/afterInteractions";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { useFocusEffect, useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { ChunkyButton } from "../../components/ui/ChunkyButton";
-import { SpeechBubble } from "../../components/ui/SpeechBubble";
-import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { IconButton } from "../../components/ui/IconButton";
 import { PressableScale } from "../../components/ui/PressableScale";
-import { AsterMascot } from "../../components/aster/AsterMascot";
+import { SectionLink } from "../../components/ui/SectionLink";
+import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { StateView } from "../../components/ui/StateView";
+import { MoonPhase } from "../../components/MoonPhase";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { EnterView } from "../../lib/motion";
-import { IntentionsList } from "../intentions/IntentionsList";
-import { CheckInSheet } from "../intentions/CheckInSheet";
-import { AddAffirmationSheet, AffirmationsSection } from "../affirmations/AffirmationsSection";
+import {
+  AddAffirmationSheet,
+  AffirmationsCarousel,
+  isAffirmationCategory,
+} from "../affirmations/AffirmationsCarousel";
+import { astrologyApi } from "../../services/astrologyApi";
+import { useAsync } from "../../hooks/useAsync";
+import { useBirthDto } from "../../hooks/useBirthDto";
 import { localDay } from "../../store/useAffirmationStore";
 import { useReflectionStore } from "../../store/useReflectionStore";
 import { useMascotStore } from "../../store/useMascotStore";
-import { lunarWindow } from "../../lib/mascotRules";
-import type { AffirmationCategory, Intention } from "../../services/types";
-import { useTranslation } from "../../i18n";
-import { colors, fonts, palette, radii, spacing, surface } from "../../lib/design-system";
+import { usePlanStore } from "../../store/usePlanStore";
+import { useAppStore, FREE_INTENTIONS } from "../../store/useAppStore";
+import type { AffirmationCategory, PracticeMethod } from "../../services/types";
+import { useTranslation, type TranslationKey } from "../../i18n";
+import { colors, radii, spacing, surface } from "../../lib/design-system";
 import { useMascot } from "../aster/useMascot";
-import { asterA11y, asterLine } from "../aster/asterCopy";
+import { WishSky } from "./WishSky";
+import { PracticeHero } from "./PracticeHero";
+import { LunarSheet, ShelfSheet } from "./ManifestSheets";
+import { EveningReflectionSheet } from "./RitualSheets";
+import { lunarInfo, planAffirmationCategory } from "./wishModel";
+import { isMethod, pickPractice } from "./practiceModel";
 
 /**
- * Manifest — everything that feeds Aster in one place: Aster holding your
- * intention, the Moon ritual when a new/full moon is near, your intentions
- * with one-tap check-ins, closing the day in the evening, and affirmations.
- * Journaling text (rituals, reflections) stays on the device; only the fact
- * that it happened is reported to Aster.
+ * Manifest. One screen, one thing to do: today's guided practice (scripting,
+ * reading aloud, 3-6-9 or visualise + gratitude, or the Moon ritual in its
+ * window), with the four methods one tap away. Below it the manifestation
+ * stars, and a short list of links for everything else — the Moon's cycle,
+ * the came-true shelf, affirmations and how manifesting works — each in its
+ * own sheet, so nothing is lost and nothing crowds.
+ *
+ * Deep links: `?affirm=<category>` opens the affirmations on that category,
+ * `?ritual=evening|moon` the matching ritual, `?practice=<method>` a practice.
  */
 export function ManifestScreen() {
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const router = useRouter();
-  const { state } = useMascot();
-  const [paywall, setPaywall] = useState(false);
-  const [checkIn, setCheckIn] = useState<Intention | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [addCategory, setAddCategory] = useState<AffirmationCategory | null>(null);
-  const [moonOpen, setMoonOpen] = useState(false);
-  const [reflectOpen, setReflectOpen] = useState(false);
+  const params = useLocalSearchParams<{ affirm?: string; ritual?: string; practice?: string }>();
+  const dto = useBirthDto();
+  const plan = usePlanStore((s) => s.plan);
+  const planLoading = usePlanStore((s) => s.loading);
+  const isPremium = useAppStore((s) => s.isPremium);
+  useMascot();
 
-  const moon = useMemo(() => lunarWindow(new Date()), []);
-  const moonKey = moon ? `${moon.phase}:${moon.peakDate}` : null;
-  const ritualDone = useReflectionStore((s) => (moonKey ? moonKey in s.rituals : false));
-  const dayClosed = useReflectionStore((s) => localDay() in s.days);
-  const evening = new Date().getHours() >= 17;
+  const [reloadKey, setReloadKey] = useState(0);
+  const wishes = useAsync(() => astrologyApi.listIntentions(), [reloadKey]);
+  const shelf = useAsync(() => astrologyApi.listIntentions("manifested"), [reloadKey]);
+  const lunar = useMemo(() => lunarInfo(new Date()), [reloadKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [sheet, setSheet] = useState<null | "lunar" | "shelf" | "affirm" | "evening">(null);
+  const [addCategory, setAddCategory] = useState<AffirmationCategory | null>(null);
+  const [paywall, setPaywall] = useState(false);
+  const [category, setCategory] = useState<AffirmationCategory | null>(null);
+  // Only a pull-to-refresh shows the spinner; focus reloads stay quiet.
+  const [pulling, setPulling] = useState(false);
+  useEffect(() => {
+    if (!wishes.loading) setPulling(false);
+  }, [wishes.loading]);
+
+  const ritualDone = useReflectionStore((s) => (lunar.windowKey ? lunar.windowKey in s.rituals : false));
+  const today = useReflectionStore((s) => s.practice[localDay()]);
+
+  const reload = useCallback(() => setReloadKey((k) => k + 1), []);
+
+  // Coming back from a practice, a manifestation or the wizard: stars and the shelf change.
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) {
+        firstFocus.current = false;
+        return;
+      }
+      // After the tab has eased in, so the re-render misses the animation.
+      return runAfterTransition(reload);
+    }, [reload]),
+  );
+
+  // The plan personalises the Moon line, the power manifestation and the affirmations.
+  useEffect(() => {
+    if (dto && !usePlanStore.getState().plan) usePlanStore.getState().refresh(dto);
+  }, [dto]);
+
+  // A shield bridged a missed day while loading — let Aster tell the user.
+  const shielded = (wishes.data ?? []).reduce((n, it) => n + (it.streak.shieldsUsed ?? 0), 0);
+  useEffect(() => {
+    if (shielded > 0) useMascotStore.getState().applyDelta(null, { shieldsUsed: shielded });
+  }, [shielded]);
+
+  const active = wishes.data ?? [];
+
+  const startPractice = useCallback(
+    (method: PracticeMethod) => {
+      setSheet(null);
+      router.push(`/practice?method=${method}` as Href);
+    },
+    [router],
+  );
+
+  // ─── Deep links ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const a = params.affirm;
+    if (a === undefined) return;
+    if (isAffirmationCategory(a)) {
+      setCategory(a);
+      setSheet("affirm");
+    }
+    router.setParams({ affirm: undefined });
+  }, [params.affirm, router]);
+
+  useEffect(() => {
+    const r = params.ritual;
+    if (r === undefined) return;
+    if (r === "evening") setSheet("evening");
+    else if (r === "moon") router.push("/ritual" as Href);
+    router.setParams({ ritual: undefined });
+  }, [params.ritual, router]);
+
+  useEffect(() => {
+    const p = params.practice;
+    if (p === undefined) return;
+    router.setParams({ practice: undefined });
+    if (isMethod(p)) startPractice(p);
+  }, [params.practice, router, startPractice]);
+
+  // ─── Actions ───────────────────────────────────────────────────────────────
+  const onNew = () => {
+    if (!isPremium && active.length >= FREE_INTENTIONS) {
+      setPaywall(true);
+      return;
+    }
+    router.push("/intentions/create" as Href);
+  };
+
+  const onRefresh = () => {
+    setPulling(true);
+    reload();
+    if (dto) usePlanStore.getState().refresh(dto);
+  };
+
+  const suggestion = wishes.data
+    ? pickPractice({
+        lunar,
+        ritualDone,
+        hour: new Date().getHours(),
+        day: today,
+        wishes: active,
+        powerIntentionId: plan?.powerIntentionId ?? null,
+      })
+    : null;
+
+  const suggested = planAffirmationCategory(plan);
+  const openCategory: AffirmationCategory = category ?? suggested ?? "money";
+  const cameTrue = shelf.data?.length ?? 0;
 
   return (
     <ScreenWrapper>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={onRefresh} tintColor={colors.star[300]} />}
       >
-        {/* Hero: Aster + what this space is for */}
-        <EnterView style={styles.hero}>
-          <View style={styles.heroText}>
-            <AppText variant="label" color={palette.candy.face}>
-              {t("manifest.eyebrow")}
-            </AppText>
-            <AppText variant="title">{t("manifest.title")}</AppText>
-            <AppText variant="bodySmall">{t("manifest.subtitle")}</AppText>
-          </View>
+        {/* Header: the title, and the Moon as a chip (its whole cycle is one tap away). */}
+        <EnterView style={styles.header}>
+          <AppText variant="display" accessibilityRole="header" style={styles.flex}>
+            {t("wish.title")}
+          </AppText>
           <PressableScale
-            onPress={() => router.push("/aster" as Href)}
+            onPress={() => setSheet("lunar")}
             scaleTo={0.94}
+            style={styles.moonChip}
             accessibilityRole="button"
-            accessibilityLabel={asterA11y(t, state)}
+            accessibilityLabel={`${t("practice.lunar.title")}: ${t(`moonPhase.${lunar.phaseKey}` as TranslationKey)}`}
           >
-            <AsterMascot
-              stage={state?.stage ?? 0}
-              mood={state?.mood ?? "sleepy"}
-              accessories={state?.equipped ?? []}
-              size={112}
-            />
+            <MoonPhase size={22} />
+            <AppText variant="labelLong" color={colors.text.primary} numberOfLines={1}>
+              {t(`moonPhase.${lunar.phaseKey}` as TranslationKey)}
+            </AppText>
           </PressableScale>
         </EnterView>
 
-        <EnterView index={1}>
-          <SpeechBubble text={asterLine(locale, state?.mood ?? "sleepy", state?.hatched ?? false, 1)} tail="top" />
-        </EnterView>
-
-        {/* Moon ritual — only around a new or full moon */}
-        {moon ? (
-          <EnterView index={2}>
-            <ChunkyCard tone="star" tinted style={styles.feature}>
-              <View style={styles.featureHead}>
-                <View style={[styles.featureIcon, { backgroundColor: palette.star.face }]}>
-                  <Ionicons name={moon.phase === "new" ? "ellipse-outline" : "ellipse"} size={22} color={palette.star.on} />
-                </View>
-                <View style={styles.flex}>
-                  <AppText variant="heading">
-                    {moon.phase === "new" ? t("manifest.moon.newTitle") : t("manifest.moon.fullTitle")}
-                  </AppText>
-                  <AppText variant="bodySmall" color={colors.text.secondary}>
-                    {ritualDone
-                      ? t("manifest.moon.done")
-                      : moon.phase === "new"
-                        ? t("manifest.moon.newBody")
-                        : t("manifest.moon.fullBody")}
-                  </AppText>
-                </View>
-              </View>
-              {!ritualDone ? (
-                <ChunkyButton label={t("manifest.moon.cta")} variant="star" size="md" onPress={() => setMoonOpen(true)} />
-              ) : null}
-            </ChunkyCard>
+        {/* 1 — Today's practice (the one primary action) and the four methods. */}
+        {suggestion ? (
+          <EnterView index={1}>
+            <PracticeHero
+              suggestion={suggestion}
+              day={today}
+              onStart={startPractice}
+              onMoon={() => router.push("/ritual" as Href)}
+            />
           </EnterView>
         ) : null}
 
-        {/* Intentions */}
-        <View style={styles.section}>
-          <EnterView index={3}>
-            <AppText variant="title">{t("manifest.intentionsTitle")}</AppText>
-          </EnterView>
-          <IntentionsList
-            enterIndex={4}
-            reloadKey={reloadKey}
-            onPaywall={() => setPaywall(true)}
-            onCheckIn={setCheckIn}
-          />
-        </View>
-
-        {/* Close the day */}
-        <EnterView index={6}>
-          <ChunkyCard tone="primary" tinted={!evening || dayClosed} style={styles.feature}>
-            <View style={styles.featureHead}>
-              <View style={[styles.featureIcon, { backgroundColor: evening && !dayClosed ? palette.cloud.face : palette.primary.face }]}>
-                <Ionicons
-                  name={dayClosed ? "checkmark" : "moon"}
-                  size={22}
-                  color={evening && !dayClosed ? palette.primary.face : palette.primary.on}
-                />
-              </View>
-              <View style={styles.flex}>
-                <AppText variant="heading" color={evening && !dayClosed ? palette.primary.on : undefined}>
-                  {t("manifest.reflection.title")}
-                </AppText>
-                <AppText variant="bodySmall" color={evening && !dayClosed ? palette.primary.on : colors.text.secondary}>
-                  {dayClosed ? t("manifest.reflection.done") : t("manifest.reflection.body")}
-                </AppText>
-              </View>
+        {/* 2 — The manifestation stars (an empty sky invites the first one). */}
+        <EnterView index={2} style={styles.section}>
+          {active.length > 0 ? (
+            <View style={styles.sectionHead}>
+              <AppText variant="heading" style={styles.flex}>
+                {t("wish.sky.tendTitle")}
+              </AppText>
+              <IconButton icon="add" onPress={onNew} size={44} tone="star" accessibilityLabel={t("wish.sky.newWish")} />
             </View>
-            {!dayClosed ? (
-              <ChunkyButton
-                label={t("manifest.reflection.cta")}
-                variant={evening ? "cloud" : "primary"}
-                size="md"
-                onPress={() => setReflectOpen(true)}
-              />
-            ) : null}
-          </ChunkyCard>
+          ) : null}
+          {wishes.loading && !wishes.data ? (
+            <ChunkyCard style={styles.stateCard}>
+              <StateView kind="loading" compact message={t("wish.sky.loading")} />
+            </ChunkyCard>
+          ) : wishes.error && !wishes.data ? (
+            <ChunkyCard style={styles.stateCard}>
+              <StateView kind="error" compact message={t("wish.sky.error")} onAction={wishes.reload} />
+            </ChunkyCard>
+          ) : (
+            <WishSky wishes={active} powerIntentionId={plan?.powerIntentionId ?? null} onPlant={onNew} />
+          )}
         </EnterView>
 
-        {/* Affirmations */}
-        <View style={styles.section}>
-          <AffirmationsSection enterIndex={7} onAdd={setAddCategory} />
-        </View>
+        {/* 3 — Everything else, one tap away. */}
+        <EnterView index={3} style={styles.links}>
+          <SectionLink
+            label={t("practice.learn.open")}
+            icon="school"
+            tone="primary"
+            bare
+            onPress={() => router.push("/learn" as Href)}
+          />
+          <View style={styles.sep} />
+          <SectionLink
+            label={t("practice.methods.read.otherTitle")}
+            icon="heart"
+            tone="candy"
+            bare
+            onPress={() => setSheet("affirm")}
+          />
+          <View style={styles.sep} />
+          <SectionLink
+            label={t("wish.shelf.title")}
+            icon="trophy"
+            tone="star"
+            value={shelf.data ? cameTrue : undefined}
+            bare
+            onPress={() => setSheet("shelf")}
+          />
+        </EnterView>
       </ScrollView>
 
-      {checkIn ? (
-        <CheckInSheet
-          visible={checkIn !== null}
-          onClose={() => {
-            setCheckIn(null);
-            setReloadKey((k) => k + 1);
-          }}
-          intentionId={checkIn.id}
-          affirmation={checkIn.affirmation}
-          onResult={() => undefined}
+      <LunarSheet
+        visible={sheet === "lunar"}
+        onClose={() => setSheet(null)}
+        lunar={lunar}
+        plan={planLoading && !plan ? null : plan}
+        onRitual={
+          ritualDone
+            ? undefined
+            : () => {
+                setSheet(null);
+                router.push("/ritual" as Href);
+              }
+        }
+      />
+      <ShelfSheet
+        visible={sheet === "shelf"}
+        onClose={() => setSheet(null)}
+        wishes={shelf.data}
+        loading={shelf.loading}
+        error={!!shelf.error}
+        onRetry={shelf.reload}
+      />
+      <SpringBottomSheet
+        visible={sheet === "affirm"}
+        onClose={() => setSheet(null)}
+        title={t("practice.methods.read.otherTitle")}
+      >
+        <AffirmationsCarousel
+          category={openCategory}
+          onCategoryChange={setCategory}
+          suggested={suggested}
+          onAdd={setAddCategory}
         />
-      ) : null}
+      </SpringBottomSheet>
+      <EveningReflectionSheet visible={sheet === "evening"} onClose={() => setSheet(null)} />
       <AddAffirmationSheet category={addCategory} onClose={() => setAddCategory(null)} />
-      {moon && moonKey ? (
-        <MoonRitualSheet
-          visible={moonOpen}
-          phase={moon.phase}
-          ritualKey={moonKey}
-          onClose={() => setMoonOpen(false)}
-        />
-      ) : null}
-      <ReflectionSheet visible={reflectOpen} onClose={() => setReflectOpen(false)} />
       <PaywallSheet visible={paywall} onClose={() => setPaywall(false)} variant="premium" />
     </ScreenWrapper>
   );
 }
 
-function MoonRitualSheet({
-  visible,
-  phase,
-  ritualKey,
-  onClose,
-}: {
-  visible: boolean;
-  phase: "new" | "full";
-  ritualKey: string;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const saveRitual = useReflectionStore((s) => s.saveRitual);
-  const report = useMascotStore((s) => s.report);
-  const [text, setText] = useState("");
-
-  const finish = () => {
-    if (!text.trim()) return;
-    saveRitual(ritualKey, text);
-    report("MOON_RITUAL");
-    setText("");
-    onClose();
-  };
-
-  return (
-    <SpringBottomSheet visible={visible} onClose={onClose} title={t("manifest.moon.sheetTitle")}>
-      <View style={styles.sheet}>
-        <AppText variant="lead">
-          {phase === "new" ? t("manifest.moon.newPrompt") : t("manifest.moon.fullPrompt")}
-        </AppText>
-        <TextInput
-          value={text}
-          onChangeText={setText}
-          placeholder={t("manifest.moon.placeholder")}
-          placeholderTextColor={colors.text.tertiary}
-          style={styles.input}
-          multiline
-          maxLength={500}
-        />
-        <AppText variant="bodySmall">{t("manifest.moon.privacy")}</AppText>
-        <ChunkyButton label={t("manifest.moon.finish")} variant="star" onPress={finish} disabled={!text.trim()} />
-      </View>
-    </SpringBottomSheet>
-  );
-}
-
-function ReflectionSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { t } = useTranslation();
-  const closeDay = useReflectionStore((s) => s.closeDay);
-  const report = useMascotStore((s) => s.report);
-  const [items, setItems] = useState(["", "", ""]);
-  const prompts = [t("manifest.reflection.p1"), t("manifest.reflection.p2"), t("manifest.reflection.p3")];
-  const ready = items.some((x) => x.trim());
-
-  const finish = () => {
-    if (!ready) return;
-    closeDay(items);
-    report("EVENING_REFLECTION");
-    setItems(["", "", ""]);
-    onClose();
-  };
-
-  return (
-    <SpringBottomSheet visible={visible} onClose={onClose} title={t("manifest.reflection.title")}>
-      <View style={styles.sheet}>
-        {prompts.map((p, i) => (
-          <View key={p} style={styles.reflectRow}>
-            <View style={styles.reflectNum}>
-              <AppText variant="heading" color={palette.primary.on}>
-                {i + 1}
-              </AppText>
-            </View>
-            <TextInput
-              value={items[i]}
-              onChangeText={(v) => setItems((prev) => prev.map((x, j) => (j === i ? v : x)))}
-              placeholder={p}
-              placeholderTextColor={colors.text.tertiary}
-              style={[styles.input, styles.reflectInput]}
-              maxLength={200}
-            />
-          </View>
-        ))}
-        <AppText variant="bodySmall">{t("manifest.reflection.privacy")}</AppText>
-        <ChunkyButton label={t("manifest.reflection.cta")} variant="primary" onPress={finish} disabled={!ready} />
-      </View>
-    </SpringBottomSheet>
-  );
-}
-
 const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 140, gap: spacing.xl },
-  hero: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  heroText: { flex: 1, gap: spacing.xs },
-  section: { gap: spacing.lg },
-  feature: { gap: spacing.md },
-  featureHead: { flexDirection: "row", alignItems: "flex-start", gap: spacing.md },
-  featureIcon: { width: 44, height: 44, borderRadius: radii.pill, alignItems: "center", justifyContent: "center" },
-  flex: { flex: 1, gap: 2 },
-  sheet: { gap: spacing.lg },
-  input: {
-    minHeight: 96,
-    padding: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: 2,
-    borderColor: colors.border.chunky,
-    backgroundColor: surface.raised,
-    color: colors.text.primary,
-    fontFamily: fonts.sansMedium,
-    fontSize: 16,
-    textAlignVertical: "top",
-  },
-  reflectRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  reflectNum: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.pill,
-    backgroundColor: palette.primary.face,
+  flex: { flex: 1 },
+  header: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  moonChip: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    gap: spacing.xs,
+    minHeight: 44,
+    maxWidth: 170,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: surface.raised,
   },
-  reflectInput: { flex: 1, minHeight: 48, paddingVertical: spacing.md },
+  section: { gap: spacing.md },
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  links: { borderRadius: radii.lg, backgroundColor: surface.card, overflow: "hidden" },
+  sep: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border.hairline, marginLeft: spacing.lg + 34 + spacing.md },
+  stateCard: { borderRadius: radii.xl },
 });

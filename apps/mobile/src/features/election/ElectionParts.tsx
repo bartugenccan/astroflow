@@ -2,12 +2,12 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { StateView } from "../../components/ui/StateView";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import type { ElectionFactor, ElectionHourWindow, ElectionVerdict } from "../../services/types";
 import { TranslationKey, useTranslation } from "../../i18n";
-import { colors, radii, spacing, surface } from "../../lib/design-system";
+import { colors, depth, palette, radii, spacing, surface } from "../../lib/design-system";
 
 export function verdictColor(v: ElectionVerdict): string {
   if (v === "excellent") return colors.semantic.harmonic;
@@ -46,7 +46,7 @@ export function FactorList({ factors }: { factors: ElectionFactor[] }) {
             <AppText variant="body" color={colors.text.primary} style={styles.factorText}>
               {f.label}
             </AppText>
-            <AppText variant="numeric" color={color} style={styles.impact}>
+            <AppText variant="heading" color={color} style={styles.impact}>
               {f.impact > 0 ? `+${f.impact}` : f.impact}
             </AppText>
           </View>
@@ -64,12 +64,12 @@ export function HourWindows({ hours, place }: { hours: ElectionHourWindow[]; pla
       {hours.map((h, i) => (
         <View key={h.from} style={[styles.hour, i === 0 && styles.hourBest]}>
           <View style={styles.hourHead}>
-            <Ionicons name={i === 0 ? "star" : "time-outline"} size={14} color={i === 0 ? colors.text.onAccent : colors.star[300]} />
-            <AppText variant="heading" color={i === 0 ? colors.text.onAccent : colors.text.primary}>
+            <Ionicons name={i === 0 ? "star" : "time-outline"} size={14} color={i === 0 ? palette.star.on : colors.star[300]} />
+            <AppText variant="heading" color={i === 0 ? palette.star.on : colors.text.primary}>
               {h.from}–{h.to}
             </AppText>
           </View>
-          <AppText variant="bodySmall" color={i === 0 ? colors.text.onAccent : colors.text.secondary}>
+          <AppText variant="bodySmall" color={i === 0 ? palette.star.on : colors.text.secondary}>
             {h.highlights.join(" · ")}
           </AppText>
         </View>
@@ -112,9 +112,8 @@ export function SectionTitle({ children }: { children: string }) {
 export function ErrorCard({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
   return (
-    <ChunkyCard style={styles.error}>
-      <AppText variant="body">{t("election.resultError")}</AppText>
-      <ChunkyButton label={t("common.retry")} variant="ghost" onPress={onRetry} />
+    <ChunkyCard>
+      <StateView kind="error" compact message={t("election.resultError")} onAction={onRetry} />
     </ChunkyCard>
   );
 }
@@ -128,7 +127,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 4,
     borderRadius: radii.pill,
-    borderWidth: 1,
+    borderWidth: 2,
   },
   dot: { width: 7, height: 7, borderRadius: 4 },
   factors: { gap: spacing.md },
@@ -138,19 +137,22 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   factorText: { flex: 1, minWidth: 0 },
-  impact: { minWidth: 30, textAlign: "right", fontSize: 15 },
+  impact: { minWidth: 30, textAlign: "right" },
   hours: { gap: spacing.sm },
   hour: {
     gap: 2,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
   },
   hourBest: {
-    backgroundColor: colors.star[400],
-    borderColor: colors.star[400],
+    backgroundColor: palette.star.face,
+    borderColor: palette.star.face,
+    borderBottomColor: palette.star.slab,
   },
   hourHead: {
     flexDirection: "row",
@@ -160,5 +162,4 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   sectionBody: { lineHeight: 24 },
   sectionTitle: { marginTop: spacing.sm },
-  error: { gap: spacing.md },
 });

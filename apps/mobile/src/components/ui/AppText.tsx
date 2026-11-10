@@ -30,6 +30,8 @@ const MAX_SCALE: Record<Variant, number> = {
   numeric: 1.25,
   button: 1.2,
   stat: 1.2,
+  script: 1.3,
+  scriptLarge: 1.2,
 };
 
 /**

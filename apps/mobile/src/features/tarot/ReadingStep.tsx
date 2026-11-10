@@ -1,3 +1,4 @@
+import { positionKey } from "./deck";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +8,7 @@ import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { StateView } from "../../components/ui/StateView";
 import { EnterView } from "../../lib/motion";
 import { TranslationKey, useTranslation } from "../../i18n";
 import { colors, fonts, radii, spacing, surface } from "../../lib/design-system";
@@ -48,7 +50,8 @@ export function ReadingStep({ spread, freshDraw, onFlip, onNewReading }: Props) 
   }, [freshDraw]);
 
   const content = width - spacing.xl * 2;
-  const smallW = Math.min(110, (content - spacing.md * 2) / 3);
+  const count = spread.cards.length;
+  const smallW = Math.min(110, (content - spacing.md * (count - 1)) / count);
   const smallH = smallW / TAROT_CARD_RATIO;
   const bigW = Math.min(230, content * 0.62);
   const bigH = bigW / TAROT_CARD_RATIO;
@@ -89,7 +92,7 @@ export function ReadingStep({ spread, freshDraw, onFlip, onNewReading }: Props) 
                 onTurn={onFlip}
               />
               <AppText variant="label" center numberOfLines={2} color={colors.text.tertiary} style={{ width: smallW + 16 }}>
-                {cards[i].data?.positionName ?? t(`tarot.positions.${spread.category}.p${i}` as TranslationKey)}
+                {cards[i].data?.positionName ?? t(positionKey(spread.category, spread.spread, i))}
               </AppText>
             </PressableScale>
           ))}
@@ -105,7 +108,7 @@ export function ReadingStep({ spread, freshDraw, onFlip, onNewReading }: Props) 
             drawn={c}
             index={i}
             part={cards[i]}
-            fallbackPosition={t(`tarot.positions.${spread.category}.p${i}` as TranslationKey)}
+            fallbackPosition={t(positionKey(spread.category, spread.spread, i))}
             width={bigW}
             height={bigH}
             onZoom={() => setZoom(c)}
@@ -308,8 +311,7 @@ function ErrorBlock({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
   return (
     <ChunkyCard style={styles.sections}>
-      <AppText variant="body">{t("tarot.sectionError")}</AppText>
-      <ChunkyButton label={t("common.retry")} variant="ghost" onPress={onRetry} />
+      <StateView kind="error" compact message={t("tarot.sectionRetry")} onAction={onRetry} />
     </ChunkyCard>
   );
 }

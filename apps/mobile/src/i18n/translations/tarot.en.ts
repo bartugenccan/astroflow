@@ -17,6 +17,7 @@ export const tarotEn = {
     spiritual: { name: "Spiritual", desc: "Your lesson and what awaits" },
   },
   positions: {
+    decision: { p0: "Where you stand", p1: "Path one", p2: "Path two", p3: "What you overlook", p4: "Guidance" },
     general: { p0: "Past", p1: "Present", p2: "Future" },
     love: { p0: "You", p1: "The other", p2: "Where it’s going" },
     career: { p0: "Where you stand", p1: "The obstacle", p2: "Likely outcome" },
@@ -58,7 +59,20 @@ export const tarotEn = {
   newReading: "New reading",
   todayReading: "Today’s reading",
   todayReadingOpen: "Open your reading",
+  limitEyebrow: "Today's reading is done",
+  limitTitle: "The cards rest until tomorrow",
+  passCta: "One more today for {{n}} Stardust",
+  passShort: "One more costs {{n}} Stardust (you have {{have}})",
+  spreadPick: {
+    label: "Spread",
+    three: "Three cards",
+    decision: "Crossroads · 5 cards",
+    lockedAt: "opens at {{stage}}",
+  },
   limitNote: "Your free reading for today is used. Premium opens unlimited readings.",
   soundOn: "Sound on",
   soundOff: "Sound off",
+  asterAsk: "Think of a question… hold it gently, and we'll ask the cards together.",
+  asterPrefilled: "I brought the question from your plan — change it if you like.",
+  sectionRetry: "This part of the reading slipped away. Shall we try again?",
 };

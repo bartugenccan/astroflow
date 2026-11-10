@@ -1,7 +1,7 @@
 import { Locale } from '../../astrology/interpretation.types';
 import { TarotCard, elementName } from '../tarot.deck';
-import { CATEGORY_LABEL, TAROT_SPREADS } from '../tarot.spreads';
-import { TarotCardReading, TarotCategory, TarotDrawnCard, TarotSynthesis } from '../tarot.types';
+import { CATEGORY_LABEL, spreadPositions } from '../tarot.spreads';
+import { TarotCardReading, TarotCategory, TarotDrawnCard, TarotSpread, TarotSynthesis } from '../tarot.types';
 
 /**
  * Templated readings used when no AI key is configured or the model fails.
@@ -17,8 +17,9 @@ export function tarotCardStub(
   card: TarotCard,
   drawn: TarotDrawnCard,
   index: number,
+  spread: TarotSpread = 'three',
 ): Omit<TarotCardReading, 'cardId' | 'position' | 'reversed' | 'astro'> {
-  const position = TAROT_SPREADS[category][index];
+  const position = spreadPositions(category, spread)[index];
   const words = (drawn.reversed ? card.reversed : card.upright)[locale];
   const [a, b, c] = words;
   const topic = CATEGORY_LABEL[category][locale];
@@ -69,7 +70,7 @@ export function tarotSynthesisStub(
 
   if (locale === 'tr') {
     return {
-      title: `${cap(firstWords[0])} · ${firstWords[1]} · ${firstWords[2]}`,
+      title: `${cap(firstWords[0])} · ${firstWords[1]} · ${firstWords[firstWords.length - 1]}`,
       story: `${names.join(', ')} birlikte ${topic} alanında bir yolculuk anlatıyor: ${firstWords[0]} ile başlayan hikâye, ${firstWords[1]} üzerinden ${firstWords[2]} temasına uzanıyor. ${reversed ? `${reversed} ters kart, bu yolda bazı enerjilerin henüz tam akmadığını gösteriyor; acele etmek yerine neyin tıkandığına bakmak iyi gelecek.` : 'Tüm kartların düz gelmesi, enerjinin açık ve akışta olduğunu gösteriyor.'} Kartlar kesin bir kader değil, bir yön gösteriyor — seçim her zaman senin.`,
       guidance: [
         `${cap(firstWords[0])} temasıyla barış ve oradan güç al.`,
@@ -80,7 +81,7 @@ export function tarotSynthesisStub(
     };
   }
   return {
-    title: `From ${firstWords[0]} to ${firstWords[2]}`,
+    title: `From ${firstWords[0]} to ${firstWords[firstWords.length - 1]}`,
     story: `${names.join(', ')} together tell a journey in ${topic}: the story begins with ${firstWords[0]}, moves through ${firstWords[1]} and opens toward ${firstWords[2]}. ${reversed ? `${reversed} reversed card(s) show that some energy isn't fully flowing yet; rather than rushing, look at what is stuck.` : 'With every card upright, the energy is open and moving.'} The cards show a direction, not a fixed fate — the choice is always yours.`,
     guidance: [
       `Make peace with ${firstWords[0]} and draw strength from it.`,

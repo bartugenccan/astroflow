@@ -14,15 +14,15 @@ import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
+import { AsterCameo } from "../../components/ui/AsterCameo";
+import { IconButton } from "../../components/ui/IconButton";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
-import { PressableScale } from "../../components/ui/PressableScale";
 import { BackButton } from "../../components/ui/BackButton";
 import { CountUp } from "../../components/ui/CountUp";
 import { TermInfo } from "../../components/TermInfo";
 import { ScoreRing } from "../../components/ScoreRing";
 import { PaywallSheet } from "../../components/PaywallSheet";
-import { ShareButton } from "../../components/ui/ShareButton";
 import { ShareCardModal } from "../share/ShareCardModal";
 import { ShareCardData } from "../share/ShareableCard";
 import { SynastryAspectRow } from "./SynastryAspectRow";
@@ -38,7 +38,7 @@ import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { EnterView } from "../../lib/motion";
-import { colors, spacing, radii, motion, surface } from "../../lib/design-system";
+import { colors, spacing, radii, motion, palette, surface } from "../../lib/design-system";
 
 /** Delay before the first dimension bar starts filling (lets the ring sweep first). */
 const BARS_START = 450;
@@ -91,7 +91,10 @@ export function CompatibilityResultScreen() {
           {person ? t("compatibility.withLabel", { name: person.label }) : t("compatibility.title")}
         </AppText>
         {score.data ? (
-          <ShareButton
+          <IconButton
+            icon="share-outline"
+            size={40}
+            accessibilityLabel={t("share.cta")}
             onPress={() =>
               setShareData({
                 variant: "compatibility",
@@ -103,7 +106,7 @@ export function CompatibilityResultScreen() {
             }
           />
         ) : (
-          <View style={{ width: 34 }} />
+          <View style={styles.topSpacer} />
         )}
       </View>
 
@@ -121,10 +124,29 @@ export function CompatibilityResultScreen() {
           </AppText>
         </EnterView>
 
-        {score.loading || !score.data ? (
-          <View style={styles.loaderBox}>
-            <CelestialLoader label={t("compatibility.computing")} />
-          </View>
+        {!score.data ? (
+          score.error ? (
+            <StateView
+              kind="error"
+              message={t("profileUi.compat.resultError")}
+              onAction={score.reload}
+            />
+          ) : people.error && !people.data ? (
+            <StateView
+              kind="error"
+              message={t("profileUi.compat.loadError")}
+              onAction={people.reload}
+            />
+          ) : people.data && !person ? (
+            <StateView
+              kind="empty"
+              message={t("profileUi.compat.personMissing")}
+              actionLabel={t("compatibility.addPerson")}
+              onAction={() => router.replace("/compatibility/add")}
+            />
+          ) : (
+            <StateView kind="loading" message={t("compatibility.computing")} />
+          )
         ) : (
           <>
             <EnterView index={1} scale style={styles.ringWrap}>
@@ -179,64 +201,56 @@ export function CompatibilityResultScreen() {
 
             {/* View this person's charts (premium after 2 free) */}
             <EnterView index={4} style={styles.chartsRow}>
-              <PressableScale
+              <ChunkyButton
+                label={t("compatibility.viewNatal")}
+                variant="night"
+                size="md"
+                uppercase={false}
+                haptic="light"
                 style={styles.chartBtn}
-                scaleTo={0.96}
-                accessibilityRole="button"
+                icon={<Ionicons name="planet-outline" size={18} color={colors.star[300]} />}
                 onPress={() => router.push(`/compatibility/${encodeURIComponent(String(id))}/chart` as Href)}
-              >
-                <Ionicons name="planet-outline" size={18} color={colors.star[300]} />
-                <AppText
-                  variant="bodySmall"
-                  color={colors.text.primary}
-                  numberOfLines={2}
-                  style={styles.chartBtnText}
-                >
-                  {t("compatibility.viewNatal")}
-                </AppText>
-              </PressableScale>
-              <PressableScale
+              />
+              <ChunkyButton
+                label={t("compatibility.viewTransits")}
+                variant="night"
+                size="md"
+                uppercase={false}
+                haptic="light"
                 style={styles.chartBtn}
-                scaleTo={0.96}
-                accessibilityRole="button"
+                icon={<Ionicons name="telescope-outline" size={18} color={colors.star[300]} />}
                 onPress={() => router.push(`/compatibility/${encodeURIComponent(String(id))}/transits` as Href)}
-              >
-                <Ionicons name="telescope-outline" size={18} color={colors.star[300]} />
-                <AppText
-                  variant="bodySmall"
-                  color={colors.text.primary}
-                  numberOfLines={2}
-                  style={styles.chartBtnText}
-                >
-                  {t("compatibility.viewTransits")}
-                </AppText>
-              </PressableScale>
+              />
             </EnterView>
 
             {/* Reading — gated */}
             <EnterView index={5} style={styles.section}>
               <SectionHeader eyebrow={t("compatibility.readingTitle")} />
               {locked ? (
-                <ChunkyCard>
+                <ChunkyCard tone="star" tinted>
                   <View style={styles.lockedBox}>
-                    <Ionicons name="lock-closed" size={20} color={colors.star[300]} />
-                    <AppText variant="body" center>
-                      {t("compatibility.lockedAspects")}
-                    </AppText>
-                    <ChunkyButton label={t("paywall.unlock")} onPress={() => setPaywall(true)} />
-                  </View>
-                </ChunkyCard>
-              ) : reading.loading ? (
-                <ChunkyCard>
-                  <View style={styles.loaderBox}>
-                    <CelestialLoader size="sm" />
+                    <AsterCameo text={t("compatibility.lockedAspects")} size={56} />
+                    <ChunkyButton
+                      label={t("paywall.unlock")}
+                      variant="star"
+                      onPress={() => setPaywall(true)}
+                      icon={<Ionicons name="lock-open" size={18} color={palette.star.on} />}
+                    />
                   </View>
                 </ChunkyCard>
               ) : reading.data ? (
                 <ChunkyCard>
                   <AppText variant="lead">{reading.data.text}</AppText>
                 </ChunkyCard>
-              ) : null}
+              ) : reading.error && !reading.loading ? (
+                <ChunkyCard>
+                  <StateView kind="error" compact onAction={reading.reload} />
+                </ChunkyCard>
+              ) : (
+                <ChunkyCard>
+                  <StateView kind="loading" compact />
+                </ChunkyCard>
+              )}
             </EnterView>
           </>
         )}
@@ -312,7 +326,7 @@ function CategoryBar({
             {label}
           </AppText>
           {lowerIsBetter ? (
-            <AppText variant="labelLong" color={colors.text.tertiary} style={styles.lowerTag}>
+            <AppText variant="labelLong" color={colors.text.tertiary}>
               ↓ {lowerBetterLabel}
             </AppText>
           ) : null}
@@ -350,6 +364,9 @@ const styles = StyleSheet.create({
   topTitle: {
     flex: 1,
   },
+  topSpacer: {
+    width: 40,
+  },
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
@@ -366,11 +383,6 @@ const styles = StyleSheet.create({
   },
   eyebrowText: {
     flexShrink: 1,
-  },
-  loaderBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.xxl,
   },
   ringWrap: {
     alignItems: "center",
@@ -398,9 +410,6 @@ const styles = StyleSheet.create({
   dimLabel: {
     flexShrink: 1,
   },
-  lowerTag: {
-    fontSize: 11,
-  },
   barTrack: {
     height: 8,
     borderRadius: radii.pill,
@@ -425,29 +434,12 @@ const styles = StyleSheet.create({
   },
   chartBtn: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    minHeight: 48,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
-  },
-  chartBtnText: {
-    flexShrink: 1,
-    textAlign: "center",
   },
   sep: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border.hairline,
   },
   lockedBox: {
-    alignItems: "center",
     gap: spacing.lg,
-    paddingVertical: spacing.md,
   },
 });

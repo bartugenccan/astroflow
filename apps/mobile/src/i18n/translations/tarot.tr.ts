@@ -15,6 +15,7 @@ export const tarotTr: typeof tarotEn = {
     spiritual: { name: "Ruhsal", desc: "Dersin ve seni bekleyen" },
   },
   positions: {
+    decision: { p0: "Bulunduğun yer", p1: "Birinci yol", p2: "İkinci yol", p3: "Gözden kaçan", p4: "Rehberlik" },
     general: { p0: "Geçmiş", p1: "Şimdi", p2: "Gelecek" },
     love: { p0: "Sen", p1: "Karşındaki", p2: "İlişkinin yönü" },
     career: { p0: "Mevcut durum", p1: "Engel", p2: "Olası sonuç" },
@@ -56,7 +57,20 @@ export const tarotTr: typeof tarotEn = {
   newReading: "Yeni açılım",
   todayReading: "Bugünkü açılımın",
   todayReadingOpen: "Açılımını aç",
+  limitEyebrow: "Bugünkü açılım tamam",
+  limitTitle: "Kartlar yarına kadar dinleniyor",
+  passCta: "{{n}} Toz ile bugün bir açılım daha",
+  passShort: "Bir açılım daha {{n}} Toz (sende {{have}} var)",
+  spreadPick: {
+    label: "Açılım",
+    three: "Üç kart",
+    decision: "Yol ayrımı · 5 kart",
+    lockedAt: "{{stage}} aşamasında açılır",
+  },
   limitNote: "Bugünkü ücretsiz açılımını kullandın. Premium ile sınırsız açılım yapabilirsin.",
   soundOn: "Ses açık",
   soundOff: "Ses kapalı",
+  asterAsk: "Aklından bir soru geçir… onu nazikçe tut, kartlara birlikte soralım.",
+  asterPrefilled: "Sorunu planından getirdim — istersen değiştirebilirsin.",
+  sectionRetry: "Okumanın bu kısmı kayıp gitti. Bir daha deneyelim mi?",
 };

@@ -5,7 +5,7 @@ import { BirthInputDto } from '../astrology/dto/birth-input.dto';
 import { Locale } from '../astrology/interpretation.types';
 import { IntentionsService } from './intentions.service';
 import { AffirmationPreviewDto, CreateIntentionDto } from './dto/create-intention.dto';
-import { CheckInDto } from './dto/checkin.dto';
+import { CheckInDto, SignDto } from './dto/checkin.dto';
 import { AiRoute } from '../../common/auth/route-tags';
 
 @ApiTags('Intentions')
@@ -95,6 +95,28 @@ export class IntentionsController {
   @ApiQuery({ name: 'days', required: false })
   powerDays(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string, @Query('days') days?: string) {
     return this.intentions.powerDays(deviceId, id, parseInt(days ?? '14', 10) || 14);
+  }
+
+  @Get(':id/signs')
+  @ApiOperation({ summary: "The manifest's sign log (things the user noticed), newest first" })
+  signs(@Param('id', ParseUUIDPipe) id: string, @DeviceId() deviceId: string) {
+    return this.intentions.signs(deviceId, id);
+  }
+
+  @Post(':id/signs')
+  @ApiOperation({ summary: 'Log a sign on a manifest → SIGN_LOG award (once a day)' })
+  addSign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SignDto, @DeviceId() deviceId: string) {
+    return this.intentions.addSign(deviceId, id, dto.text);
+  }
+
+  @Delete(':id/signs/:signId')
+  @ApiOperation({ summary: 'Delete one sign' })
+  removeSign(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('signId', ParseUUIDPipe) signId: string,
+    @DeviceId() deviceId: string,
+  ) {
+    return this.intentions.removeSign(deviceId, id, signId);
   }
 
   @Get(':id/history')

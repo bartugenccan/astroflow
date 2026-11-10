@@ -2,10 +2,9 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
 import { CountUp } from "../../components/ui/CountUp";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { PressableScale } from "../../components/ui/PressableScale";
 import { ScoreRing } from "../../components/ScoreRing";
 import { EnterView } from "../../lib/motion";
 import { formatLongDay } from "../../lib/dates";
@@ -13,8 +12,8 @@ import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { astrologyApi } from "../../services/astrologyApi";
 import { electionKey } from "../../services/interpretationCache";
 import type { CreateBirthProfileDto, ElectionCheckQuery } from "../../services/types";
-import { useTranslation } from "../../i18n";
-import { colors, spacing } from "../../lib/design-system";
+import { useTranslation, type TranslationKey } from "../../i18n";
+import { colors, radii, spacing } from "../../lib/design-system";
 import { scoreColor } from "../forecast/BestDaysGrid";
 import {
   ErrorCard,
@@ -48,11 +47,7 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
   );
 
   if (result.loading && !result.data) {
-    return (
-      <View style={styles.loading}>
-        <CelestialLoader size="lg" label={t("election.computing")} />
-      </View>
-    );
+    return <StateView kind="loading" message={t("election.computing")} />;
   }
   if (!result.data) return <ErrorCard onRetry={result.reload} />;
 
@@ -126,8 +121,12 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
         <SectionTitle>{t("election.alternatives")}</SectionTitle>
         {r.alternatives.length ? (
           r.alternatives.map((a) => (
-            <PressableScale key={a.date} onPress={() => onOpenDate(a.date)} scaleTo={0.98}>
-              <ChunkyCard style={styles.alt}>
+              <ChunkyCard
+                key={a.date}
+                style={styles.alt}
+                onPress={() => onOpenDate(a.date)}
+                accessibilityLabel={`${formatLongDay(a.date, locale)}, ${t(`election.verdict.${a.verdict}` as TranslationKey)}, ${a.score}`}
+              >
                 <View style={[styles.altScore, { backgroundColor: scoreColor(a.score, 0.55) }]}>
                   <AppText variant="numeric" color={colors.text.primary}>
                     {a.score}
@@ -141,7 +140,6 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
               </ChunkyCard>
-            </PressableScale>
           ))
         ) : (
           <AppText variant="bodySmall" color={colors.text.secondary}>
@@ -155,7 +153,6 @@ export function CheckResult({ dto, query, onOpenDate }: Props) {
 
 const styles = StyleSheet.create({
   root: { gap: spacing.lg },
-  loading: { paddingVertical: spacing.xxxl, alignItems: "center" },
   hero: {
     flexDirection: "row",
     alignItems: "center",
@@ -173,7 +170,7 @@ const styles = StyleSheet.create({
   altScore: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -8,6 +8,7 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { motion } from "../../lib/design-system";
+import { ScreenActiveProvider } from "../ScreenActive";
 
 interface SectionPagerProps<T extends string> {
   /** Section keys in the order they appear in the switcher. */
@@ -76,7 +77,8 @@ function Pane({
       accessibilityElementsHidden={!active}
       importantForAccessibility={active ? "auto" : "no-hide-descendants"}
     >
-      {children}
+      {/* A hidden pane keeps its state but rests its looping animations. */}
+      <ScreenActiveProvider active={active}>{children}</ScreenActiveProvider>
     </Animated.View>
   );
 }

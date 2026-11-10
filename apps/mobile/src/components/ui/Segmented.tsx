@@ -30,7 +30,7 @@ export function Segmented<T extends string>({
   const [width, setWidth] = useState(0);
   const index = Math.max(0, options.findIndex((o) => o.key === value));
   // Four or more segments share ~80pt each on a phone — step the label down a
-  // size so Turkish labels ("Niyetler") fit without ellipsis.
+  // size so Turkish labels ("Manifestler") fit without ellipsis.
   const compact = options.length >= 4;
   const segW = width > 0 ? (width - PAD * 2) / options.length : 0;
   const x = useSharedValue(0);

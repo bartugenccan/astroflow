@@ -25,6 +25,8 @@ import {
   HouseInterpretation,
   Intention,
   IntentionCheckInHistory,
+  IntentionSign,
+  SignResult,
   IntentionSuggestion,
   NatalChartData,
   NodeAnalysis,
@@ -51,7 +53,7 @@ import {
 } from "./types";
 import { mockAward, mockResetMascot, mockTodayMood } from "./mascotApi";
 import { buildPlan, focusAreaOf, weekStrip, type PlanTransit } from "../lib/planRules";
-import { LIFE_AREA_HOUSES, starState, visiblePowerDays } from "../lib/intentionRules";
+import { LIFE_AREA_HOUSES, intentionStats, starState, visiblePowerDays } from "../lib/intentionRules";
 import { lunarWindow, nextLunarPeak } from "../lib/mascotRules";
 import { Locale } from "../i18n";
 import { generateNatalChart } from "./mock/natalChart";
@@ -213,6 +215,11 @@ export interface AstrologyApi {
     locale: Locale,
   ): Promise<CheckInResult>;
   getIntentionHistory(id: string): Promise<IntentionCheckInHistory[]>;
+  /** The manifest's sign log, newest first. */
+  getIntentionSigns(id: string): Promise<IntentionSign[]>;
+  /** Log a sign → SIGN_LOG (+5 Işık, once a day). */
+  addIntentionSign(id: string, text: string): Promise<SignResult>;
+  deleteIntentionSign(id: string, signId: string): Promise<void>;
 
   // Tarot — one detailed reading per card (fetched in parallel) + the whole spread.
   getTarotCard(
@@ -461,7 +468,7 @@ const mockAstrologyApi: AstrologyApi = {
     const lifeArea = input.lifeArea ?? "energy";
     const plantedMoon = input.plant === "newMoon" ? nextLunarPeak(new Date(), "new") : null;
     const intention: Intention = {
-      id: `${Date.now()}`,
+      id: mockUuid(),
       goalText: input.goalText,
       category: input.category,
       lifeArea,
@@ -593,7 +600,13 @@ const mockAstrologyApi: AstrologyApi = {
 
   async getIntention(id) {
     await delay();
-    return mockIntentions.find((i) => i.id === id) ?? mockIntentions[0];
+    const found = mockIntentions.find((i) => i.id === id) ?? mockIntentions[0];
+    if (!found) return found;
+    const rows = mockCheckIns.filter((c) => c.intentionId === found.id);
+    return {
+      ...found,
+      stats: intentionStats(rows, found.createdAt.slice(0, 10), localDayKey(), found.streak.longestStreak),
+    };
   },
 
   async deleteIntention(id) {
@@ -620,6 +633,15 @@ const mockAstrologyApi: AstrologyApi = {
       }
     }
     const reply = mockCheckInReply(input.conviction, input.userText, locale);
+    mockCheckIns.unshift({
+      id: mockUuid(),
+      intentionId: id,
+      date: localDayKey(),
+      conviction: input.conviction,
+      userText: input.userText ?? null,
+      aiResponse: reply.response,
+      createdAt: new Date().toISOString(),
+    });
     const deltas = [mockAward("CHECKIN")];
     if (dayCompleted) deltas.push(mockAward("DAY_COMPLETE", id));
     const last = deltas[deltas.length - 1];
@@ -640,9 +662,31 @@ const mockAstrologyApi: AstrologyApi = {
     };
   },
 
-  async getIntentionHistory() {
+  async getIntentionHistory(id) {
     await delay();
-    return [];
+    return mockCheckIns
+      .filter((c) => c.intentionId === id)
+      .slice(0, 60)
+      .map(({ intentionId: _omit, ...row }) => row);
+  },
+
+  async getIntentionSigns(id) {
+    await delay();
+    return mockSigns.filter((s) => s.intentionId === id).map(({ intentionId: _omit, ...s }) => s);
+  },
+
+  async addIntentionSign(id, text) {
+    await delay();
+    const clean = text.trim().slice(0, 280);
+    const sign = { id: mockUuid(), text: clean, date: localDayKey(), createdAt: new Date().toISOString() };
+    mockSigns.unshift({ ...sign, intentionId: id });
+    return { sign, mascot: mockAward("SIGN_LOG") };
+  },
+
+  async deleteIntentionSign(id, signId) {
+    await delay();
+    const i = mockSigns.findIndex((s) => s.id === signId && s.intentionId === id);
+    if (i >= 0) mockSigns.splice(i, 1);
   },
 
   // Tarot
@@ -691,6 +735,8 @@ const mockAstrologyApi: AstrologyApi = {
     mockPeople.splice(0);
     mockChat.splice(0);
     mockIntentions.splice(0);
+    mockCheckIns.splice(0);
+    mockSigns.splice(0);
     mockUnlocked.clear();
     mockResetMascot();
   },
@@ -722,6 +768,14 @@ const mockPeople: SavedPerson[] = [];
 const mockUnlocked = new Set<string>();
 const mockChat: ChatMessage[] = [];
 const mockIntentions: Intention[] = [];
+const mockCheckIns: (IntentionCheckInHistory & { intentionId: string })[] = [];
+const mockSigns: (IntentionSign & { intentionId: string })[] = [];
+
+/** A v4-shaped id, so mock wishes pass the same id checks as server ones. */
+function mockUuid(): string {
+  const hex = (n: number) => Array.from({ length: n }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  return `${hex(8)}-${hex(4)}-4${hex(3)}-a${hex(3)}-${hex(12)}`;
+}
 
 /** The device's local day, YYYY-MM-DD (the mock has no x-tz round trip). */
 function localDayKey(now = new Date()): string {

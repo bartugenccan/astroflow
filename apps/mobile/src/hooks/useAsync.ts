@@ -7,6 +7,14 @@ interface AsyncState<T> {
   reload: () => void;
 }
 
+function sameJson(a: unknown, b: unknown): boolean {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Runs an async factory on mount and whenever `deps` change, exposing
  * loading/error state and a manual `reload`. Ignores stale results.
@@ -29,7 +37,9 @@ export function useAsync<T>(
     factory()
       .then((result) => {
         if (active) {
-          setData(result);
+          // A reload that brings back the same data keeps the old reference,
+          // so nothing downstream re-renders or re-memoises for it.
+          setData((prev) => (prev !== null && sameJson(prev, result) ? prev : result));
           setLoading(false);
         }
       })

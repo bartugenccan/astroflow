@@ -3,11 +3,11 @@ import { StyleSheet, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { PressableScale } from "../../components/ui/PressableScale";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { RunningLightBorder } from "../../components/ui/RunningLightBorder";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
-import { colors, radii, spacing, surface } from "../../lib/design-system";
+import { colors, palette, radii, spacing } from "../../lib/design-system";
 
 /**
  * Front door to Election, at the top of For You. Same running-light frame as
@@ -44,28 +44,24 @@ export function ElectionCard() {
       <AppText variant="body">{t("election.cardSub")}</AppText>
 
       <View style={styles.actions}>
-        <PressableScale
+        <ChunkyButton
+          label={t("election.modeCheck")}
           onPress={() => open("check")}
-          scaleTo={0.96}
-          style={[styles.action, styles.primary]}
-          accessibilityRole="button"
-        >
-          <Ionicons name="help-circle-outline" size={17} color={colors.text.onAccent} />
-          <AppText variant="heading" color={colors.text.onAccent} style={styles.actionText} numberOfLines={1}>
-            {t("election.modeCheck")}
-          </AppText>
-        </PressableScale>
-        <PressableScale
+          variant="star"
+          size="md"
+          uppercase={false}
+          style={styles.action}
+          icon={<Ionicons name="help-circle-outline" size={18} color={palette.star.on} />}
+        />
+        <ChunkyButton
+          label={t("election.modeSearch")}
           onPress={() => open("search")}
-          scaleTo={0.96}
-          style={[styles.action, styles.secondary]}
-          accessibilityRole="button"
-        >
-          <Ionicons name={isPremium ? "search" : "lock-closed"} size={15} color={colors.star[300]} />
-          <AppText variant="heading" color={colors.star[200]} style={styles.actionText} numberOfLines={1}>
-            {t("election.modeSearch")}
-          </AppText>
-        </PressableScale>
+          variant="night"
+          size="md"
+          uppercase={false}
+          style={styles.action}
+          icon={<Ionicons name={isPremium ? "search" : "lock-closed"} size={16} color={colors.star[300]} />}
+        />
       </View>
     </RunningLightBorder>
   );
@@ -90,12 +86,10 @@ const styles = StyleSheet.create({
   icon: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.glow.starSoft,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
+    backgroundColor: palette.star.soft,
   },
   spark: {
     position: "absolute",
@@ -105,8 +99,6 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     minWidth: 0,
-    fontSize: 24,
-    lineHeight: 30,
   },
   actions: {
     flexDirection: "row",
@@ -115,24 +107,5 @@ const styles = StyleSheet.create({
   },
   action: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: radii.pill,
-  },
-  primary: {
-    backgroundColor: colors.star[400],
-  },
-  secondary: {
-    borderWidth: 1,
-    borderColor: colors.star[400],
-    backgroundColor: surface.sheet,
-  },
-  actionText: {
-    fontSize: 14,
-    flexShrink: 1,
   },
 });

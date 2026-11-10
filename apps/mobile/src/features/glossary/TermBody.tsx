@@ -11,6 +11,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { TermMark } from "./TermMark";
 import { PressableScale } from "../../components/ui/PressableScale";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { useTranslation } from "../../i18n";
 import { useAppStore } from "../../store/useAppStore";
 import { useBirthDto } from "../../hooks/useBirthDto";
@@ -25,7 +26,7 @@ import {
   personalLine,
   termText,
 } from "../../lib/glossary";
-import { colors, spacing, radii, motion, surface } from "../../lib/design-system";
+import { colors, depth, spacing, radii, motion, palette, surface } from "../../lib/design-system";
 
 interface TermBodyProps {
   id: GlossaryTermId;
@@ -106,21 +107,22 @@ export function TermBody({ id, initiallyExpanded = false, onRelated }: TermBodyP
         </Animated.View>
       ) : null}
 
-      <PressableScale
+      <ChunkyButton
+        label={expanded ? t("glossary.ui.showLess") : t("glossary.ui.goDeeper")}
         onPress={() => setExpanded((v) => !v)}
-        style={styles.toggle}
-        scaleTo={0.97}
-        accessibilityRole="button"
-      >
-        <AppText variant="heading" color={colors.star[300]}>
-          {expanded ? t("glossary.ui.showLess") : t("glossary.ui.goDeeper")}
-        </AppText>
-        <Ionicons
-          name={expanded ? "chevron-up" : "chevron-down"}
-          size={16}
-          color={colors.star[300]}
-        />
-      </PressableScale>
+        variant="night"
+        size="md"
+        uppercase={false}
+        haptic="light"
+        iconRight
+        icon={
+          <Ionicons
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={colors.star[300]}
+          />
+        }
+      />
 
       {onRelated && entry.related.length ? (
         <View style={styles.related}>
@@ -132,11 +134,13 @@ export function TermBody({ id, initiallyExpanded = false, onRelated }: TermBodyP
                 onPress={() => onRelated(r)}
                 style={styles.chip}
                 scaleTo={0.94}
+                accessibilityRole="button"
+                accessibilityLabel={termText(t, r, "title")}
               >
                 <TermMark mark={GLOSSARY_BY_ID[r].mark} size={14} />
                 <AppText
                   variant="bodySmall"
-                  color={colors.text.secondary}
+                  color={colors.text.primary}
                   numberOfLines={1}
                   style={styles.chipText}
                 >
@@ -163,26 +167,24 @@ const styles = StyleSheet.create({
   glyph: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderRadius: radii.pill,
+    backgroundColor: palette.star.soft,
     alignItems: "center",
     justifyContent: "center",
   },
   short: {
     flex: 1,
     minWidth: 0,
-    fontSize: 19,
-    lineHeight: 27,
   },
   yours: {
     gap: spacing.xs,
     padding: spacing.lg,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: colors.glow.starSoft,
+    borderRadius: radii.lg,
+    borderWidth: 2,
+    borderColor: palette.star.face,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: palette.star.slab,
+    backgroundColor: palette.star.soft,
   },
   detail: {
     gap: spacing.lg,
@@ -194,16 +196,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
-  },
-  toggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
   },
   related: {
     gap: spacing.sm,
@@ -221,11 +213,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
     maxWidth: "100%",
+    minHeight: 44,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
     borderRadius: radii.pill,
-    backgroundColor: surface.sheet,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
+    backgroundColor: surface.raised,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
   },
 });

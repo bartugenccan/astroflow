@@ -12,6 +12,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { AppText } from "../../components/ui/AppText";
+import { StateView } from "../../components/ui/StateView";
 import { Glyph } from "../../components/Glyph";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import { astrologyApi } from "../../services/astrologyApi";
@@ -168,17 +169,7 @@ function HouseReading({
       {loading ? (
         <ShimmerLines lines={4} />
       ) : error ? (
-        <PressableScale
-          onPress={reload}
-          haptic="none"
-          style={styles.retry}
-          accessibilityRole="button"
-        >
-          <Ionicons name="refresh" size={16} color={colors.star[300]} />
-          <AppText variant="body" color={colors.star[300]}>
-            {t("reading.retry")}
-          </AppText>
-        </PressableScale>
+        <StateView kind="error" compact message={t("reading.error")} onAction={reload} />
       ) : (
         <AppText variant="lead">{data?.text}</AppText>
       )}
@@ -244,11 +235,5 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
-  },
-  retry: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
   },
 });

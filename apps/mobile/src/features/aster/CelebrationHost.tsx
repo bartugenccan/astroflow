@@ -1,223 +1,405 @@
-import React, { useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown, ZoomIn } from "react-native-reanimated";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+} from "react-native-reanimated";
 import { AsterMascot } from "../../components/aster/AsterMascot";
 import { AppText } from "../../components/ui/AppText";
+import { Chip } from "../../components/ui/Chip";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { SpotlightModal } from "../../components/ui/SpotlightModal";
 import { StarBurst } from "../intentions/StarBurst";
-import { Celebration, useMascotStore } from "../../store/useMascotStore";
+import { Celebration, tierOf, useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
+import { useAccountPromptStore } from "../../store/useAccountPromptStore";
 import { useTranslation, TranslationKey } from "../../i18n";
-import { ABILITIES } from "../../lib/mascotRules";
-import { colors, depth, palette, radii, spacing, surface } from "../../lib/design-system";
+import { haptics } from "../../lib/haptics";
+import { useMotion } from "../../lib/motion";
+import { colors, depth, motion, palette, radii, spacing, surface, Tone } from "../../lib/design-system";
 import { milestoneLabel, stageName } from "./asterCopy";
+import { unlockLines } from "./unlockCopy";
+import { DiscoveryContent } from "./JourneyDiscovery";
+import { ProtectAsterSheet } from "./ProtectAsterSheet";
 
 /**
- * App-wide celebrations, fed by useMascotStore's queue. Big moments (hatching,
- * growing a stage, milestones, a shield saving the streak) take the screen
- * with Aster jumping; plain Işık rewards are a short toast that dismisses
- * itself. One at a time, in order.
+ * App-wide celebrations, fed by useMascotStore's queue, one at a time, in
+ * three tiers (see `tierOf`):
+ *
+ *   pill   — everyday wins (Işık, a milestone, a shield, a manifest come true,
+ *            the account linked): a small pill at the top. It never blocks the
+ *            screen, leaves on its own, and a tap or an upward flick sends it off.
+ *   moment — Aster hatching or growing a stage: the only full-screen beat. Short,
+ *            and a tap anywhere continues.
+ *   sheet  — a journey return: what Aster found, in a centred spotlight card.
+ *
+ * With reduce-motion on, entrances are plain fades and Aster holds still.
+ * When the queue is empty and an account prompt is waiting (after a hatch, the
+ * first journey, three days in orbit), Aster asks to be protected.
  */
 export function CelebrationHost() {
+  const router = useRouter();
   const current = useMascotStore((s) => s.queue[0]);
   const dismiss = useMascotStore((s) => s.dismiss);
-  if (!current) return null;
-  if (current.type === "reward") return <RewardToast key={current.id} item={current} onDone={dismiss} />;
-  return <BigMoment key={current.id} item={current} onDone={dismiss} />;
+  const promptOpen = useAccountPromptStore((s) => s.open);
+  const closePrompt = useAccountPromptStore((s) => s.close);
+  const offer = useAccountPromptStore((s) => s.offer);
+
+  const done = useCallback(() => {
+    const item = useMascotStore.getState().queue[0];
+    dismiss();
+    if (item?.type === "hatch") {
+      const resting = useMascotStore.getState().state?.eclipse?.active ?? false;
+      offer("hatch", { resting });
+    }
+  }, [dismiss, offer]);
+
+  const tier = current ? tierOf(current.type) : null;
+
+  return (
+    <>
+      {current && tier === "pill" ? <RewardPill key={current.id} item={current} onDone={done} /> : null}
+      {current && tier === "moment" ? <GrowthMoment key={current.id} item={current} onDone={done} /> : null}
+      {current && tier === "sheet" && current.journey ? (
+        <JourneySheet
+          key={current.id}
+          item={current}
+          onDone={done}
+          onSeeInChart={(link) => {
+            done();
+            router.push(link as Href);
+          }}
+        />
+      ) : null}
+      <ProtectAsterSheet visible={!!promptOpen && !current} onClose={closePrompt} />
+    </>
+  );
 }
 
-function RewardToast({ item, onDone }: { item: Celebration; onDone: () => void }) {
+// ─── Pill ─────────────────────────────────────────────────────────────────────
+
+interface PillCopy {
+  tone: Tone;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  body: string;
+  long: boolean;
+}
+
+function pillCopy(item: Celebration, t: ReturnType<typeof useTranslation>["t"]): PillCopy {
+  switch (item.type) {
+    case "milestone":
+      return {
+        tone: "mint",
+        icon: "trophy",
+        title: t("aster.celebrate.milestoneTitle"),
+        body: item.milestoneName ? milestoneLabel(t, item.milestoneName) : "",
+        long: true,
+      };
+    case "shield":
+      return {
+        tone: "sky",
+        icon: "shield-checkmark",
+        title: t("aster.celebrate.shieldTitle"),
+        body: t("aster.celebrate.shieldBody", { n: item.shieldsUsed ?? 1 }),
+        long: true,
+      };
+    case "manifested":
+      return {
+        tone: "star",
+        icon: "star",
+        title: t("aster.celebrate.manifestedTitle"),
+        body: item.wishText ? `“${item.wishText}”` : t("aster.celebrate.manifestedBody"),
+        long: true,
+      };
+    case "accountLinked":
+      return {
+        tone: "mint",
+        icon: "cloud-done",
+        title: t("aster.celebrate.linkedTitle"),
+        body: t("aster.celebrate.stardust", { n: item.delta?.stardustGained || 50 }),
+        long: true,
+      };
+    default:
+      return {
+        tone: "star",
+        icon: "sparkles",
+        title: t("aster.celebrate.rewardTitle", { n: item.amount ?? item.delta?.xpGained ?? 0 }),
+        body: t("aster.celebrate.rewardBody"),
+        long: false,
+      };
+  }
+}
+
+/** Flick the pill up past this many px to send it off. */
+const FLICK_PX = 18;
+
+function RewardPill({ item, onDone }: { item: Celebration; onDone: () => void }) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const accessories = useMascotStore((s) => s.state?.equipped ?? []);
+  const m = useMotion();
+  const stage = useMascotStore((s) => s.state?.stage ?? item.delta?.stage ?? 1);
+  const accessories = useMascotStore((s) => s.state?.equipped ?? NO_EQUIPPED);
+  const copy = pillCopy(item, t);
+  const tone = palette[copy.tone];
 
+  // One buzz per pill, not per merged reward.
   useEffect(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-    const timer = setTimeout(onDone, 2200);
-    return () => clearTimeout(timer);
-  }, [onDone]);
+    haptics.success();
+  }, []);
 
-  const n = item.delta?.xpGained ?? 0;
+  // Leaves on its own; a merged reward restarts the clock.
+  useEffect(() => {
+    const timer = setTimeout(onDone, copy.long ? motion.duration.toastLong : motion.duration.toast);
+    return () => clearTimeout(timer);
+  }, [onDone, copy.long, item.bump]);
+
+  // A merged reward gives the pill a small nudge so the new total registers.
+  const nudge = useSharedValue(1);
+  useEffect(() => {
+    if (!item.bump || m.reduced) return;
+    nudge.value = withSequence(withSpring(1.06, motion.spring.press), withSpring(1, motion.spring.pop));
+  }, [item.bump, m.reduced, nudge]);
+  const nudgeStyle = useAnimatedStyle(() => ({ transform: [{ scale: nudge.value }] }));
+
+  const dy = useSharedValue(0);
+  const flick = Gesture.Pan()
+    .onUpdate((e) => {
+      dy.value = Math.min(0, e.translationY);
+    })
+    .onEnd((e) => {
+      if (e.translationY < -FLICK_PX || e.velocityY < -500) runOnJS(onDone)();
+      else dy.value = withSpring(0, motion.spring.press);
+    });
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: dy.value }],
+    opacity: 1 + dy.value / 80,
+  }));
+
   return (
     <Animated.View
-      entering={SlideInDown.springify().damping(14)}
-      exiting={SlideOutDown.duration(200)}
+      entering={m.enter("drop")}
+      exiting={m.exit("lift")}
       pointerEvents="box-none"
-      style={[styles.toastWrap, { bottom: insets.bottom + 96 }]}
+      style={[styles.pillWrap, { top: insets.top + spacing.sm }]}
     >
-      <View
-        style={styles.toast}
-        accessible
-        accessibilityLiveRegion="polite"
-        accessibilityLabel={`${t("aster.celebrate.rewardTitle", { n })}. ${t("aster.celebrate.rewardBody")}`}
-      >
-        <AsterMascot
-          stage={item.delta?.stage ?? 1}
-          mood="glowing"
-          action="cheer"
-          size={56}
-          accessories={accessories}
-        />
-        <View style={styles.toastText}>
-          <View style={styles.row}>
-            <Ionicons name="sparkles" size={18} color={palette.star.face} />
-            <AppText variant="stat" color={palette.star.face}>
-              {t("aster.celebrate.rewardTitle", { n })}
-            </AppText>
-          </View>
-          <AppText variant="bodySmall" color={colors.text.secondary}>
-            {t("aster.celebrate.rewardBody")}
-          </AppText>
-        </View>
-      </View>
+      <GestureDetector gesture={flick}>
+        <Animated.View style={[styles.pillShell, dragStyle]}>
+          <Animated.View style={nudgeStyle}>
+            <Pressable
+              onPress={onDone}
+              accessibilityRole="button"
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={copy.body ? `${copy.title}. ${copy.body}` : copy.title}
+              accessibilityHint={t("aster.celebrate.dismissHint")}
+              style={[styles.pill, { borderColor: tone.face, borderBottomColor: tone.slab }]}
+            >
+              <View style={styles.pillAster}>
+                <AsterMascot stage={stage} mood="happy" action="idle" size={34} accessories={accessories} />
+              </View>
+              <View style={styles.pillText}>
+                <View style={styles.row}>
+                  <Ionicons name={copy.icon} size={16} color={tone.face} />
+                  <AppText variant="heading" color={tone.face} numberOfLines={1} style={styles.flex}>
+                    {copy.title}
+                  </AppText>
+                </View>
+                {copy.body ? (
+                  <AppText variant="bodySmall" color={colors.text.secondary} numberOfLines={1}>
+                    {copy.body}
+                  </AppText>
+                ) : null}
+              </View>
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
+      </GestureDetector>
     </Animated.View>
   );
 }
 
-function BigMoment({ item, onDone }: { item: Celebration; onDone: () => void }) {
+// ─── Moment (hatch / grow) ────────────────────────────────────────────────────
+
+/** A tap on the scrim continues only after this beat, so the moment can't be skipped by accident. */
+const TAP_AFTER_MS = 700;
+/** Egg wobble before it cracks; a grow waits a short beat. */
+const HATCH_BEAT_MS = 600;
+const GROW_BEAT_MS = 450;
+
+function GrowthMoment({ item, onDone }: { item: Celebration; onDone: () => void }) {
   const { t } = useTranslation();
-  const accessories = useMascotStore((s) => s.state?.equipped ?? []);
+  const m = useMotion();
+  const accessories = useMascotStore((s) => s.state?.equipped ?? NO_EQUIPPED);
   const finalStage = item.delta?.stage ?? 1;
-  const startStage = item.type === "hatch" ? 0 : item.type === "levelUp" ? item.delta?.previousStage ?? finalStage : finalStage;
-  const [stage, setStage] = useState(startStage);
+  const startStage = item.type === "hatch" ? 0 : item.delta?.previousStage ?? finalStage;
+  const [stage, setStage] = useState(m.reduced ? finalStage : startStage);
   const [burst, setBurst] = useState(0);
-  const [action, setAction] = useState<"hatch" | "cheer">(item.type === "hatch" ? "hatch" : "cheer");
+  const [action, setAction] = useState<"hatch" | "cheer" | "idle">(
+    m.reduced ? "idle" : item.type === "hatch" ? "hatch" : "idle",
+  );
+  const [canTap, setCanTap] = useState(false);
 
   useEffect(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    const tap = setTimeout(() => setCanTap(true), TAP_AFTER_MS);
     if (stage === finalStage) {
+      haptics.celebrate();
       setBurst(1);
-      return;
+      return () => clearTimeout(tap);
     }
-    // Hatch: wobble the egg, then crack open. Level-up: a beat, then grow.
-    const timer = setTimeout(
+    // Hatch: a short wobble, then crack open. Grow: a beat, then the new size.
+    const grow = setTimeout(
       () => {
         setStage(finalStage);
         setAction("cheer");
         setBurst((b) => b + 1);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined);
+        haptics.celebrate();
       },
-      item.type === "hatch" ? 1600 : 700,
+      item.type === "hatch" ? HATCH_BEAT_MS : GROW_BEAT_MS,
     );
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(tap);
+      clearTimeout(grow);
+    };
     // Run once per celebration.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const newAbility = item.type === "levelUp" || item.type === "hatch"
-    ? ABILITIES.find((a) => a.minStage === finalStage && a.available)
-    : undefined;
-
-  let title = "";
-  let body = "";
-  let tone: "star" | "mint" | "primary" | "sky" = "star";
-  if (item.type === "hatch") {
-    title = t("aster.celebrate.hatchTitle");
-    body = t("aster.celebrate.hatchBody");
-  } else if (item.type === "levelUp") {
-    title = t("aster.celebrate.levelTitle");
-    body = t("aster.celebrate.levelBody", { stage: stageName(t, finalStage) });
-    tone = "primary";
-  } else if (item.type === "milestone") {
-    title = t("aster.celebrate.milestoneTitle");
-    body = item.milestoneName ? milestoneLabel(t, item.milestoneName) : "";
-    tone = "mint";
-  } else if (item.type === "shield") {
-    title = t("aster.celebrate.shieldTitle");
-    body = t("aster.celebrate.shieldBody", { n: item.shieldsUsed ?? 1 });
-    tone = "sky";
-  }
+  const opened = item.type === "levelUp" ? unlockLines(t, finalStage) : [];
+  const hatch = item.type === "hatch";
+  const tone: Tone = hatch ? "star" : "primary";
+  const title = hatch ? t("aster.celebrate.hatchTitle") : t("aster.celebrate.levelTitle");
+  const body = hatch
+    ? t("aster.celebrate.hatchBody")
+    : t("aster.celebrate.levelBody", { stage: stageName(t, finalStage) });
+  const xp = item.delta?.xpGained ?? 0;
 
   return (
-    <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(160)} style={styles.backdrop}>
-      <Animated.View
-        entering={ZoomIn.springify().damping(12)}
-        style={styles.card}
-        accessibilityViewIsModal
-        accessibilityLiveRegion="assertive"
-      >
-        <View style={styles.asterWrap}>
-          <StarBurst playKey={burst} radius={110} count={14} />
+    <SpotlightModal
+      onDismiss={onDone}
+      canDismiss={canTap}
+      crown={
+        <>
+          <StarBurst playKey={burst} radius={80} count={10} />
           <AsterMascot
             stage={stage}
             mood="glowing"
             action={action}
             playKey={burst}
-            size={180}
+            size={140}
             accessories={stage > 0 ? accessories : []}
           />
+        </>
+      }
+    >
+      <AppText variant="title" center color={palette[tone].face}>
+        {title}
+      </AppText>
+      <AppText variant="body" center color={colors.text.primary}>
+        {body}
+      </AppText>
+      {xp > 0 ? (
+        <View style={styles.chips}>
+          <Chip label={t("aster.celebrate.rewardTitle", { n: xp })} icon="sparkles" tone="star" />
         </View>
-        <AppText variant="display" center color={palette[tone].face}>
-          {title}
-        </AppText>
-        {body ? (
-          <AppText variant="lead" center>
-            {body}
+      ) : null}
+      {opened.length ? (
+        <View style={styles.unlocks} accessibilityRole="list">
+          <AppText variant="label" color={palette.mint.face}>
+            {t("skypath.unlocks.title")}
           </AppText>
-        ) : null}
-        {item.delta && item.delta.xpGained > 0 ? (
-          <View style={[styles.row, styles.center]}>
-            <Ionicons name="sparkles" size={18} color={palette.star.face} />
-            <AppText variant="heading" color={palette.star.face}>
-              {t("aster.celebrate.rewardTitle", { n: item.delta.xpGained })}
-            </AppText>
-          </View>
-        ) : null}
-        {newAbility ? (
-          <View style={styles.ability}>
-            <Ionicons name="lock-open" size={18} color={palette.mint.face} />
-            <AppText variant="heading" color={colors.text.primary} style={styles.flex}>
-              {t("aster.celebrate.newAbility", {
-                ability: t(`aster.abilities.${newAbility.key}.title` as TranslationKey),
-              })}
-            </AppText>
-          </View>
-        ) : null}
-        <ChunkyButton label={t("aster.celebrate.continue")} onPress={onDone} variant={tone} style={styles.cta} />
-      </Animated.View>
-    </Animated.View>
+          {opened.map((line) => (
+            <View key={line.key} style={styles.unlockRow}>
+              <View style={[styles.unlockIcon, { backgroundColor: palette[line.tone].soft }]}>
+                <Ionicons name={line.icon} size={16} color={palette[line.tone].face} />
+              </View>
+              <AppText variant="bodySmall" color={colors.text.primary} style={styles.flex}>
+                {line.label}
+              </AppText>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      <ChunkyButton
+        label={t("aster.celebrate.continue")}
+        onPress={onDone}
+        variant={tone}
+        size="md"
+        haptic="none"
+        style={styles.cta}
+      />
+    </SpotlightModal>
+  );
+}
+
+
+
+// ─── Sheet (journey return) ───────────────────────────────────────────────────
+
+/** Aster is home: what it found, the constellation drawing itself, the door into the chart. */
+function JourneySheet({
+  item,
+  onDone,
+  onSeeInChart,
+}: {
+  item: Celebration;
+  onDone: () => void;
+  onSeeInChart: (link: string) => void;
+}) {
+  const { t } = useTranslation();
+  const m = useMotion();
+  const accessories = useMascotStore((s) => s.state?.equipped ?? NO_EQUIPPED);
+  const claim = item.journey!;
+
+  useEffect(() => {
+    haptics.success();
+  }, []);
+
+  return (
+    <SpotlightModal
+      onDismiss={onDone}
+      crown={
+        <AsterMascot
+          stage={claim.delta.stage}
+          mood="glowing"
+          action={m.reduced ? "idle" : "cheer"}
+          size={110}
+          accessories={accessories}
+        />
+      }
+    >
+      <View style={styles.journey}>
+        <View style={styles.journeyHead}>
+          <AppText variant="label" color={palette.star.face}>
+            {t("aster.discovery.eyebrow")}
+          </AppText>
+          {claim.delta.xpGained > 0 ? (
+            <Chip label={t("aster.celebrate.rewardTitle", { n: claim.delta.xpGained })} icon="sparkles" tone="star" />
+          ) : null}
+        </View>
+        <DiscoveryContent
+          discovery={claim.discovery}
+          constellationKey={claim.constellationKey}
+          duplicate={claim.duplicate}
+          bonusStardust={claim.bonusStardust}
+          shieldGranted={claim.shieldGranted}
+          drawDelay={m.reduced ? 0 : motion.duration.slow}
+          onSeeInChart={() => onSeeInChart(claim.discovery.link)}
+          onLater={onDone}
+        />
+      </View>
+    </SpotlightModal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    ...StyleSheet.absoluteFill,
-    zIndex: 2000,
-    elevation: 2000,
-    backgroundColor: "rgba(12,7,36,0.82)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.xl,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 400,
-    backgroundColor: surface.sheet,
-    borderRadius: radii.xl,
-    borderWidth: 2,
-    borderColor: colors.border.chunky,
-    borderBottomWidth: depth.lg + 2,
-    borderBottomColor: surface.slab,
-    padding: spacing.xl,
-    gap: spacing.md,
-    alignItems: "stretch",
-  },
-  asterWrap: { alignItems: "center", justifyContent: "center", marginTop: -spacing.xxxl - 40 },
-  row: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  center: { justifyContent: "center" },
-  ability: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: palette.mint.soft,
-  },
-  flex: { flex: 1 },
-  cta: { marginTop: spacing.sm },
-  toastWrap: {
+  // Pill
+  pillWrap: {
     position: "absolute",
     left: spacing.lg,
     right: spacing.lg,
@@ -225,20 +407,52 @@ const styles = StyleSheet.create({
     elevation: 1900,
     alignItems: "center",
   },
-  toast: {
+  pillShell: { maxWidth: 380, width: "100%" },
+  pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.md,
-    width: "100%",
-    maxWidth: 420,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
+    gap: spacing.sm,
+    minHeight: 52,
+    paddingVertical: spacing.xs + 2,
+    paddingLeft: spacing.xs + 2,
+    paddingRight: spacing.lg,
+    borderRadius: radii.pill,
     backgroundColor: surface.sheet,
     borderWidth: 2,
-    borderColor: palette.star.face,
-    borderBottomWidth: depth.md + 2,
-    borderBottomColor: palette.star.slab,
+    borderBottomWidth: depth.sm + 2,
   },
-  toastText: { flex: 1, gap: 2 },
+  pillAster: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: surface.raised,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  pillText: { flex: 1, gap: 1 },
+  row: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+  flex: { flex: 1 },
+
+  // Moment
+  unlocks: {
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: palette.mint.soft,
+  },
+  unlockRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  unlockIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: radii.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  chips: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: spacing.sm },
+  cta: { marginTop: spacing.sm },
+
+  // Journey sheet
+  journey: { gap: spacing.md },
+  journeyHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.md },
 });

@@ -106,7 +106,6 @@ export function WheelPicker({
     (index, prev) => {
       if (prev !== null && index !== prev) runOnJS(commit)(index);
     },
-    [commit],
   );
 
   const onScroll = useAnimatedScrollHandler({

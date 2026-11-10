@@ -6,7 +6,7 @@ import { useAffirmationStore } from "../store/useAffirmationStore";
 import { useReflectionStore } from "../store/useReflectionStore";
 import { useTarotStore, type SavedTarotReading } from "../store/useTarotStore";
 import { useElectionStore } from "../store/useElectionStore";
-import type { Affirmation, AffirmationDay, ElectionQuery } from "./types";
+import type { Affirmation, AffirmationDay, ElectionQuery, PracticeDay } from "./types";
 
 /**
  * Encrypted backup of the notes the app otherwise keeps only on this phone
@@ -41,6 +41,9 @@ const preferLocal = <V>(local: Record<string, V>, remote: Record<string, V>): Re
 interface ReflectionsData {
   days: Record<string, string[]>;
   rituals: Record<string, string>;
+  /** Added with the guided practice; older vaults don't have them. */
+  practice?: Record<string, PracticeDay>;
+  gratitude?: Record<string, string[]>;
 }
 interface AffirmationsData {
   customs: Affirmation[];
@@ -58,13 +61,31 @@ const ADAPTERS: { [K in Namespace]: Adapter<unknown> } = {
   reflections: {
     read: () => {
       const s = useReflectionStore.getState();
-      return { days: s.days, rituals: s.rituals } satisfies ReflectionsData;
+      return {
+        days: s.days,
+        rituals: s.rituals,
+        practice: s.practice,
+        gratitude: s.gratitude,
+      } satisfies ReflectionsData;
     },
-    write: (v) => useReflectionStore.setState(v as ReflectionsData),
+    write: (v) => {
+      const d = v as ReflectionsData;
+      useReflectionStore.setState({
+        days: d.days,
+        rituals: d.rituals,
+        practice: d.practice ?? {},
+        gratitude: d.gratitude ?? {},
+      });
+    },
     merge: (l, r) => {
       const a = l as ReflectionsData;
       const b = r as ReflectionsData;
-      return { days: preferLocal(a.days, b.days ?? {}), rituals: preferLocal(a.rituals, b.rituals ?? {}) };
+      return {
+        days: preferLocal(a.days, b.days ?? {}),
+        rituals: preferLocal(a.rituals, b.rituals ?? {}),
+        practice: preferLocal(a.practice ?? {}, b.practice ?? {}),
+        gratitude: preferLocal(a.gratitude ?? {}, b.gratitude ?? {}),
+      };
     },
     subscribe: (fn) => useReflectionStore.subscribe(fn),
   },

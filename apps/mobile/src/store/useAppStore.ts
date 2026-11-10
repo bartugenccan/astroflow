@@ -9,6 +9,14 @@ import { secureStorage } from "../services/secureStorage";
 /** Persist key. Lives in the Keychain/Keystore: it holds birth date, time and place. */
 export const APP_STORE_KEY = "astroflow-app";
 
+/**
+ * Version of the AI notice. Bump it whenever what reaches the AI provider
+ * grows, so everyone who accepted an older notice sees the new one once.
+ * v2: wish texts and check-in notes, tarot/election questions, sky check-in
+ * labels and today's transits for Aster's journeys are listed explicitly.
+ */
+export const AI_CONSENT_VERSION = 2;
+
 interface AppState {
   locale: Locale;
   hasOnboarded: boolean;
@@ -33,6 +41,8 @@ interface AppState {
   reminders: ReminderSettings;
   /** When the user accepted the AI / entertainment notice (ISO), or null. */
   aiConsentAt: string | null;
+  /** Which version of the notice they accepted (0 = before versions existed). */
+  aiConsentVersion: number;
 
   setLocale: (locale: Locale) => void;
   setDisplayName: (name: string) => void;
@@ -56,11 +66,22 @@ export interface ReminderSettings {
   daily: boolean;
   hour: number;
   minute: number;
-  /** Evening nudge to check in on intentions. */
+  /** Evening nudge to practise for a manifestation. */
   intention: boolean;
+  /**
+   * The three 3-6-9 sessions (09:00, 14:00, 21:00). Optional so settings saved
+   * before it existed still read as "off".
+   */
+  practice369?: boolean;
 }
 
-export const DEFAULT_REMINDERS: ReminderSettings = { daily: false, hour: 9, minute: 0, intention: false };
+export const DEFAULT_REMINDERS: ReminderSettings = {
+  daily: false,
+  hour: 9,
+  minute: 0,
+  intention: false,
+  practice369: false,
+};
 
 /** How many distinct saved people can be viewed before Premium is required. */
 export const FREE_PERSON_CHARTS = 2;
@@ -92,6 +113,7 @@ export const useAppStore = create<AppState>()(
       tarotCount: 0,
       reminders: DEFAULT_REMINDERS,
       aiConsentAt: null,
+      aiConsentVersion: 0,
 
       setLocale: (locale) => set({ locale }),
       setDisplayName: (displayName) => set({ displayName }),
@@ -128,7 +150,8 @@ export const useAppStore = create<AppState>()(
             : { tarotDate: today, tarotCount: 1 };
         }),
       setReminders: (patch) => set((s) => ({ reminders: { ...s.reminders, ...patch } })),
-      acceptAiConsent: () => set({ aiConsentAt: new Date().toISOString() }),
+      acceptAiConsent: () =>
+        set({ aiConsentAt: new Date().toISOString(), aiConsentVersion: AI_CONSENT_VERSION }),
       reset: () =>
         set({
           hasOnboarded: false,
@@ -144,6 +167,7 @@ export const useAppStore = create<AppState>()(
           tarotCount: 0,
           reminders: DEFAULT_REMINDERS,
           aiConsentAt: null,
+          aiConsentVersion: 0,
         }),
       setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
@@ -165,6 +189,7 @@ export const useAppStore = create<AppState>()(
         tarotCount: state.tarotCount,
         reminders: state.reminders,
         aiConsentAt: state.aiConsentAt,
+        aiConsentVersion: state.aiConsentVersion,
       }),
       onRehydrateStorage: () => (state) => {
         // Beta: Premium for everyone, whatever an older build persisted.

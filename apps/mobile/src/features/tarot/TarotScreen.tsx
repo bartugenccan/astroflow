@@ -1,13 +1,14 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
-import { PressableScale } from "../../components/ui/PressableScale";
+import { IconButton } from "../../components/ui/IconButton";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { EnterView } from "../../lib/motion";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, surface } from "../../lib/design-system";
-import type { TarotCategory, TarotDrawnCard } from "../../services/types";
+import { spacing } from "../../lib/design-system";
+import type { TarotCategory, TarotDrawnCard, TarotSpreadKey } from "../../services/types";
+import { useMascotStore } from "../../store/useMascotStore";
 import { FREE_DAILY_TAROT, useAppStore } from "../../store/useAppStore";
 import { tarotToday, useTarotStore } from "../../store/useTarotStore";
 import { CategoryStep } from "./CategoryStep";
@@ -17,13 +18,29 @@ import { useTarotSounds } from "./useTarotSounds";
 
 type Phase = "category" | "table" | "reading";
 
+/** Same cap as the question field. */
+const MAX_QUESTION = 200;
+
+/** `?q=` arrives decoded from expo-router; tolerate arrays, blanks and junk. */
+function questionParam(raw: string | string[] | undefined): string | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value !== "string") return null;
+  const q = value.replace(/\s+/g, " ").trim().slice(0, MAX_QUESTION);
+  return q.length > 0 ? q : null;
+}
+
 /**
  * Tarot tab: theme → shuffle / stop → pick three from the fan → the cards
  * turn over and each gets a detailed reading. One free spread a day; the
  * day's spread stays reopenable from the first step.
+ *
+ * Deep link: `/(tabs)/tarot?q=<question>` (the plan's TAROT step) opens the
+ * first step with the question already written in.
  */
 export function TarotScreen() {
   const { t, locale } = useTranslation();
+  const router = useRouter();
+  const params = useLocalSearchParams<{ q?: string | string[] }>();
   const sounds = useTarotSounds();
   const soundOn = useTarotStore((s) => s.soundOn);
   const setSoundOn = useTarotStore((s) => s.setSoundOn);
@@ -36,19 +53,37 @@ export function TarotScreen() {
 
   const [phase, setPhase] = useState<Phase>("category");
   const [category, setCategory] = useState<TarotCategory | null>(null);
+  const [spreadKey, setSpreadKey] = useState<TarotSpreadKey>("three");
+  const passes = useMascotStore((s) => s.state?.passesToday?.tarot ?? 0);
   const [question, setQuestion] = useState("");
   const [freshDraw, setFreshDraw] = useState(false);
   const [paywall, setPaywall] = useState(false);
+  // Remounts the first step so a deep-linked question replaces what was typed.
+  const [formKey, setFormKey] = useState(0);
+  const [prefilled, setPrefilled] = useState(false);
+
+  const linkedQuestion = questionParam(params.q);
+  useEffect(() => {
+    if (!linkedQuestion) return;
+    setQuestion(linkedQuestion);
+    setPrefilled(true);
+    setPhase("category");
+    setFormKey((k) => k + 1);
+    // Consume the param, so the same link opened again later still applies.
+    router.setParams({ q: undefined });
+  }, [linkedQuestion, router]);
 
   const today = tarotToday();
   const todays = lastReading && lastReading.date === today ? lastReading : null;
   const usedToday = tarotDate === today ? tarotCount : 0;
-  const atLimit = !isPremium && usedToday >= FREE_DAILY_TAROT;
+  // A bought taste (tarotPass) adds to today's free reading.
+  const atLimit = !isPremium && usedToday >= FREE_DAILY_TAROT + passes;
 
   const onStart = useCallback(
-    (c: TarotCategory, q: string) => {
+    (c: TarotCategory, q: string, sp: TarotSpreadKey) => {
       setCategory(c);
       setQuestion(q);
+      setSpreadKey(sp);
       if (atLimit) {
         setPaywall(true);
         return;
@@ -61,12 +96,15 @@ export function TarotScreen() {
   const onComplete = useCallback(
     (cards: TarotDrawnCard[]) => {
       if (!category) return;
-      startReading({ category, question: question || undefined, cards }, locale);
+      startReading(
+        { category, question: question || undefined, cards, ...(spreadKey === "three" ? {} : { spread: spreadKey }) },
+        locale,
+      );
       recordTarotReading();
       setFreshDraw(true);
       setPhase("reading");
     },
-    [category, question, locale, startReading, recordTarotReading],
+    [category, question, spreadKey, locale, startReading, recordTarotReading],
   );
 
   const openToday = useCallback(() => {
@@ -82,6 +120,7 @@ export function TarotScreen() {
             <View style={styles.tableWrap}>
               <TarotTable
                 category={category}
+                spread={spreadKey}
                 sounds={sounds}
                 onComplete={onComplete}
                 onChangeTheme={() => setPhase("category")}
@@ -97,31 +136,27 @@ export function TarotScreen() {
             />
           ) : (
             <CategoryStep
+              key={formKey}
+              prefilled={prefilled}
               initialCategory={category}
               initialQuestion={question}
               today={todays}
               atLimit={atLimit}
               onOpenToday={openToday}
               onStart={onStart}
+              onPremium={() => setPaywall(true)}
             />
           )}
         </EnterView>
 
-        <PressableScale
+        <IconButton
+          icon={soundOn ? "volume-medium" : "volume-mute"}
           onPress={() => setSoundOn(!soundOn)}
-          scaleTo={0.9}
+          tone={soundOn ? "star" : "night"}
+          size={40}
           style={styles.sound}
-          accessibilityRole="switch"
-          accessibilityState={{ checked: soundOn }}
           accessibilityLabel={soundOn ? t("tarot.soundOn") : t("tarot.soundOff")}
-          hitSlop={10}
-        >
-          <Ionicons
-            name={soundOn ? "volume-medium-outline" : "volume-mute-outline"}
-            size={20}
-            color={soundOn ? colors.star[300] : colors.text.tertiary}
-          />
-        </PressableScale>
+        />
       </View>
 
       <PaywallSheet visible={paywall} onClose={() => setPaywall(false)} variant="premium" />
@@ -141,13 +176,5 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: spacing.md,
     right: spacing.lg,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: surface.sheet,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
   },
 });

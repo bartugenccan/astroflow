@@ -1,168 +1,157 @@
-import { mt } from "../../lib/motion";
 import React, { useCallback, useEffect } from "react";
-import {
-  View,
-  StyleSheet,
-  Dimensions,
-  TouchableWithoutFeedback,
-} from "react-native";
+import { Alert, Dimensions, StyleSheet, TouchableWithoutFeedback, View } from "react-native";
 import Animated, {
-  useSharedValue,
+  Easing,
+  runOnJS,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
   withTiming,
-  runOnJS,
-  Easing,
 } from "react-native-reanimated";
-import {
-  Gesture,
-  GestureDetector,
-  ScrollView,
-} from "react-native-gesture-handler";
+import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
-import * as Haptics from "expo-haptics";
-import { MotiView } from "moti";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "./AppText";
-import { PressableScale } from "./PressableScale";
+import { IconButton } from "./IconButton";
+import { useTranslation } from "../../i18n";
 import { useUiStore } from "../../store/useUiStore";
-import { colors, spacing, radii, motion, blurIntensity, shadows, surface } from "../../lib/design-system";
-
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
+import { useMotion } from "../../lib/motion";
+import { colors, depth, layout, motion, palette, radii, spacing, surface, type Tone } from "../../lib/design-system";
 
 const { height: SCREEN_HEIGHT } = Dimensions.get("window");
-const SHEET_HEIGHT = SCREEN_HEIGHT * 0.6;
-const DISMISS_FRACTION = 0.3;
+/** The card never covers more than this much of the screen; longer content scrolls inside. */
+const MAX_HEIGHT = SCREEN_HEIGHT * 0.85;
+/** The card floats this far in from the screen edges. */
+const INSET = spacing.md;
+const DISMISS_DISTANCE = 120;
 const FLING_VELOCITY = 900;
+const BORDER = 2;
 
 interface SpringBottomSheetProps {
   visible: boolean;
   onClose: () => void;
   title?: string;
+  /** A small tone badge beside the title (an icon in the tone's face colour). */
+  icon?: keyof typeof Ionicons.glyphMap;
+  tone?: Tone;
+  /**
+   * Unsaved input inside: closing asks first (swipe, backdrop or ✕), so a
+   * half-written note is never lost to a stray tap.
+   */
+  dirty?: boolean;
   children?: React.ReactNode;
 }
 
 /**
- * Draggable modal sheet. Drag-to-dismiss is scoped to the grabber/header so the
- * body scrolls freely. Ink-900 surface with a faint gold sheen; springs open
- * with a staggered content entrance.
+ * CardSheet — the app's one bottom sheet, for short things only: a picker, a
+ * quick form, a confirmation. Long reads and multi-step flows are full-screen
+ * routes instead (a sheet is never a primary path).
+ *
+ * A chunky floating card, inset from the screen edges, sized to its content
+ * up to 85% of the screen. Same Duolingo depth as every card: a 2pt outline
+ * and a hard 6pt slab, no blur. It rises on the sheet spring and leaves faster
+ * than it came; under Reduce Motion it simply fades. Drag the grabber or the
+ * header down, tap the backdrop, or press ✕ to close.
  */
-export function SpringBottomSheet({
-  visible,
-  onClose,
-  title,
-  children,
-}: SpringBottomSheetProps) {
+export function SpringBottomSheet({ visible, onClose, title, icon, tone = "primary", dirty, children }: SpringBottomSheetProps) {
   const insets = useSafeAreaInsets();
-  const translateY = useSharedValue(SHEET_HEIGHT);
-  const backdropOpacity = useSharedValue(0);
-  const materialize = useSharedValue(0); // 0 → hidden, 1 → settled (scale/opacity pop)
+  const { t } = useTranslation();
+  const { reduced, springConfig } = useMotion();
+  const offset = useSharedValue(reduced ? 0 : MAX_HEIGHT);
+  const shown = useSharedValue(0);
   const pushSheet = useUiStore((s) => s.pushSheet);
   const popSheet = useUiStore((s) => s.popSheet);
 
-  // Every open sheet hides the floating tab bar; the counter in the store
-  // keeps it hidden while any sheet (even a stacked one) is still up.
+  // Every open sheet hides the floating tab bar; the store's counter keeps it
+  // hidden while any sheet (even a stacked one) is still up.
   useEffect(() => {
     if (!visible) return;
     pushSheet();
     return popSheet;
   }, [visible, pushSheet, popSheet]);
 
-  const handleClose = useCallback(() => {
-    "worklet";
-    translateY.value = withSpring(SHEET_HEIGHT, motion.spring.gentle);
-    backdropOpacity.value = withTiming(0, {
-      duration: 240,
-      easing: Easing.out(Easing.cubic),
-    });
-    materialize.value = withTiming(0, { duration: 200 });
-    runOnJS(onClose)();
-  }, [onClose, translateY, backdropOpacity, materialize]);
-
   useEffect(() => {
-    if (visible) {
-      // A soft haptic + materialize (rise, gentle overshoot, scale/opacity pop)
-      // so the sheet feels summoned rather than slid.
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-      translateY.value = withSpring(0, motion.spring.mystic);
-      materialize.value = withSpring(1, motion.spring.mystic);
-      backdropOpacity.value = withTiming(1, {
-        duration: 320,
-        easing: Easing.out(Easing.cubic),
-      });
+    if (!visible) return;
+    if (reduced) {
+      offset.value = 0;
+      shown.value = withTiming(1, { duration: motion.duration.fast });
+      return;
     }
-  }, [visible, translateY, backdropOpacity, materialize]);
+    offset.value = MAX_HEIGHT;
+    offset.value = withSpring(0, springConfig("sheet"));
+    shown.value = withTiming(1, { duration: motion.duration.base, easing: Easing.out(Easing.cubic) });
+  }, [visible, reduced, offset, shown, springConfig]);
 
-  // Pan only on the grabber/header so the body ScrollView isn't intercepted.
+  const finishClose = useCallback(() => {
+    "worklet";
+    // Leaving is quicker than arriving: a short eased slide, no spring tail.
+    if (!reduced) {
+      offset.value = withTiming(MAX_HEIGHT, { duration: motion.duration.exit, easing: Easing.in(Easing.cubic) });
+    }
+    shown.value = withTiming(0, { duration: motion.duration.exit });
+    runOnJS(onClose)();
+  }, [onClose, offset, shown, reduced]);
+
+  const requestClose = useCallback(() => {
+    if (!dirty) {
+      finishClose();
+      return;
+    }
+    offset.value = withSpring(0, springConfig("press"));
+    Alert.alert(t("common.discardTitle"), t("common.discardBody"), [
+      { text: t("common.keepEditing"), style: "cancel" },
+      { text: t("common.discard"), style: "destructive", onPress: () => finishClose() },
+    ]);
+  }, [dirty, finishClose, offset, springConfig, t]);
+
+  // Pan only on the grabber/header so the body ScrollView is never intercepted.
   const pan = Gesture.Pan()
-    .onUpdate((event) => {
-      translateY.value = Math.max(0, event.translationY);
+    .onUpdate((e) => {
+      offset.value = Math.max(0, e.translationY);
     })
-    .onEnd((event) => {
-      if (
-        translateY.value > SHEET_HEIGHT * DISMISS_FRACTION ||
-        event.velocityY > FLING_VELOCITY
-      ) {
-        handleClose();
+    .onEnd((e) => {
+      if (offset.value > DISMISS_DISTANCE || e.velocityY > FLING_VELOCITY) {
+        runOnJS(requestClose)();
       } else {
-        translateY.value = withSpring(0, motion.spring.snappy);
+        offset.value = withSpring(0, motion.spring.press);
       }
     });
 
-  const sheetStyle = useAnimatedStyle(() => ({
-    opacity: 0.7 + materialize.value * 0.3,
-    transform: [
-      { translateY: translateY.value },
-      { scale: 0.96 + materialize.value * 0.04 },
-    ],
+  const cardStyle = useAnimatedStyle(() => ({
+    opacity: reduced ? shown.value : 0.6 + shown.value * 0.4,
+    transform: [{ translateY: offset.value }, { scale: reduced ? 1 : 0.96 + shown.value * 0.04 }],
   }));
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: backdropOpacity.value,
-  }));
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: shown.value }));
 
   if (!visible) return null;
 
+  const toneSet = palette[tone];
+
   return (
-    <View style={styles.root}>
-      <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
-        <AnimatedBlurView
-          intensity={blurIntensity.medium}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.backdropTint} />
-        <TouchableWithoutFeedback onPress={onClose}>
+    <View style={styles.root} accessibilityViewIsModal>
+      <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
+        <TouchableWithoutFeedback onPress={requestClose} accessibilityRole="button" accessibilityLabel={t("common.close")}>
           <View style={StyleSheet.absoluteFill} />
         </TouchableWithoutFeedback>
       </Animated.View>
 
-      <Animated.View style={[styles.sheet, sheetStyle]}>
-        {/* Faint gold sheen along the top edge */}
-        <LinearGradient
-          colors={["rgba(231,205,143,0.08)", "transparent"]}
-          style={styles.sheen}
-          pointerEvents="none"
-        />
-
+      <Animated.View
+        style={[styles.card, { bottom: insets.bottom + INSET, maxHeight: MAX_HEIGHT - insets.top }, cardStyle]}
+      >
         <GestureDetector gesture={pan}>
           <View style={styles.dragZone}>
             <View style={styles.grabber} />
             {title ? (
               <View style={styles.header}>
-                <AppText variant="title" style={styles.title} numberOfLines={2}>
+                {icon ? (
+                  <View style={[styles.badge, { backgroundColor: toneSet.face, borderColor: toneSet.slab }]}>
+                    <Ionicons name={icon} size={18} color={toneSet.on} />
+                  </View>
+                ) : null}
+                <AppText variant="title" style={styles.title} numberOfLines={2} accessibilityRole="header">
                   {title}
                 </AppText>
-                <PressableScale
-                  onPress={onClose}
-                  hitSlop={12}
-                  scaleTo={0.85}
-                  accessibilityRole="button"
-                  accessibilityLabel="Close"
-                >
-                  <Ionicons name="close" size={22} color={colors.text.tertiary} />
-                </PressableScale>
+                <IconButton icon="close" onPress={requestClose} size={44} accessibilityLabel={t("common.close")} />
               </View>
             ) : null}
           </View>
@@ -170,22 +159,11 @@ export function SpringBottomSheet({
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: insets.bottom + spacing.xxl },
-          ]}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {/* Fade only — a translateY entrance here would shift the content
-              under the finger while the sheet is still springing open, which
-              reads as the scroll jumping back to the top. */}
-          <MotiView
-            from={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={mt({ type: "timing", duration: 220 })}
-          >
-            {children}
-          </MotiView>
+          {children}
         </ScrollView>
       </Animated.View>
     </View>
@@ -198,62 +176,59 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 1000,
   },
-  backdropTint: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(6, 8, 16, 0.55)",
+  backdrop: {
+    backgroundColor: colors.overlay.scrim,
   },
-  sheet: {
+  card: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: SHEET_HEIGHT,
-    backgroundColor: surface.card,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    borderTopWidth: 1,
-    borderColor: colors.border.hairlineStrong,
+    left: INSET,
+    right: INSET,
+    backgroundColor: surface.sheet,
+    borderRadius: radii.xl,
+    borderWidth: BORDER,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: BORDER + depth.lg,
+    borderBottomColor: surface.slab,
     overflow: "hidden",
   },
-  sheen: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-  },
   dragZone: {
-    paddingTop: spacing.md,
+    paddingTop: spacing.sm,
   },
   grabber: {
     alignSelf: "center",
     width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.star[300],
-    opacity: 0.85,
-    marginBottom: spacing.sm,
-    ...shadows.glow,
+    height: 5,
+    borderRadius: radii.pill,
+    backgroundColor: colors.border.hairlineStrong,
+    marginBottom: spacing.xs,
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border.hairline,
+    alignItems: "center",
+    gap: spacing.md,
+    paddingLeft: layout.gutter,
+    paddingRight: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  badge: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.sm,
+    borderWidth: 0,
+    borderBottomWidth: depth.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
   title: {
     flex: 1,
     minWidth: 0,
-    marginRight: spacing.sm,
   },
   scroll: {
-    flex: 1,
+    flexGrow: 0,
   },
   content: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingHorizontal: layout.gutter,
+    paddingTop: spacing.sm,
+    paddingBottom: layout.gutter,
   },
 });

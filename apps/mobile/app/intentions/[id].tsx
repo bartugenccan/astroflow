@@ -1,3 +1,3 @@
-import { IntentionDetailScreen } from "../../src/features/intentions/IntentionDetailScreen";
+import { WishDetailScreen } from "../../src/features/manifest/WishDetailScreen";
 
-export default IntentionDetailScreen;
+export default WishDetailScreen;

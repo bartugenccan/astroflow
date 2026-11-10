@@ -21,6 +21,13 @@ export const API_CONFIG_ERROR = !__DEV__ && API_URL.length === 0;
 export const USE_HTTP = API_URL.length > 0 || !__DEV__;
 
 /**
+ * Optional accounts need the real API. Lives here (not in auth/account) so
+ * stores can read it without importing the auth service, which would close
+ * the cycle account → dataWipe → stores → account.
+ */
+export const ACCOUNTS_ENABLED = API_URL.length > 0;
+
+/**
  * Everyone gets Premium until real payments ship. Flip
  * EXPO_PUBLIC_PREMIUM_BETA=false (with PREMIUM_BETA=false on the API) when they do.
  */

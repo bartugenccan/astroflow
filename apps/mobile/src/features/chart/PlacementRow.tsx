@@ -6,15 +6,17 @@ import { Glyph } from "../../components/Glyph";
 import { PlanetPlacement } from "../../services/types";
 import { houseLabel } from "../../lib/astroLanguage";
 import { useTranslation } from "../../i18n";
-import { colors, spacing } from "../../lib/design-system";
+import { colors, palette, radii, spacing } from "../../lib/design-system";
 
 interface Props {
   planet: PlanetPlacement;
   onPress: (planet: PlanetPlacement) => void;
+  /** Marked by a deep link (a transit touching it, or its sign being explored). */
+  highlighted?: boolean;
 }
 
 /** A single "☉ Sun — Aries · 1st House — 14°32′" row. */
-export function PlacementRow({ planet, onPress }: Props) {
+export function PlacementRow({ planet, onPress, highlighted = false }: Props) {
   const { t, locale } = useTranslation();
   const signName = t(`signs.${planet.sign}` as "signs.Aries");
   const planetName = t(`planets.${planet.name}` as "planets.Sun");
@@ -23,15 +25,16 @@ export function PlacementRow({ planet, onPress }: Props) {
     <PressableScale
       onPress={() => onPress(planet)}
       scaleTo={0.98}
-      style={styles.row}
+      style={[styles.row, highlighted && styles.rowHighlighted]}
       accessibilityRole="button"
+      accessibilityState={{ selected: highlighted }}
       accessibilityLabel={`${planetName}, ${signName}, ${houseLabel(t, locale, planet.house)}${
         planet.retrograde ? `, ${t("chart.retrograde")}` : ""
       }`}
     >
       <View style={styles.left}>
         <View style={styles.glyph}>
-          <Glyph name={planet.name} size={24} color={colors.star[200]} />
+          <Glyph name={planet.name} size={24} color={highlighted ? palette.star.face : colors.star[200]} />
         </View>
         <View style={styles.text}>
           <View style={styles.titleRow}>
@@ -66,6 +69,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.md,
     paddingVertical: spacing.md,
+    minHeight: 56,
+  },
+  rowHighlighted: {
+    marginHorizontal: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.sm,
+    backgroundColor: palette.star.soft,
   },
   left: {
     flexDirection: "row",

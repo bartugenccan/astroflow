@@ -3,11 +3,14 @@ import { View, StyleSheet, Dimensions } from "react-native";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { AppText } from "../../components/ui/AppText";
+import { AsterCameo } from "../../components/ui/AsterCameo";
+import { StateView } from "../../components/ui/StateView";
+import { Ionicons } from "@expo/vector-icons";
 import { ShareableCard, ShareCardData, CARD_W, CARD_H } from "./ShareableCard";
 import { useShareCard } from "./useShareCard";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
-import { colors, spacing, radii } from "../../lib/design-system";
+import { colors, depth, palette, spacing, radii, surface } from "../../lib/design-system";
 
 interface ShareCardModalProps {
   visible: boolean;
@@ -42,6 +45,7 @@ export function ShareCardModal({ visible, onClose, data }: ShareCardModalProps) 
       </View>
 
       <SpringBottomSheet visible={visible} onClose={onClose} title={t("share.title")}>
+        <AsterCameo text={t("profileUi.share.asterLine")} size={52} style={styles.cameo} />
         <EnterView scale delay={120} style={styles.previewWrap}>
           <View style={styles.previewClip}>
             <View style={styles.previewScaler}>
@@ -50,21 +54,21 @@ export function ShareCardModal({ visible, onClose, data }: ShareCardModalProps) 
           </View>
         </EnterView>
 
-        <ChunkyButton
-          label={t("share.cta")}
-          onPress={share}
-          loading={busy}
-          style={{ marginTop: spacing.xl }}
-        />
         {status === "unavailable" ? (
           <AppText variant="bodySmall" center color={colors.semantic.error} style={styles.msg}>
             {t("share.unavailable")}
           </AppText>
         ) : status === "error" ? (
-          <AppText variant="bodySmall" center color={colors.semantic.error} style={styles.msg}>
-            {t("share.error")}
-          </AppText>
+          <StateView kind="error" compact message={t("share.error")} style={styles.msg} />
         ) : null}
+        <ChunkyButton
+          label={status === "error" ? t("common.retry") : t("share.cta")}
+          onPress={share}
+          loading={busy}
+          disabled={status === "unavailable"}
+          style={styles.cta}
+          icon={<Ionicons name="share-social" size={18} color={palette.primary.on} />}
+        />
       </SpringBottomSheet>
     </>
   );
@@ -81,13 +85,21 @@ const styles = StyleSheet.create({
   previewWrap: {
     alignItems: "center",
   },
+  cameo: {
+    marginBottom: spacing.lg,
+  },
   previewClip: {
     width: PREVIEW_W,
     height: PREVIEW_H,
     borderRadius: radii.md,
     overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.md,
+    borderBottomColor: surface.slab,
+  },
+  cta: {
+    marginTop: spacing.xl,
   },
   previewScaler: {
     width: CARD_W,

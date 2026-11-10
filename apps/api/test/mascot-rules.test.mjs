@@ -17,7 +17,16 @@ import {
   partitionMergeEvents,
   mergeMascotState,
   MAX_SHIELDS,
+  SKY_PATH,
+  lessonStatus,
+  skyPathView,
+  canUnlockEarly,
+  spreadUnlocked,
+  unlocksAt,
+  passesToday,
+  STAGES,
 } from '../src/modules/mascot/mascot-rules.ts';
+import { intentionStats } from '../src/modules/intentions/intention-rules.ts';
 
 test('the egg stays an egg until it hatches, whatever the Işık', () => {
   assert.equal(stageFor(0, false), 0);
@@ -136,7 +145,8 @@ test('merge never double-counts a once-ever award earned on different days', () 
 });
 
 const mascot = (o = {}) => ({
-  xp: 0, stardust: 0, shields: 0, equipped: [], owned: [], lastFreeShieldWeek: null, hatchedAt: null, ...o,
+  xp: 0, stardust: 0, shields: 0, equipped: [], owned: [], lastFreeShieldWeek: null, hatchedAt: null,
+  lessonsDone: [], lessonsEarly: [], novaLook: false, ...o,
 });
 
 test('merging into nothing keeps the anonymous Aster as is', () => {
@@ -263,7 +273,8 @@ test('later journeys mostly bring the discovery sign, else an unfound sky figure
 
 const fullMascot = (o = {}) => ({
   xp: 0, stardust: 0, shields: 0, equipped: [], owned: [], lastFreeShieldWeek: null, hatchedAt: null,
-  orbitStreak: 0, orbitBest: 0, orbitLastDate: null, journeysCompleted: 0, eclipseStart: null, eclipseEnd: null, ...o,
+  orbitStreak: 0, orbitBest: 0, orbitLastDate: null, journeysCompleted: 0, eclipseStart: null, eclipseEnd: null,
+  lessonsDone: [], lessonsEarly: [], novaLook: false, ...o,
 });
 
 test('merge keeps the most recent orbit, the best best, and adds journeys', () => {
@@ -274,4 +285,111 @@ test('merge keeps the most recent orbit, the best best, and adds journeys', () =
   assert.equal(m.orbitLastDate, '2026-11-10');
   assert.equal(m.orbitBest, 20);
   assert.equal(m.journeysCompleted, 6);
+});
+
+// ─── Harita Yolu ─────────────────────────────────────────────────────────────
+
+const path = (o = {}) => ({ stage: 1, done: [], early: [], ...o });
+
+test('the first chapter is open from the start, even for the egg', () => {
+  assert.equal(lessonStatus('bigThree', path({ stage: 0 })), 'open');
+  assert.equal(lessonStatus('chartMood', path({ stage: 0 })), 'lockedPrev');
+});
+
+test('chapters open in order; a done chapter stays done', () => {
+  const p = path({ done: ['bigThree'] });
+  assert.equal(lessonStatus('bigThree', p), 'done');
+  assert.equal(lessonStatus('chartMood', p), 'open');
+  assert.equal(lessonStatus('personal', p), 'lockedPrev');
+});
+
+test('stage gates a chapter only once the one above it is done', () => {
+  const done = ['bigThree', 'chartMood', 'personal'];
+  assert.equal(lessonStatus('housesSelf', path({ stage: 1, done })), 'lockedStage');
+  assert.equal(lessonStatus('housesSelf', path({ stage: 2, done })), 'open');
+  assert.equal(lessonStatus('housesWorld', path({ stage: 2, done })), 'lockedPrev');
+});
+
+test('buying a chapter early opens it before the stage, never out of order', () => {
+  const done = ['bigThree', 'chartMood', 'personal'];
+  assert.equal(lessonStatus('housesSelf', path({ stage: 1, done, early: ['housesSelf'] })), 'open');
+  assert.equal(lessonStatus('housesWorld', path({ stage: 1, done, early: ['housesWorld'] })), 'lockedPrev');
+});
+
+test('only stage-gated, not yet owned chapters can be bought early', () => {
+  assert.equal(canUnlockEarly('bigThree', path()), false); // free
+  assert.equal(canUnlockEarly('housesSelf', path({ stage: 1 })), true);
+  assert.equal(canUnlockEarly('housesSelf', path({ stage: 2 })), false); // stage already enough
+  assert.equal(canUnlockEarly('housesSelf', path({ stage: 1, early: ['housesSelf'] })), false);
+});
+
+test('the path view lists every chapter in order', () => {
+  const v = skyPathView(path());
+  assert.deepEqual(v.map((c) => c.key), SKY_PATH.map((c) => c.key));
+  assert.equal(v[0].status, 'open');
+});
+
+test('lessons award once each, at most two a day', () => {
+  assert.equal(EVENT_RULES.SKY_LESSON.mode, 'once');
+  assert.equal(EVENT_RULES.SKY_LESSON.dailyCap, 2);
+  assert.equal(EVENT_RULES.SIGN_LOG.dailyCap, 1);
+  assert.ok(!CLIENT_EVENT_KINDS.includes('SKY_LESSON'), 'lessons are server-verified');
+});
+
+test('the decision spread opens at Glimmer', () => {
+  assert.equal(spreadUnlocked('three', 0), true);
+  assert.equal(spreadUnlocked('decision', 2), false);
+  assert.equal(spreadUnlocked('decision', 3), true);
+});
+
+test('every grown stage opens something that works, not only cosmetics', () => {
+  for (let stage = 2; stage < STAGES.length; stage++) {
+    const u = unlocksAt(stage);
+    assert.ok(u.lessons.length + u.spreads.length + u.abilities.length > 0, `stage ${stage} opens nothing`);
+  }
+  assert.ok(ABILITIES.every((a) => a.available), 'every advertised ability is built');
+});
+
+test('passes only count for today', () => {
+  const stored = { '2026-11-09': { tarot: 1 }, '2026-11-10': { chat: 5 } };
+  assert.deepEqual(passesToday(stored, '2026-11-10'), { chat: 5 });
+  assert.deepEqual(passesToday(stored, '2026-11-11'), {});
+  assert.deepEqual(passesToday(null, '2026-11-11'), {});
+});
+
+test('merging unites finished and early lessons and keeps the Nova look', () => {
+  const into = mascot({ lessonsDone: ['bigThree'], lessonsEarly: [], novaLook: false });
+  const from = mascot({ lessonsDone: ['bigThree', 'chartMood'], lessonsEarly: ['housesSelf'], novaLook: true });
+  const m = mergeMascotState(into, from, 0);
+  assert.deepEqual(m.lessonsDone.sort(), ['bigThree', 'chartMood']);
+  assert.deepEqual(m.lessonsEarly, ['housesSelf']);
+  assert.equal(m.novaLook, true);
+});
+
+test('a typical 60 Işık day reaches Glimmer in about nine days', () => {
+  const day = 60;
+  const daysTo = (stage) => Math.ceil(STAGES[stage].minXp / day);
+  assert.ok(daysTo(2) <= 3);
+  assert.ok(daysTo(3) <= 9);
+  assert.ok(daysTo(4) <= 20);
+});
+
+// ─── Manifest report card ────────────────────────────────────────────────────
+
+test('manifest stats count days, practice days and the conviction trend oldest first', () => {
+  const rows = [
+    { date: '2026-11-10', conviction: 5 },
+    { date: '2026-11-10', conviction: 4 },
+    { date: '2026-11-08', conviction: 3 },
+  ];
+  const s = intentionStats(rows, '2026-11-01', '2026-11-10', 4);
+  assert.equal(s.daysActive, 10);
+  assert.equal(s.checkIns, 3);
+  assert.equal(s.practiceDays, 2);
+  assert.equal(s.longestStreak, 4);
+  assert.deepEqual(s.convictionTrend, [3, 4, 5]);
+});
+
+test('a manifest planted today is one day old', () => {
+  assert.equal(intentionStats([], '2026-11-10', '2026-11-10', 0).daysActive, 1);
 });

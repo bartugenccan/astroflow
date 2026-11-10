@@ -8,13 +8,15 @@ import { astrologyApi } from "../../services/astrologyApi";
 export function usePerson(id: string | undefined): {
   person: SavedPerson | null;
   loading: boolean;
+  error: boolean;
+  reload: () => void;
 } {
   const people = useAsync(() => astrologyApi.listPeople(), []);
   const person = useMemo(
     () => people.data?.find((p) => p.id === id) ?? null,
     [people.data, id],
   );
-  return { person, loading: people.loading };
+  return { person, loading: people.loading, error: !!people.error, reload: people.reload };
 }
 
 /** Build an API birth DTO from a saved person (unknown time → noon). */

@@ -1,53 +1,90 @@
-import { mt } from "../../lib/motion";
 import React, { useEffect, useState } from "react";
-import {
-  StyleSheet,
-  View,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import { useRouter } from "expo-router";
-import { MotiView } from "moti";
+import { StyleSheet, View, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { useRouter, type Href } from "expo-router";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
-  withTiming,
+  useReducedMotion,
+  useSharedValue,
   withDelay,
-  Easing,
+  withSpring,
 } from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { AppText } from "../../components/ui/AppText";
+import { AsterCameo } from "../../components/ui/AsterCameo";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { AccountSheet } from "../account/AccountSheet";
 import { ACCOUNTS_ENABLED } from "../../services/auth/account";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
-import { useAppStore } from "../../store/useAppStore";
+import { AI_CONSENT_VERSION, useAppStore } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, fonts, radii, surface } from "../../lib/design-system";
+import { EnterView } from "../../lib/motion";
+import { colors, motion, radii, spacing, surface, typography } from "../../lib/design-system";
+import { readTourCheckpoint } from "./tourCheckpoint";
 
+/** Before onboarding ends Aster is still an egg. */
+const EGG_STAGE = 0;
+
+/**
+ * First screen: the wordmark, then the egg Aster asks your name in its own
+ * bubble. If a previous run already cast the chart and stopped mid-tour (app
+ * reload), it picks the tour back up instead of starting over.
+ */
 export function WelcomeScreen() {
   const router = useRouter();
   const { t } = useTranslation();
+  const reduced = useReducedMotion();
   const name = useOnboardingDraft((s) => s.name);
   const setName = useOnboardingDraft((s) => s.setName);
-  const aiConsentAt = useAppStore((s) => s.aiConsentAt);
+  const setProfile = useOnboardingDraft((s) => s.setProfile);
+  const draftProfile = useOnboardingDraft((s) => s.profile);
+  const aiConsentCurrent = useAppStore((s) => !!s.aiConsentAt && s.aiConsentVersion >= AI_CONSENT_VERSION);
   // Returning users (new phone, reinstall) sign in instead of re-onboarding.
   const [signInOpen, setSignInOpen] = useState(false);
+  const [resumeChecked, setResumeChecked] = useState(false);
 
-  const spacingV = useSharedValue(10);
-
+  // Resume a tour interrupted by a reload: the chart is already cast.
   useEffect(() => {
-    spacingV.value = withDelay(
-      200,
-      withTiming(1, { duration: 1000, easing: Easing.out(Easing.cubic) }),
-    );
-  }, [spacingV]);
+    let active = true;
+    if (draftProfile) {
+      setResumeChecked(true);
+      return;
+    }
+    readTourCheckpoint().then((checkpoint) => {
+      if (!active) return;
+      if (checkpoint) {
+        setName(checkpoint.name);
+        setProfile(checkpoint.profile);
+        router.replace("/(onboarding)/tour" as Href);
+        return;
+      }
+      setResumeChecked(true);
+    });
+    return () => {
+      active = false;
+    };
+    // Once, on first mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // The wordmark pops in on a spring instead of animating letter-spacing
+  // (which re-lays out text every frame).
+  const pop = useSharedValue(reduced ? 1 : 0);
+  useEffect(() => {
+    if (!resumeChecked || reduced) return;
+    pop.value = withDelay(120, withSpring(1, motion.spring.bouncy));
+  }, [resumeChecked, reduced, pop]);
   const wordmarkStyle = useAnimatedStyle(() => ({
-    letterSpacing: spacingV.value,
+    opacity: Math.min(1, pop.value * 1.4),
+    transform: [{ scale: 0.82 + pop.value * 0.18 }],
   }));
+
+  if (!resumeChecked) return <ScreenWrapper variant="dense" edges={["top", "bottom"]}>{null}</ScreenWrapper>;
+
+  const trimmed = name.trim();
+  const asterLine = trimmed
+    ? t("screens.welcome.asterGreet", { name: trimmed })
+    : t("screens.welcome.asterAsk");
 
   return (
     <ScreenWrapper variant="dense" edges={["top", "bottom"]}>
@@ -57,30 +94,23 @@ export function WelcomeScreen() {
       >
         <View style={styles.container}>
           <View style={styles.hero}>
-            <Animated.Text style={[styles.wordmark, wordmarkStyle]}>
-              AstroFlow
-            </Animated.Text>
-
-            <MotiView
-              from={{ opacity: 0, translateY: 8 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              transition={mt({ type: "timing", duration: 700, delay: 700 })}
-            >
+            <Animated.View style={wordmarkStyle}>
+              <AppText variant="hero" center accessibilityRole="header">
+                AstroFlow
+              </AppText>
+            </Animated.View>
+            <EnterView delay={400}>
               <AppText variant="lead" center color={colors.text.secondary} style={styles.tagline}>
                 {t("onboarding.welcomeTagline")}
               </AppText>
-            </MotiView>
+            </EnterView>
           </View>
 
-          <MotiView
-            from={{ opacity: 0, translateY: 16 }}
-            animate={{ opacity: 1, translateY: 0 }}
-            transition={mt({ type: "timing", duration: 500, delay: 1000 })}
-            style={styles.footer}
-          >
-            <AppText variant="labelLong" color={colors.text.accent} style={styles.nameLabel}>
-              {t("onboarding.nameQuestion")}
-            </AppText>
+          <EnterView delay={700} scale style={styles.aster}>
+            <AsterCameo text={asterLine} stage={EGG_STAGE} size={84} action="talk" mood="happy" />
+          </EnterView>
+
+          <EnterView delay={850} style={styles.footer}>
             <TextInput
               value={name}
               onChangeText={setName}
@@ -89,12 +119,14 @@ export function WelcomeScreen() {
               style={styles.input}
               returnKeyType="done"
               autoCapitalize="words"
+              maxLength={40}
+              accessibilityLabel={t("onboarding.nameQuestion")}
             />
             <ChunkyButton
               label={t("onboarding.begin")}
               // Birth data leaves the phone from here on: the AI notice comes first, once.
-              onPress={() => router.push(aiConsentAt ? "/birth-date" : "/consent")}
-              disabled={name.trim().length === 0}
+              onPress={() => router.push(aiConsentCurrent ? "/birth-date" : "/consent")}
+              disabled={trimmed.length === 0}
               style={styles.cta}
             />
             {ACCOUNTS_ENABLED ? (
@@ -102,13 +134,14 @@ export function WelcomeScreen() {
                 onPress={() => setSignInOpen(true)}
                 style={styles.signIn}
                 accessibilityRole="button"
+                accessibilityLabel={t("account.haveAccount")}
               >
                 <AppText variant="label" color={colors.text.accent} center>
                   {t("account.haveAccount")}
                 </AppText>
               </PressableScale>
             ) : null}
-          </MotiView>
+          </EnterView>
         </View>
       </KeyboardAvoidingView>
       <AccountSheet visible={signInOpen} onClose={() => setSignInOpen(false)} intent="signIn" />
@@ -129,36 +162,35 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.lg,
   },
-  wordmark: {
-    fontFamily: fonts.heading,
-    fontSize: 46,
-    color: colors.text.primary,
-  },
   tagline: {
-    maxWidth: "84%",
+    maxWidth: 320,
+  },
+  aster: {
+    marginBottom: spacing.lg,
   },
   footer: {
     gap: spacing.sm,
   },
-  nameLabel: {
-    marginLeft: spacing.xs,
-  },
   input: {
-    height: 56,
+    height: 58,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: 5,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
-    fontFamily: fonts.sansMedium,
-    fontSize: 17,
+    fontFamily: typography.lead.fontFamily,
+    fontSize: typography.lead.fontSize,
   },
   cta: {
     marginTop: spacing.md,
   },
   signIn: {
     alignSelf: "center",
+    minHeight: 44,
+    justifyContent: "center",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
   },

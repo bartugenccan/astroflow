@@ -5,10 +5,12 @@ import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { Disclosure } from "../../components/ui/Disclosure";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { Segmented } from "../../components/ui/Segmented";
+import { Chip } from "../../components/ui/Chip";
 import { CountUp } from "../../components/ui/CountUp";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { PremiumGate } from "../../components/PremiumGate";
@@ -23,7 +25,7 @@ import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation, TranslationKey, Locale } from "../../i18n";
-import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { areaTone, colors, spacing, radii, motion } from "../../lib/design-system";
 
 const AREAS: LifeArea[] = ["love", "career", "money", "energy"];
 
@@ -89,7 +91,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
           <AppText variant="label" color={colors.text.accent}>
             {t("forecast.eyebrow")}
           </AppText>
-          <AppText variant="title" style={styles.titleText}>
+          <AppText variant="title">
             {t("forecast.title")}
           </AppText>
           <AppText variant="bodySmall" color={colors.text.tertiary}>
@@ -117,7 +119,8 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
               <Chip
                 key={a}
                 label={t(`lifeAreas.${a}` as TranslationKey)}
-                active={area === a}
+                tone={areaTone[a] ?? "primary"}
+                selected={area === a}
                 onPress={() => setArea(a)}
               />
             ))}
@@ -125,9 +128,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
 
           <ChunkyCard>
             {bestDays.loading ? (
-              <View style={styles.loaderBox}>
-                <CelestialLoader size="sm" />
-              </View>
+              <StateView kind="loading" compact />
             ) : bestDays.data ? (
               <>
                 <BestDaysGrid
@@ -153,7 +154,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                 ) : null}
               </>
             ) : (
-              <AppText variant="body">{t("forecast.error")}</AppText>
+              <StateView kind="error" compact message={t("forecast.error")} onAction={bestDays.reload} />
             )}
           </ChunkyCard>
         </EnterView>
@@ -165,9 +166,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
             <LockedForecast onUnlock={() => setPaywall(true)} label={t("forecast.lockedMonthlyTitle")} />
           ) : forecast.loading ? (
             <ChunkyCard>
-              <View style={styles.loaderBox}>
-                <CelestialLoader label={t("forecast.loading")} />
-              </View>
+              <StateView kind="loading" compact message={t("forecast.loading")} />
             </ChunkyCard>
           ) : forecast.data ? (
             <>
@@ -177,6 +176,13 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                 </ChunkyCard>
               </EnterView>
 
+              {/* Themes and key dates: secondary, folded under one row. */}
+              <Disclosure
+                title={t("forecast.moreTitle")}
+                summary={t("forecast.moreSummary")}
+                icon="calendar"
+                tone="sky"
+              >
               {/* Themes: free for premium, gated for non-premium weekly */}
               <View style={styles.themes}>
                 <SectionHeader eyebrow={t("forecast.themesTitle")} />
@@ -220,10 +226,11 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                   </ChunkyCard>
                 </View>
               ) : null}
+              </Disclosure>
             </>
           ) : (
             <ChunkyCard>
-              <AppText variant="body">{t("forecast.error")}</AppText>
+              <StateView kind="error" compact message={t("forecast.error")} onAction={forecast.reload} />
             </ChunkyCard>
           )}
         </EnterView>
@@ -281,23 +288,6 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
   );
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return (
-    <PressableScale
-      onPress={onPress}
-      scaleTo={0.92}
-      haptic={active ? "none" : "selection"}
-      style={[styles.chip, active && styles.chipActive]}
-      accessibilityRole="button"
-      accessibilityState={{ selected: active }}
-    >
-      <AppText variant="bodySmall" color={active ? colors.star[200] : colors.text.tertiary}>
-        {label}
-      </AppText>
-    </PressableScale>
-  );
-}
-
 function LockedForecast({ onUnlock, label }: { onUnlock: () => void; label: string }) {
   const { t } = useTranslation();
   return (
@@ -322,10 +312,6 @@ const styles = StyleSheet.create({
   headerRow: {
     gap: spacing.xs,
   },
-  titleText: {
-    fontSize: 24,
-    lineHeight: 30,
-  },
   section: {
     gap: spacing.md,
   },
@@ -333,22 +319,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: spacing.sm,
     flexWrap: "wrap",
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
-  },
-  chipActive: {
-    borderColor: colors.star[400],
-    backgroundColor: colors.glow.starSoft,
-  },
-  loaderBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.xl,
   },
   lockRow: {
     flexDirection: "row",

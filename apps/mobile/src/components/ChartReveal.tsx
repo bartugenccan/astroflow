@@ -1,5 +1,5 @@
 import { mt } from "../lib/motion";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, View, Dimensions } from "react-native";
 import {
   Canvas,
@@ -14,6 +14,7 @@ import {
   useDerivedValue,
   withTiming,
   Easing,
+  useReducedMotion,
 } from "react-native-reanimated";
 import { MotiView } from "moti";
 import { Glyph } from "./Glyph";
@@ -25,6 +26,9 @@ const CENTER = SIZE / 2;
 const RING_R = SIZE * 0.4;
 const ORBIT_R = SIZE * 0.3;
 
+/** Side of the square the reveal draws in. */
+export const CHART_REVEAL_SIZE = SIZE;
+
 const PLANET_NAMES = [
   "Sun", "Moon", "Mercury", "Venus", "Mars",
   "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
@@ -34,14 +38,26 @@ interface Props {
   onComplete?: () => void;
 }
 
+/** Where a planet glyph sits once popped, in the reveal's own coordinates. */
+export function chartRevealPoint(planet: string): { x: number; y: number } {
+  const i = Math.max(0, PLANET_NAMES.indexOf(planet));
+  const angle = (i / PLANET_NAMES.length) * Math.PI * 2 - Math.PI / 2;
+  return { x: CENTER + ORBIT_R * Math.cos(angle), y: CENTER + ORBIT_R * Math.sin(angle) };
+}
+
 /**
  * Onboarding reveal: stars converge inward, a gold ring draws itself, then the
  * ten planet glyphs pop in sequence with a haptic tick each.
  */
 export function ChartReveal({ onComplete }: Props) {
+  const reduced = useReducedMotion();
   const ring = useSharedValue(0);
   const converge = useSharedValue(0);
   const [popped, setPopped] = useState(0);
+  // The parent usually passes an inline callback; keep the latest one without
+  // restarting the whole reveal every time the parent re-renders.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   // Fixed seeded scatter for the converging stars.
   const stars = useMemo(() => {
@@ -66,27 +82,42 @@ export function ChartReveal({ onComplete }: Props) {
   const ringEnd = useDerivedValue(() => ring.value);
 
   useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    if (reduced) {
+      // Reduce Motion: the finished chart simply appears.
+      converge.value = 1;
+      ring.value = 1;
+      setPopped(PLANET_NAMES.length);
+      timers.push(setTimeout(() => onCompleteRef.current?.(), 600));
+      return () => timers.forEach(clearTimeout);
+    }
     converge.value = withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) });
     ring.value = withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.cubic) });
 
-    const timers: ReturnType<typeof setTimeout>[] = [];
     // Pop planets one by one after the ring begins closing.
     for (let i = 0; i < PLANET_NAMES.length; i++) {
       timers.push(
         setTimeout(() => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
           setPopped(i + 1);
         }, 1100 + i * 160),
       );
     }
     timers.push(
-      setTimeout(() => onComplete?.(), 1100 + PLANET_NAMES.length * 160 + 400),
+      setTimeout(() => onCompleteRef.current?.(), 1100 + PLANET_NAMES.length * 160 + 400),
     );
     return () => timers.forEach(clearTimeout);
-  }, [converge, ring, onComplete]);
+    // Once per mount — the reveal plays a single time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <View style={{ width: SIZE, height: SIZE }}>
+    <View
+      style={{ width: SIZE, height: SIZE }}
+      // Decorative: the screen around it says what is happening.
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
       <Canvas style={StyleSheet.absoluteFill}>
         {/* Converging stars */}
         {stars.map((st, i) => (

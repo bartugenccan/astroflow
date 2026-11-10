@@ -1,38 +1,19 @@
 import React from "react";
-import { StyleSheet, ViewStyle } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { PressableScale } from "./PressableScale";
-import { colors, radii, surface } from "../../lib/design-system";
+import { StyleProp, ViewStyle } from "react-native";
+import { IconButton } from "./IconButton";
+import { useTranslation } from "../../i18n";
 
 interface ShareButtonProps {
   onPress: () => void;
-  size?: number;
-  style?: ViewStyle;
+  /** Face diameter (the touch target never drops below 44pt). */
+  size?: 40 | 44;
+  style?: StyleProp<ViewStyle>;
 }
 
-/** Small gold share affordance — a hairline-ringed icon button. */
-export function ShareButton({ onPress, size = 34, style }: ShareButtonProps) {
+/** Share affordance — a round chunky icon button in the night tone. */
+export function ShareButton({ onPress, size = 40, style }: ShareButtonProps) {
+  const { t } = useTranslation();
   return (
-    <PressableScale
-      hitSlop={8}
-      onPress={onPress}
-      scaleTo={0.88}
-      style={[styles.btn, { width: size, height: size }, style]}
-      accessibilityRole="button"
-      accessibilityLabel="Share"
-    >
-      <Ionicons name="share-outline" size={size * 0.5} color={colors.star[300]} />
-    </PressableScale>
+    <IconButton icon="share-outline" onPress={onPress} size={size} accessibilityLabel={t("common.share")} style={style} />
   );
 }
-
-const styles = StyleSheet.create({
-  btn: {
-    borderRadius: radii.pill,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
-  },
-});

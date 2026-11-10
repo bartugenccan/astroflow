@@ -1,10 +1,10 @@
 import { runAfterInteractions } from "../../lib/afterInteractions";
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View, ScrollView } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, { LinearTransition, useReducedMotion } from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
+import { StateView } from "../../components/ui/StateView";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { StarDivider } from "../../components/ui/StarDivider";
@@ -132,7 +132,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
                 </AppText>
                 <TermInfo term="bigThree" size={14} />
               </View>
-              {profile ? <ShareButton onPress={shareBigThree} size={32} /> : null}
+              {profile ? <ShareButton onPress={shareBigThree} /> : null}
             </View>
             {profile ? (
               <BigThree
@@ -339,15 +339,7 @@ function Section({
   children: React.ReactNode;
 }) {
   if (loading) return <ShimmerLines lines={3} />;
-  if (error)
-    return (
-      <PressableScale style={styles.retry} onPress={onRetry} accessibilityRole="button">
-        <Ionicons name="refresh" size={16} color={colors.star[300]} />
-        <AppText variant="body" color={colors.star[300]}>
-          {retryLabel}
-        </AppText>
-      </PressableScale>
-    );
+  if (error) return <StateView kind="error" compact actionLabel={retryLabel} onAction={onRetry} />;
   return <>{children}</>;
 }
 
@@ -418,11 +410,5 @@ const styles = StyleSheet.create({
   sep: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border.hairline,
-  },
-  retry: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
   },
 });

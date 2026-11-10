@@ -14,6 +14,7 @@ import {
   useSharedValue,
   useDerivedValue,
   withRepeat,
+  withDelay,
   useReducedMotion,
   withTiming,
   Easing,
@@ -30,28 +31,49 @@ interface Star {
   x: number;
   y: number;
   r: number;
-  base: number; // base opacity
-  amp: number; // twinkle amplitude
-  speed: number; // cycles per loop
-  phase: number;
+  /** Peak opacity; the star's twinkle group dims it from here. */
+  peak: number;
   gold: boolean;
+}
+
+/** A set of stars that twinkle together: one animated value for many circles. */
+interface TwinkleGroup {
+  stars: Star[];
+  /** Whole cycles per clock loop — an integer, so the loop has no seam. */
+  speed: number;
+  phase: number;
 }
 
 interface Constellation {
   points: [number, number][];
 }
 
-function makeStars(count: number, rng: () => number): Star[] {
-  return Array.from({ length: count }, () => ({
-    x: rng() * W,
-    y: rng() * H,
-    r: rng() * 1.4 + 0.5,
-    base: rng() * 0.4 + 0.25,
-    amp: rng() * 0.4 + 0.2,
-    speed: rng() * 2 + 1,
+/**
+ * Stars are dealt into a handful of groups that share a twinkle. One animated
+ * value per star meant 64+ worklets running every frame on the UI thread (and
+ * twice that while a stack screen with its own background slides in); a few
+ * interleaved groups read the same to the eye at a fraction of the cost.
+ */
+const TWINKLE_GROUPS = 6;
+/** How far a group dims at the bottom of its twinkle (fraction of peak). */
+const TWINKLE_FLOOR = 0.4;
+
+function makeGroups(count: number, rng: () => number): TwinkleGroup[] {
+  const groups: TwinkleGroup[] = Array.from({ length: TWINKLE_GROUPS }, () => ({
+    stars: [],
+    speed: 1 + Math.floor(rng() * 3),
     phase: rng() * Math.PI * 2,
-    gold: rng() < 0.22,
   }));
+  for (let i = 0; i < count; i++) {
+    groups[i % TWINKLE_GROUPS].stars.push({
+      x: rng() * W,
+      y: rng() * H,
+      r: rng() * 1.4 + 0.5,
+      peak: rng() * 0.4 + 0.55,
+      gold: rng() < 0.22,
+    });
+  }
+  return groups;
 }
 
 /** Seeded PRNG so the star field is stable across renders (no Math.random cascade). */
@@ -92,37 +114,74 @@ const STAR_WHITE = colors.text.primary;
 
 interface Props {
   variant?: Variant;
+  /**
+   * Stop twinkling (the field stays drawn, frozen). For a background that is
+   * covered — e.g. the tab navigator's while a stack screen sits on top — so
+   * it stops costing frames nobody sees.
+   */
+  paused?: boolean;
+  /** Nova look (Aster's stage-5 ability): a warm gold nebula rises in the middle of the sky. */
+  nova?: boolean;
 }
+
+/**
+ * Twinkling waits this long after the sky mounts or resumes, so a screen
+ * sliding in (or a tab coming back) doesn't redraw the stars on every frame of
+ * its transition.
+ */
+const TWINKLE_START_DELAY = 450;
 
 /**
  * Ambient night-sky layer: ink base, twinkling gold/white stars, and a couple
  * of fine constellations. Twinkle is driven through `useDerivedValue` feeding
  * Skia opacity props — never by reading `.value` during React render.
+ *
+ * Two canvases: the nebulae and constellations never change, so they live on a
+ * canvas that is drawn once; only the small star canvas redraws while the
+ * stars twinkle. (One canvas re-rasterised two full-screen radial gradients
+ * every frame.)
  */
-export function CelestialBackground({ variant = "default" }: Props) {
-  const count = variant === "dense" ? 90 : variant === "still" ? 50 : 64;
-  const stars = useMemo(() => makeStars(count, seededRng(0x9e3779b1 ^ count)), [count]);
+export function CelestialBackground({ variant = "default", paused = false, nova = false }: Props) {
+  // A calm sky: few stars, so the content — not the backdrop — holds the eye.
+  const count = variant === "dense" ? 60 : variant === "still" ? 32 : 36;
+  const groups = useMemo(() => makeGroups(count, seededRng(0x9e3779b1 ^ count)), [count]);
 
   const clock = useSharedValue(0);
   const reduced = useReducedMotion();
 
   useEffect(() => {
     // Reduce Motion: the stars hold still instead of twinkling forever.
-    if (variant === "still" || reduced) return;
-    clock.value = withRepeat(
-      withTiming(Math.PI * 2, { duration: 6000, easing: Easing.linear }),
-      -1,
-      false,
+    if (variant === "still" || reduced || paused) return;
+    // Every group's speed is a whole number of cycles per loop, so restarting
+    // from 0 lands on the same twinkle the loop would have reached anyway.
+    clock.value = 0;
+    clock.value = withDelay(
+      TWINKLE_START_DELAY,
+      withRepeat(withTiming(Math.PI * 2, { duration: 12000, easing: Easing.linear }), -1, false),
     );
     return () => cancelAnimation(clock);
-  }, [clock, variant, reduced]);
+  }, [clock, variant, reduced, paused]);
 
   return (
-    <Canvas style={StyleSheet.absoluteFill}>
+    <>
+      <StaticSky dense={variant === "dense"} nova={nova} />
+      <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+        {groups.map((group, i) => (
+          <TwinkleGroupLayer key={i} group={group} clock={clock} still={variant === "still"} />
+        ))}
+      </Canvas>
+    </>
+  );
+}
+
+/** The parts of the sky that never move: drawn once, never redrawn. */
+const StaticSky = React.memo(function StaticSky({ dense, nova }: { dense: boolean; nova: boolean }) {
+  return (
+    <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
       <Fill color={surface.base} />
 
       {/* Violet nebula, upper area */}
-      <Circle cx={W * 0.75} cy={H * 0.12} r={W * 0.8} opacity={0.55}>
+      <Circle cx={W * 0.75} cy={H * 0.12} r={W * 0.8} opacity={0.4}>
         <RadialGradient
           c={vec(W * 0.75, H * 0.12)}
           r={W * 0.8}
@@ -130,8 +189,14 @@ export function CelestialBackground({ variant = "default" }: Props) {
         />
       </Circle>
 
+      {nova ? (
+        <Circle cx={W * 0.5} cy={H * 0.45} r={W * 0.9} opacity={0.22}>
+          <RadialGradient c={vec(W * 0.5, H * 0.45)} r={W * 0.9} colors={[GOLD, "transparent"]} />
+        </Circle>
+      ) : null}
+
       {/* Candy-pink nebula, lower area */}
-      <Circle cx={W * 0.15} cy={H * 0.88} r={W * 0.8} opacity={0.28}>
+      <Circle cx={W * 0.15} cy={H * 0.88} r={W * 0.8} opacity={0.2}>
         <RadialGradient
           c={vec(W * 0.15, H * 0.88)}
           r={W * 0.8}
@@ -141,7 +206,7 @@ export function CelestialBackground({ variant = "default" }: Props) {
 
       {/* Constellations — fine gold linework */}
       {CONSTELLATIONS.map((c, ci) => (
-        <Group key={`c-${ci}`} opacity={variant === "dense" ? 0.5 : 0.32}>
+        <Group key={`c-${ci}`} opacity={dense ? 0.4 : 0.22}>
           {c.points.slice(1).map((p, i) => (
             <Line
               key={`l-${ci}-${i}`}
@@ -156,38 +221,39 @@ export function CelestialBackground({ variant = "default" }: Props) {
           ))}
         </Group>
       ))}
-
-      {/* Twinkling stars */}
-      {stars.map((s, i) => (
-        <TwinkleStar key={i} star={s} clock={clock} still={variant === "still"} />
-      ))}
     </Canvas>
   );
-}
+});
 
-function TwinkleStar({
-  star,
+function TwinkleGroupLayer({
+  group,
   clock,
   still,
 }: {
-  star: Star;
+  group: TwinkleGroup;
   clock: { value: number };
   still: boolean;
 }) {
+  const { speed, phase } = group;
   const opacity = useDerivedValue(() => {
     "worklet";
-    if (still) return star.base + star.amp * 0.5;
-    const t = Math.sin(clock.value * star.speed + star.phase) * 0.5 + 0.5;
-    return star.base + star.amp * t;
+    if (still) return (1 + TWINKLE_FLOOR) / 2;
+    const t = Math.sin(clock.value * speed + phase) * 0.5 + 0.5;
+    return TWINKLE_FLOOR + (1 - TWINKLE_FLOOR) * t;
   });
 
   return (
-    <Circle
-      cx={star.x}
-      cy={star.y}
-      r={star.r}
-      color={star.gold ? GOLD_BRIGHT : STAR_WHITE}
-      opacity={opacity}
-    />
+    <Group opacity={opacity}>
+      {group.stars.map((star, i) => (
+        <Circle
+          key={i}
+          cx={star.x}
+          cy={star.y}
+          r={star.r}
+          color={star.gold ? GOLD_BRIGHT : STAR_WHITE}
+          opacity={star.peak}
+        />
+      ))}
+    </Group>
   );
 }

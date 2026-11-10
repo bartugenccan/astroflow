@@ -1,14 +1,19 @@
 /**
  * What Yıldız Tozu buys. Accessories are cosmetic layers on Aster (one per
- * slot); the streak shield is a consumable. Prices are server-authoritative.
+ * slot); the streak shield is a consumable; a pass is a one-off premium taste
+ * (an extra tarot reading, five more Aster messages) for free users, one of
+ * each per local day. Prices are server-authoritative.
  */
+import type { PassFeature } from './mascot-rules';
 
 export type AccessorySlot = 'head' | 'neck' | 'hand' | 'aura';
 
 export interface CatalogItem {
   id: string;
-  kind: 'accessory' | 'shield';
+  kind: 'accessory' | 'shield' | 'pass';
   slot?: AccessorySlot;
+  /** For passes: the metered feature it tops up. */
+  pass?: PassFeature;
   price: number;
   /** Aster must have reached this stage to buy it. */
   minStage: number;
@@ -26,6 +31,8 @@ export const CATALOG: readonly CatalogItem[] = [
   { id: 'auraMint', kind: 'accessory', slot: 'aura', price: 250, minStage: 2 },
   { id: 'auraNova', kind: 'accessory', slot: 'aura', price: 0, minStage: 5 },
   { id: 'shield', kind: 'shield', price: 200, minStage: 2 },
+  { id: 'tarotPass', kind: 'pass', pass: 'tarot', price: 150, minStage: 1 },
+  { id: 'chatPass', kind: 'pass', pass: 'chat', price: 100, minStage: 1 },
 ];
 
 export function catalogItem(id: string): CatalogItem | undefined {

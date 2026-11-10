@@ -7,7 +7,6 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import * as Haptics from "expo-haptics";
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -16,6 +15,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { AppText } from "./AppText";
 import { colors, motion, palette, radii, spacing, Tone, surface } from "../../lib/design-system";
+import { haptics } from "../../lib/haptics";
 
 export type ChunkyVariant = Tone | "ghost";
 export type ChunkySize = "sm" | "md" | "lg";
@@ -75,7 +75,7 @@ export function ChunkyButton({
   style,
   accessibilityLabel,
   accessibilityHint,
-  haptic = "medium",
+  haptic = "light",
 }: ChunkyButtonProps) {
   const reduced = useReducedMotion();
   const press = useSharedValue(0);
@@ -88,15 +88,12 @@ export function ChunkyButton({
   }));
 
   const springTo = (v: number) => {
-    press.value = reduced ? v : withSpring(v, motion.spring.snappy);
+    press.value = reduced ? v : withSpring(v, motion.spring.press);
   };
 
   const handlePress = () => {
-    if (haptic === "medium") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-    } else if (haptic === "light") {
-      Haptics.selectionAsync().catch(() => undefined);
-    }
+    if (haptic === "medium") haptics.press();
+    else if (haptic === "light") haptics.tap();
     onPress();
   };
 

@@ -1,9 +1,14 @@
-import { BadRequestException, Body, Controller, Delete, Get, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, Get, NotFoundException, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { DeviceId } from '../../common/device/device-id.decorator';
 import { MascotService } from './mascot.service';
-import { MascotEclipseDto, MascotEquipDto, MascotEventDto, MascotPurchaseDto } from './dto/mascot.dto';
-import { lunarWindow } from './mascot-rules';
+import { MascotEclipseDto, MascotEquipDto, MascotEventDto, MascotLookDto, MascotPurchaseDto } from './dto/mascot.dto';
+import { isSkyLessonKey, lunarWindow, SkyLessonKey } from './mascot-rules';
+
+function lessonKey(key: string): SkyLessonKey {
+  if (!isSkyLessonKey(key)) throw new NotFoundException('Unknown lesson');
+  return key;
+}
 
 @ApiTags('Mascot')
 @ApiBearerAuth()
@@ -12,7 +17,7 @@ export class MascotController {
   constructor(private readonly mascot: MascotService) {}
 
   @Get()
-  @ApiOperation({ summary: "Aster's state: stage, Işık, Yıldız Tozu, energy, today's quests, shop" })
+  @ApiOperation({ summary: "Aster's state: stage, Işık, Yıldız Tozu, energy, today's counts, shop, Harita Yolu, next unlocks" })
   get(@DeviceId() deviceId: string) {
     return this.mascot.getState(deviceId);
   }
@@ -53,6 +58,24 @@ export class MascotController {
   @ApiOperation({ summary: 'Wake from an eclipse early' })
   endEclipse(@DeviceId() deviceId: string) {
     return this.mascot.endEclipse(deviceId);
+  }
+
+  @Post('lessons/:key/complete')
+  @ApiOperation({ summary: 'Finish a Harita Yolu chapter → SKY_LESSON award (chapter must be open)' })
+  completeLesson(@Param('key') key: string, @DeviceId() deviceId: string) {
+    return this.mascot.completeLesson(deviceId, lessonKey(key));
+  }
+
+  @Post('lessons/:key/unlock')
+  @ApiOperation({ summary: 'Open a stage-locked chapter early for Yıldız Tozu' })
+  unlockLesson(@Param('key') key: string, @DeviceId() deviceId: string) {
+    return this.mascot.unlockLessonEarly(deviceId, lessonKey(key));
+  }
+
+  @Patch('look')
+  @ApiOperation({ summary: 'Switch the Nova look (stage 5) on or off' })
+  look(@Body() dto: MascotLookDto, @DeviceId() deviceId: string) {
+    return this.mascot.setNovaLook(deviceId, dto.novaLook);
   }
 
   @Get('constellations')

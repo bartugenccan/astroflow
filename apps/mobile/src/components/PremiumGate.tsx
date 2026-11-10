@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "./ui/AppText";
 import { PressableScale } from "./ui/PressableScale";
 import { EnterView } from "../lib/motion";
-import { colors, spacing, radii, blurIntensity, surface } from "../lib/design-system";
+import { colors, depth, palette, spacing, radii, blurIntensity } from "../lib/design-system";
 
 interface PremiumGateProps {
   locked: boolean;
@@ -91,7 +91,7 @@ function WigglingLock() {
 
   return (
     <Animated.View style={style}>
-      <Ionicons name="lock-closed" size={18} color={colors.star[300]} />
+      <Ionicons name="lock-closed" size={20} color={palette.star.on} />
     </Animated.View>
   );
 }
@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    backgroundColor: palette.star.face,
+    borderBottomWidth: depth.sm,
+    borderBottomColor: palette.star.slab,
   },
 });

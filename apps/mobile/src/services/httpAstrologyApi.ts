@@ -24,6 +24,8 @@ import {
   LifeAreaContext,
   PowerDays,
   IntentionCheckInHistory,
+  IntentionSign,
+  SignResult,
   IntentionSuggestion,
   NatalChartData,
   NodeAnalysis,
@@ -306,6 +308,15 @@ export const httpAstrologyApi: AstrologyApi = {
 
   getIntentionHistory: (id) =>
     request<IntentionCheckInHistory[]>("GET", `intentions/${encodeURIComponent(id)}/history`),
+
+  getIntentionSigns: (id) => request<IntentionSign[]>("GET", `intentions/${encodeURIComponent(id)}/signs`),
+
+  addIntentionSign: (id, text) =>
+    request<SignResult>("POST", `intentions/${encodeURIComponent(id)}/signs`, { text }),
+
+  deleteIntentionSign: async (id, signId) => {
+    await request("DELETE", `intentions/${encodeURIComponent(id)}/signs/${encodeURIComponent(signId)}`);
+  },
 
   // Tarot
   getTarotCard: (dto, spread, index, locale) =>

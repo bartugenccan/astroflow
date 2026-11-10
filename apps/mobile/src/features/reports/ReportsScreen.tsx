@@ -8,12 +8,13 @@ import { AppText } from "../../components/ui/AppText";
 import { BackButton } from "../../components/ui/BackButton";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { PressableScale } from "../../components/ui/PressableScale";
+import { IconButton } from "../../components/ui/IconButton";
+import { StateView } from "../../components/ui/StateView";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { Glyph } from "../../components/Glyph";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { EnterView } from "../../lib/motion";
-import { colors, motion, radii, spacing, surface } from "../../lib/design-system";
+import { colors, motion, palette, radii, spacing, surface } from "../../lib/design-system";
 import { formatDayMonthYear } from "../../lib/dates";
 import { TranslationKey, useTranslation } from "../../i18n";
 import { useAppStore } from "../../store/useAppStore";
@@ -77,7 +78,11 @@ export function ReportsScreen() {
           const job = activeJob(kind);
           return (
             <EnterView key={kind} index={i + 1}>
-              <ChunkyCard style={[styles.kindCard, focus === kind && styles.kindCardFocus]}>
+              <ChunkyCard
+                tone={focus === kind ? "star" : "night"}
+                tinted={focus === kind}
+                style={styles.kindCard}
+              >
                 <View style={styles.kindHead}>
                   <View style={styles.kindGlyph}>
                     <Glyph name={glyph} size={22} color={colors.star[300]} />
@@ -88,7 +93,14 @@ export function ReportsScreen() {
                       {t("reports.pages", { n: pages })}
                     </AppText>
                   </View>
-                  {!isPremium ? <Ionicons name="lock-closed" size={16} color={colors.star[300]} /> : null}
+                  {!isPremium ? (
+                    <Ionicons
+                      name="lock-closed"
+                      size={16}
+                      color={colors.star[300]}
+                      accessibilityLabel={t("paywall.premiumBadge")}
+                    />
+                  ) : null}
                 </View>
                 <AppText variant="bodySmall">{t(kind === "natal" ? "reports.natalDesc" : "reports.transitDesc")}</AppText>
                 {job ? (
@@ -114,11 +126,11 @@ export function ReportsScreen() {
         </EnterView>
 
         {reports === null ? (
-          <CelestialLoader size="sm" />
+          <StateView kind="loading" compact />
         ) : finished.length === 0 ? (
-          <AppText variant="bodySmall" color={colors.text.tertiary}>
-            {t("reports.empty")}
-          </AppText>
+          <ChunkyCard>
+            <StateView kind="empty" compact message={t("reports.empty")} />
+          </ChunkyCard>
         ) : (
           finished.map((meta, i) => (
             <EnterView key={meta.id} index={i + 4}>
@@ -155,8 +167,8 @@ function ErrorBanner({ error }: { error: ReportError }) {
           ? t("reports.offline")
           : t("reports.error");
   return (
-    <View style={styles.banner}>
-      <Ionicons name="alert-circle-outline" size={18} color={colors.semantic.error} />
+    <View style={styles.banner} accessibilityLiveRegion="polite">
+      <Ionicons name="alert-circle" size={18} color={palette.danger.face} />
       <AppText variant="bodySmall" style={styles.flex}>
         {text}
       </AppText>
@@ -224,9 +236,12 @@ function ReportRow({ meta, locale, busy, saved, onOpen, onRetry, onDelete }: Rep
             {failed ? t("reports.failed") : t("reports.createdOn", { date: formatDayMonthYear(locale, meta.createdAt.slice(0, 10)) })}
           </AppText>
         </View>
-        <PressableScale onPress={onDelete} style={styles.iconBtn} accessibilityLabel={t("reports.delete")}>
-          <Ionicons name="trash-outline" size={18} color={colors.text.tertiary} />
-        </PressableScale>
+        <IconButton
+          icon="trash-outline"
+          size={40}
+          onPress={onDelete}
+          accessibilityLabel={`${t("reports.delete")}: ${kindTitle(t, meta.kind)}`}
+        />
       </View>
       {failed ? (
         <ChunkyButton variant="ghost" label={t("reports.retry")} onPress={onRetry} />
@@ -267,16 +282,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: "rgba(217,138,138,0.35)",
-    backgroundColor: "rgba(217,138,138,0.08)",
+    borderWidth: 2,
+    borderColor: palette.danger.face,
+    backgroundColor: palette.danger.soft,
   },
   kindCard: {
     gap: spacing.md,
-  },
-  kindCardFocus: {
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
   },
   kindHead: {
     flexDirection: "row",
@@ -286,12 +297,10 @@ const styles = StyleSheet.create({
   kindGlyph: {
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.card,
+    backgroundColor: palette.star.soft,
   },
   job: {
     gap: spacing.sm,
@@ -317,13 +326,6 @@ const styles = StyleSheet.create({
   },
   row: {
     gap: spacing.md,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
   },
   making: {
     flexDirection: "row",

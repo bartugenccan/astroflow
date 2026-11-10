@@ -5,6 +5,21 @@ import { safeError } from '../../common/logging/safe-error';
 import {
   ABILITIES,
   ECLIPSE_MAX_DAYS,
+  LessonStatus,
+  MAX_STAGE,
+  PASS_DAILY_MAX,
+  PASSES,
+  PassFeature,
+  SKY_PATH,
+  SkyLessonKey,
+  StageUnlocks,
+  TarotSpreadKey,
+  canUnlockEarly,
+  lessonStatus,
+  passesToday,
+  skyPathView,
+  spreadUnlocked,
+  unlocksAt,
   EVENT_RULES,
   JOURNEY_MIN_ENERGY,
   JourneyStatus,
@@ -79,6 +94,20 @@ export interface MascotView {
   constellations: { found: number; total: number };
   abilities: { key: string; minStage: number; unlocked: boolean; available: boolean }[];
   catalog: (CatalogItem & { owned: boolean; locked: boolean })[];
+  /** Harita Yolu: every chapter and where it stands. */
+  skyPath: { key: SkyLessonKey; status: LessonStatus; minStage: number; earlyPrice: number; early: boolean }[];
+  /** Premium tastes bought today (extra uses on top of the free allowance). */
+  passesToday: Partial<Record<PassFeature, number>>;
+  /** What the next stage opens; null at Nova. */
+  nextUnlocks: (StageUnlocks & { items: string[]; xpNeeded: number }) | null;
+  /** Nova look switched on (stage 5 only). */
+  novaLook: boolean;
+}
+
+/** A finished lesson: the growth it earned and the fresh state. */
+export interface LessonResult {
+  delta: MascotDelta;
+  state: MascotView;
 }
 
 export interface JourneyDiscovery {
@@ -110,6 +139,10 @@ type StateRow = {
   journeysCompleted: number;
   eclipseStart: string | null;
   eclipseEnd: string | null;
+  lessonsDone: unknown;
+  lessonsEarly: unknown;
+  passes: unknown;
+  novaLook: boolean;
 };
 
 function ids(json: unknown): string[] {
@@ -332,7 +365,91 @@ export class MascotService {
         owned: owned.includes(item.id),
         locked: state.stage < item.minStage,
       })),
+      skyPath: skyPathView(this.progress(state)),
+      passesToday: passesToday(state.passes, today),
+      nextUnlocks: this.nextUnlocks(state),
+      novaLook: state.novaLook && state.stage >= MAX_STAGE,
     };
+  }
+
+  private progress(state: StateRow) {
+    return { stage: state.stage, done: ids(state.lessonsDone), early: ids(state.lessonsEarly) };
+  }
+
+  /** The next stage's unlocks, catalog included, and the Işık still to earn for it. */
+  private nextUnlocks(state: StateRow): MascotView['nextUnlocks'] {
+    if (!state.hatchedAt || state.stage >= MAX_STAGE) return null;
+    const next = state.stage + 1;
+    const { next: nextXp } = stageBounds(state.stage);
+    return {
+      ...unlocksAt(next),
+      items: CATALOG.filter((i) => i.minStage === next).map((i) => i.id),
+      xpNeeded: Math.max(0, (nextXp ?? 0) - state.xp),
+    };
+  }
+
+  /**
+   * Finish a Harita Yolu chapter. It must be open (the one before it done, and
+   * Aster grown enough or the chapter bought early). The chapter counts as done
+   * even when today's lesson Işık is already used up — the award just yields 0.
+   */
+  async completeLesson(deviceId: string, key: SkyLessonKey): Promise<LessonResult> {
+    const state = await this.ensure(deviceId);
+    const status = lessonStatus(key, this.progress(state));
+    if (status === 'lockedPrev' || status === 'lockedStage') {
+      throw new ConflictException(`Lesson ${key} is not open yet (${status})`);
+    }
+    if (status === 'open') {
+      await this.prisma.$transaction(async (tx) => {
+        const fresh = await tx.mascotState.findUniqueOrThrow({ where: { deviceId } });
+        const done = ids(fresh.lessonsDone);
+        if (!done.includes(key)) {
+          await tx.mascotState.update({ where: { deviceId }, data: { lessonsDone: [...done, key] } });
+        }
+      });
+    }
+    const delta = await this.award(deviceId, 'SKY_LESSON', key);
+    return { delta, state: await this.getState(deviceId) };
+  }
+
+  /** Open a stage-locked chapter now, for its Yıldız Tozu price. */
+  async unlockLessonEarly(deviceId: string, key: SkyLessonKey): Promise<MascotView> {
+    const state = await this.ensure(deviceId);
+    if (!canUnlockEarly(key, this.progress(state))) {
+      throw new ConflictException('This chapter cannot be bought early');
+    }
+    const price = SKY_PATH.find((c) => c.key === key)?.earlyPrice ?? 0;
+    await this.prisma.$transaction(async (tx) => {
+      const res = await tx.mascotState.updateMany({
+        where: { deviceId, stardust: { gte: price } },
+        data: { stardust: { decrement: price } },
+      });
+      if (res.count === 0) throw new BadRequestException('Not enough stardust');
+      const fresh = await tx.mascotState.findUniqueOrThrow({ where: { deviceId } });
+      const early = ids(fresh.lessonsEarly);
+      if (early.includes(key)) throw new ConflictException('Already unlocked');
+      await tx.mascotState.update({ where: { deviceId }, data: { lessonsEarly: [...early, key] } });
+    });
+    return this.getState(deviceId);
+  }
+
+  /** Is this tarot spread open for the subject's Aster? */
+  async spreadAllowed(deviceId: string, spread: TarotSpreadKey): Promise<boolean> {
+    const state = await this.ensure(deviceId);
+    return spreadUnlocked(spread, state.stage);
+  }
+
+  /** Extra uses of a metered feature bought today. */
+  async passCount(deviceId: string, feature: PassFeature): Promise<number> {
+    const state = await this.ensure(deviceId);
+    return passesToday(state.passes, localToday())[feature] ?? 0;
+  }
+
+  async setNovaLook(deviceId: string, on: boolean): Promise<MascotView> {
+    const state = await this.ensure(deviceId);
+    if (on && state.stage < MAX_STAGE) throw new ConflictException('The Nova look opens at Nova');
+    await this.prisma.mascotState.update({ where: { deviceId }, data: { novaLook: on } });
+    return this.getState(deviceId);
   }
 
   /** One free shield per ISO week once Aster can hold them (stage ≥ 2). */
@@ -359,6 +476,30 @@ export class MascotService {
     if (!item) throw new BadRequestException('Unknown item');
     const state = await this.ensure(deviceId);
     if (state.stage < item.minStage) throw new BadRequestException('Aster has not grown enough for this yet');
+
+    if (item.kind === 'pass' && item.pass) {
+      const feature = item.pass;
+      const today = localToday();
+      await this.prisma.$transaction(async (tx) => {
+        const fresh = await tx.mascotState.findUniqueOrThrow({ where: { deviceId } });
+        const bought = passesToday(fresh.passes, today)[feature] ?? 0;
+        if (bought >= PASS_DAILY_MAX * PASSES[feature].amount) {
+          throw new ConflictException('Already bought today');
+        }
+        const res = await tx.mascotState.updateMany({
+          where: { deviceId, stardust: { gte: item.price } },
+          data: { stardust: { decrement: item.price } },
+        });
+        if (res.count === 0) throw new BadRequestException('Not enough stardust');
+        // Only today is kept: yesterday's passes simply fall away.
+        const todayPasses = passesToday(fresh.passes, today);
+        await tx.mascotState.update({
+          where: { deviceId },
+          data: { passes: { [today]: { ...todayPasses, [feature]: bought + PASSES[feature].amount } } },
+        });
+      });
+      return this.getState(deviceId);
+    }
 
     if (item.kind === 'shield') {
       const res = await this.prisma.mascotState.updateMany({

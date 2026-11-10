@@ -23,7 +23,9 @@ import { searchCitiesRemote } from "../../services/geocoding";
 import { astrologyApi } from "../../services/astrologyApi";
 import { City } from "../../services/types";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
+import { colors, depth, spacing, radii, fonts, surface, typography } from "../../lib/design-system";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
+import { StateView } from "../../components/ui/StateView";
 
 const MONTHS: Record<string, string[]> = {
   en: [
@@ -214,6 +216,7 @@ export function AddPersonScreen() {
               placeholderTextColor={colors.text.tertiary}
               style={styles.input}
               autoCorrect={false}
+              accessibilityLabel={t("compatibility.nameLabel")}
             />
           </EnterView>
 
@@ -273,6 +276,7 @@ export function AddPersonScreen() {
               style={styles.unknownRow}
               scaleTo={0.97}
               accessibilityRole="checkbox"
+              accessibilityLabel={t("compatibility.unknownTime")}
               accessibilityState={{ checked: unknown }}
             >
               <Ionicons
@@ -310,6 +314,7 @@ export function AddPersonScreen() {
                   placeholderTextColor={colors.text.tertiary}
                   style={styles.searchInput}
                   autoCorrect={false}
+                  accessibilityLabel={t("compatibility.birthPlaceQ")}
                 />
                 {searching ? <CelestialLoader size="sm" /> : null}
               </View>
@@ -320,24 +325,20 @@ export function AddPersonScreen() {
                   {!searching &&
                   query.trim().length >= 2 &&
                   results.length === 0 ? (
-                    <AppText
-                      variant="body"
-                      color={colors.text.tertiary}
-                      style={styles.noResults}
-                    >
-                      {t("onboarding.placeNoResults")}
-                    </AppText>
+                    <StateView kind="empty" compact message={t("onboarding.placeNoResults")} />
                   ) : null}
                   {results.slice(0, 6).map((c, i) => (
                     <EnterView key={c.id} index={i} distance={6}>
-                      <PressableScale
+                      <ChunkyCard
+                        tone="raised"
+                        depth="sm"
+                        padded={false}
                         onPress={() => {
                           setCity(c);
                           setQuery(cityLabel(c));
                         }}
                         style={styles.cityRow}
-                        scaleTo={0.98}
-                        accessibilityRole="button"
+                        accessibilityLabel={`${c.name}, ${c.country}`}
                       >
                         <AppText variant="heading" numberOfLines={2}>
                           {c.name}
@@ -347,7 +348,7 @@ export function AddPersonScreen() {
                             ? `${c.admin1} · ${c.country}`
                             : c.country}
                         </AppText>
-                      </PressableScale>
+                      </ChunkyCard>
                     </EnterView>
                   ))}
                 </View>
@@ -360,7 +361,7 @@ export function AddPersonScreen() {
             onPress={onSave}
             loading={saving}
             disabled={!canSave}
-            style={{ marginTop: spacing.md }}
+            style={styles.save}
           />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -381,17 +382,16 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   topSpacer: {
-    width: 32,
+    width: 40,
+  },
+  save: {
+    marginTop: spacing.md,
   },
   shrink: {
     flexShrink: 1,
   },
   flex: {
     flex: 1,
-  },
-  noResults: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.sm,
   },
   content: {
     paddingHorizontal: spacing.xl,
@@ -403,15 +403,17 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   input: {
-    height: 52,
+    height: 56,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
-    fontSize: 16,
+    fontSize: typography.heading.fontSize,
   },
   wheelRow: {
     flexDirection: "row",
@@ -423,24 +425,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
+    minHeight: 44,
     marginTop: spacing.sm,
   },
   searchField: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    height: 52,
+    height: 56,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     paddingHorizontal: spacing.lg,
   },
   searchInput: {
     flex: 1,
+    alignSelf: "stretch",
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
-    fontSize: 16,
+    fontSize: typography.heading.fontSize,
   },
   results: {
     marginTop: spacing.sm,
@@ -448,11 +454,9 @@ const styles = StyleSheet.create({
     minHeight: 200,
   },
   cityRow: {
+    minHeight: 52,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.md,
-    backgroundColor: surface.sheet,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
   },
 });

@@ -3,7 +3,7 @@ import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
 import { AsterMascot } from "../aster/AsterMascot";
 import type { AsterAction } from "../aster/types";
 import { SpeechBubble } from "./SpeechBubble";
-import { useMascotStore } from "../../store/useMascotStore";
+import { useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
 import { useTranslation } from "../../i18n";
 import { asterA11y } from "../../features/aster/asterCopy";
 import { spacing } from "../../lib/design-system";
@@ -30,19 +30,27 @@ interface AsterCameoProps {
  * the user dressed it in, so it always feels like *their* Aster.
  */
 export function AsterCameo({ text, size = 72, action = "talk", mood, stage, layout = "row", style }: AsterCameoProps) {
-  const state = useMascotStore((s) => s.state);
+  // Only what the cameo draws: an unrelated change to Aster's state (a quest
+  // ticking, stardust) leaves every cameo on screen alone.
+  const hasState = useMascotStore((s) => s.state !== null);
+  const storeStage = useMascotStore((s) => s.state?.stage);
+  const storeMood = useMascotStore((s) => s.state?.mood);
+  const equipped = useMascotStore((s) => s.state?.equipped ?? NO_EQUIPPED);
   const { t } = useTranslation();
-  const resolvedStage = stage ?? state?.stage ?? 0;
+  const resolvedStage = stage ?? storeStage ?? 0;
 
   return (
     <View style={[layout === "row" ? styles.row : styles.column, style]}>
       <AsterMascot
         stage={resolvedStage}
-        mood={mood ?? state?.mood ?? "happy"}
-        accessories={state?.equipped ?? []}
+        mood={mood ?? storeMood ?? "happy"}
+        accessories={equipped}
         size={size}
         action={action}
-        accessibilityLabel={asterA11y(t, state ? { stage: resolvedStage, mood: mood ?? state.mood } : null)}
+        accessibilityLabel={asterA11y(
+          t,
+          hasState && storeMood ? { stage: resolvedStage, mood: mood ?? storeMood } : null,
+        )}
       />
       {text ? (
         <SpeechBubble

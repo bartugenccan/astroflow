@@ -98,6 +98,7 @@ export function SynastryAspectRow({ aspect, otherName, delay = 0 }: SynastryAspe
         onPress={() => setOpen((o) => !o)}
         scaleTo={0.98}
         accessibilityRole="button"
+        accessibilityLabel={aspectPhrase(t, aspect.aspect, nameA, nameB, false)}
         accessibilityState={{ expanded: open }}
       >
         <View style={styles.row}>

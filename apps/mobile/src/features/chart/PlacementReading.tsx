@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
+import { StateView } from "../../components/ui/StateView";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { TermInfo } from "../../components/TermInfo";
@@ -53,12 +53,7 @@ export function PlacementReading({ reading, loading, error, onRetry, retrograde 
       {loading && !reading ? (
         <ShimmerLines lines={4} />
       ) : error && !reading ? (
-        <PressableScale style={styles.retry} onPress={onRetry} accessibilityRole="button">
-          <Ionicons name="refresh" size={16} color={colors.star[300]} />
-          <AppText variant="body" color={colors.star[300]}>
-            {t("reading.retry")}
-          </AppText>
-        </PressableScale>
+        <StateView kind="error" compact message={t("reading.error")} onAction={onRetry} />
       ) : (
         <AppText variant="lead" style={styles.text}>
           {reading?.text ?? ""}
@@ -104,12 +99,5 @@ const styles = StyleSheet.create({
   text: {
     textAlign: "center",
     marginTop: spacing.sm,
-  },
-  retry: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.lg,
   },
 });

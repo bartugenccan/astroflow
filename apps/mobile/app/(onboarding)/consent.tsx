@@ -7,6 +7,9 @@ export default function ConsentRoute() {
   const acceptAiConsent = useAppStore((s) => s.acceptAiConsent);
   return (
     <AiConsentScreen
+      // Still an egg: onboarding hasn't finished, so there's no Aster state yet.
+      asterStage={0}
+      onBack={router.canGoBack() ? () => router.back() : undefined}
       onAccept={() => {
         acceptAiConsent();
         router.replace("/birth-date");

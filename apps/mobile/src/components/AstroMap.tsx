@@ -16,6 +16,7 @@ import Animated, {
 import { HousePlacement, PlanetPlacement, Aspect } from "../services/types";
 import { GlyphGroup } from "./Glyph";
 import { PressableScale } from "./ui/PressableScale";
+import { useScreenActive } from "./ScreenActive";
 import { useTranslation, TranslationKey } from "../i18n";
 import { colors, fonts, motion, surface } from "../lib/design-system";
 
@@ -333,19 +334,21 @@ function PlanetMarker({
   );
 }
 
-/** Soft expanding ring around the selected planet (static ring when reduced). */
+/** Soft expanding ring around the selected planet (static ring when reduced; rests off view). */
 function SelectedPulse({ reduced }: { reduced: boolean }) {
+  const active = useScreenActive();
   const pulse = useSharedValue(0);
 
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || !active) return;
+    pulse.value = 0;
     pulse.value = withRepeat(
       withTiming(1, { duration: motion.duration.reveal, easing: Easing.out(Easing.quad) }),
       -1,
       false,
     );
     return () => cancelAnimation(pulse);
-  }, [reduced, pulse]);
+  }, [reduced, active, pulse]);
 
   const style = useAnimatedStyle(() =>
     reduced

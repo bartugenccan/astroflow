@@ -19,6 +19,7 @@ export const glossaryEn = {
     screenSub: "Every word the app uses, in plain language — with the detail underneath when you want it.",
     searchPlaceholder: "Search a term",
     noResults: "No term matches that.",
+    clearSearch: "Clear search",
     openGlossary: "Glossary",
     openGlossarySub: "Every term, explained",
   },

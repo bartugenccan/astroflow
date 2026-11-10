@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { MotiView } from "moti";
+import { EnterView } from "../../lib/motion";
 import { OnboardingFrame } from "./OnboardingFrame";
 import { WheelPicker, WheelItem } from "../../components/ui/WheelPicker";
 import { AppText } from "../../components/ui/AppText";
@@ -49,6 +49,7 @@ export function BirthTimeScreen() {
       step={1}
       question={t("onboarding.timeQuestion")}
       hint={t("onboarding.timeHint")}
+      asterLine={t("screens.onboarding.asterTime")}
       ctaLabel={t("common.continue")}
       onNext={onNext}
     >
@@ -75,18 +76,21 @@ export function BirthTimeScreen() {
           />
         </View>
       ) : (
-        <MotiView
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={styles.noonNote}
-        >
+        <EnterView from="none" style={styles.noonNote}>
           <AppText variant="lead" center color={colors.text.secondary}>
             {t("onboarding.unknownTimeNote")}
           </AppText>
-        </MotiView>
+        </EnterView>
       )}
 
-      <PressableScale onPress={toggleUnknown} scaleTo={0.97} style={styles.unknownRow}>
+      <PressableScale
+        onPress={toggleUnknown}
+        scaleTo={0.97}
+        style={styles.unknownRow}
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: unknown }}
+        accessibilityLabel={t("onboarding.unknownTime")}
+      >
         <Ionicons
           name={unknown ? "checkbox" : "square-outline"}
           size={20}
@@ -120,6 +124,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   unknownRow: {
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

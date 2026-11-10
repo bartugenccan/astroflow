@@ -12,7 +12,6 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 import { AppText } from "../../components/ui/AppText";
-import { RunningLightBorder } from "../../components/ui/RunningLightBorder";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { ScoreRing } from "../../components/ScoreRing";
 import { CountUp } from "../../components/ui/CountUp";
@@ -24,15 +23,15 @@ import { astrologyApi } from "../../services/astrologyApi";
 import { yearAheadKey } from "../../services/interpretationCache";
 import { daysUntilBirthday } from "../../lib/dates";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { colors, depth, spacing, radii, motion, palette } from "../../lib/design-system";
 
 const RING = 76;
 /** Inside this many days the border spins faster and glows harder. */
 const SOON_DAYS = 30;
 
 /**
- * The Solar Return's permanent front door, pinned to the top of the Future
- * tab. It's the app's headline feature, so it isn't hidden behind a "Yearly"
+ * The Solar Return's permanent front door, pinned to the top of the Sky
+ * tab's Future pane. It's the app's headline feature, so it isn't hidden behind a "Yearly"
  * segment someone might never tap: a gold light runs around its border
  * continuously, the technique is named outright ("Solar Return"), and a
  * countdown ring fills toward the next birthday.
@@ -81,7 +80,7 @@ export function SolarReturnCard() {
         accessibilityRole="button"
         accessibilityLabel={`${t("ahead.srEyebrow")} — ${t("ahead.srCta")}`}
       >
-        <RunningLightBorder intense={soon} cardStyle={styles.card}>
+        <View style={[styles.card, styles.frame]}>
           <View style={styles.eyebrowRow}>
             <Ionicons name="sunny" size={14} color={colors.star[300]} />
             <AppText variant="label" color={colors.text.accent} style={styles.shrink}>
@@ -105,10 +104,8 @@ export function SolarReturnCard() {
               }
             />
             <View style={styles.text}>
-              <AppText variant="title" style={styles.title}>
-                {t("ahead.srTitle")}
-              </AppText>
-              <AppText variant="heading" color={colors.star[200]} style={styles.days}>
+              <AppText variant="title">{t("ahead.srTitle")}</AppText>
+              <AppText variant="heading" color={colors.star[200]}>
                 {headline}
               </AppText>
             </View>
@@ -119,18 +116,27 @@ export function SolarReturnCard() {
           </AppText>
 
           <View style={styles.cta}>
-            <AppText variant="heading" color={colors.text.onAccent} style={styles.ctaText}>
+            <AppText variant="button" color={palette.star.on} style={styles.ctaText}>
               {t("ahead.srCta")}
             </AppText>
-            <Ionicons name="arrow-forward" size={16} color={colors.text.onAccent} />
+            <Ionicons name="arrow-forward" size={16} color={palette.star.on} />
           </View>
-        </RunningLightBorder>
+        </View>
       </PressableScale>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
+  // A chunky gold-tinted card: still, not a running light (that is kept for premium offers).
+  frame: {
+    borderRadius: radii.lg,
+    borderWidth: 2,
+    borderColor: palette.star.face,
+    borderBottomWidth: 2 + depth.md,
+    borderBottomColor: palette.star.slab,
+    backgroundColor: palette.star.soft,
+  },
   card: {
     gap: spacing.md,
     padding: spacing.xl,
@@ -153,24 +159,22 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: spacing.xs,
   },
-  title: {
-    fontSize: 24,
-    lineHeight: 30,
-  },
-  days: {
-    fontSize: 15,
-  },
+  // Looks like a chunky gold button: the whole card is the press target.
   cta: {
+    minHeight: 48,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: radii.pill,
-    backgroundColor: colors.star[400],
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.md,
+    backgroundColor: palette.star.face,
+    borderBottomWidth: 4,
+    borderBottomColor: palette.star.slab,
   },
   ctaText: {
-    fontSize: 15,
     flexShrink: 1,
+    textAlign: "center",
   },
 });

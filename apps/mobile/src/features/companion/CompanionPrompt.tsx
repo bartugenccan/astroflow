@@ -1,13 +1,14 @@
 import React from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { BleedRow } from "../../components/ui/BleedRow";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { PressableScale } from "../../components/ui/PressableScale";
+import { Chip } from "../../components/ui/Chip";
 import { GuidanceTopic } from "../../services/types";
 import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, spacing, radii, surface } from "../../lib/design-system";
+import { colors, spacing } from "../../lib/design-system";
 
 const TOPICS: GuidanceTopic[] = ["love", "work", "money", "decision", "person", "mood"];
 
@@ -30,34 +31,28 @@ export function CompanionPrompt({
         {t("companion.whatsOnYourMind")}
       </AppText>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.chips}
-      >
+      <BleedRow contentContainerStyle={styles.chips}>
         {TOPICS.map((tp) => (
-          <PressableScale
+          <Chip
             key={tp}
-            style={styles.chip}
-            scaleTo={0.92}
+            label={t(`companion.topics.${tp}` as TranslationKey)}
             onPress={() => onSelectTopic(tp)}
-          >
-            <AppText variant="bodySmall" color={colors.text.primary} numberOfLines={1}>
-              {t(`companion.topics.${tp}` as TranslationKey)}
-            </AppText>
-          </PressableScale>
+            style={styles.chip}
+          />
         ))}
-      </ScrollView>
+      </BleedRow>
 
-      <PressableScale scaleTo={0.98} onPress={() => router.push("/companion" as Href)}>
-        <ChunkyCard style={styles.talkRow}>
-          <Ionicons name="sparkles-outline" size={18} color={colors.star[300]} />
-          <AppText variant="body" color={colors.text.secondary} style={styles.talkText}>
-            {t("companion.talkCta")}
-          </AppText>
-          <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
-        </ChunkyCard>
-      </PressableScale>
+      <ChunkyCard
+        style={styles.talkRow}
+        onPress={() => router.push("/companion" as Href)}
+        accessibilityLabel={t("companion.talkCta")}
+      >
+        <Ionicons name="chatbubbles" size={20} color={colors.star[300]} />
+        <AppText variant="body" color={colors.text.primary} style={styles.talkText}>
+          {t("companion.talkCta")}
+        </AppText>
+        <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+      </ChunkyCard>
     </View>
   );
 }
@@ -68,15 +63,9 @@ const styles = StyleSheet.create({
   },
   chips: {
     gap: spacing.sm,
-    paddingRight: spacing.xl,
   },
   chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    minHeight: 44,
   },
   talkRow: {
     flexDirection: "row",

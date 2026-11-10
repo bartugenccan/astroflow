@@ -78,3 +78,39 @@ export const POWER_DAYS_MIN_STAGE = 3;
 export function visiblePowerDays(stage: number, total: number): number {
   return stage >= POWER_DAYS_MIN_STAGE ? total : Math.min(total, POWER_DAYS_PREVIEW);
 }
+
+// ─── The manifest's report card ─────────────────────────────────────────────
+
+export interface IntentionStats {
+  /** Local days since the manifest was planted, counting today. */
+  daysActive: number;
+  /** Every check-in (written, 3-6-9 line) ever saved for it. */
+  checkIns: number;
+  /** Distinct local days with at least one check-in. */
+  practiceDays: number;
+  longestStreak: number;
+  /** Conviction (1–5) of the last check-ins, oldest first, at most 30. */
+  convictionTrend: number[];
+}
+
+/**
+ * Report card for one manifest. `rows` are its check-ins, newest first (as the
+ * history query returns them); `createdDay` and `today` are local YYYY-MM-DD.
+ */
+export function intentionStats(
+  rows: { date: string; conviction: number }[],
+  createdDay: string,
+  today: string,
+  longestStreak: number,
+): IntentionStats {
+  const [cy, cm, cd] = createdDay.split('-').map(Number);
+  const [ty, tm, td] = today.split('-').map(Number);
+  const span = Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(cy, cm - 1, cd)) / 86400000);
+  return {
+    daysActive: Math.max(1, span + 1),
+    checkIns: rows.length,
+    practiceDays: new Set(rows.map((r) => r.date)).size,
+    longestStreak,
+    convictionTrend: rows.slice(0, 30).map((r) => r.conviction).reverse(),
+  };
+}

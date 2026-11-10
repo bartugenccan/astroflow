@@ -1,4 +1,5 @@
 import React from "react";
+import { runAfterTransition } from "../../lib/afterInteractions";
 import { StyleSheet, View, ScrollView, Alert } from "react-native";
 import { useRouter, useFocusEffect, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,8 +7,8 @@ import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
-import { PressableScale } from "../../components/ui/PressableScale";
+import { IconButton } from "../../components/ui/IconButton";
+import { StateView } from "../../components/ui/StateView";
 import { BackButton } from "../../components/ui/BackButton";
 import { TermInfo } from "../../components/TermInfo";
 import { Glyph } from "../../components/Glyph";
@@ -16,7 +17,7 @@ import { useAsync } from "../../hooks/useAsync";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
 import { formatDayMonthYear } from "../../lib/dates";
-import { colors, spacing, radii } from "../../lib/design-system";
+import { colors, palette, spacing, radii } from "../../lib/design-system";
 
 /**
  * Compatibility home: what it is, "Add a person", and the saved people. No
@@ -30,10 +31,11 @@ export function CompatibilityList() {
 
   // Refresh when returning from the add flow.
   useFocusEffect(
-    React.useCallback(() => {
-      people.reload();
+    React.useCallback(
+      () => runAfterTransition(people.reload),
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []),
+      [],
+    ),
   );
 
   const confirmDelete = (id: string) => {
@@ -77,10 +79,15 @@ export function CompatibilityList() {
         />
       </EnterView>
 
-      {people.loading ? (
-        <View style={styles.loaderBox}>
-          <CelestialLoader size="sm" />
-        </View>
+      {people.loading && !people.data ? (
+        <StateView kind="loading" compact />
+      ) : people.error && !people.data ? (
+        <StateView
+          kind="error"
+          compact
+          message={t("profileUi.compat.loadError")}
+          onAction={people.reload}
+        />
       ) : people.data && people.data.length > 0 ? (
         <View style={styles.list}>
           <EnterView index={2}>
@@ -90,17 +97,16 @@ export function CompatibilityList() {
           </EnterView>
           {people.data.map((p, i) => (
             <EnterView key={p.id} index={i} delay={180}>
-              <PressableScale
-                scaleTo={0.98}
-                accessibilityRole="button"
+              <ChunkyCard
+                style={styles.personCard}
                 onPress={() => router.push(`/compatibility/${p.id}` as Href)}
+                accessibilityLabel={`${p.label}, ${t(`signs.${p.sunSign}` as never)}`}
               >
-                <ChunkyCard style={styles.personCard}>
                   <View style={styles.personGlyph}>
                     <Glyph
                       name={p.sunSign}
                       size={24}
-                      color={colors.star[300]}
+                      color={palette.candy.on}
                     />
                   </View>
                   <View style={styles.personInfo}>
@@ -112,42 +118,32 @@ export function CompatibilityList() {
                       {formatDayMonthYear(locale, p.birthDate)}
                     </AppText>
                   </View>
-                  <PressableScale
-                    hitSlop={10}
-                    scaleTo={0.85}
-                    haptic="light"
-                    style={styles.trash}
-                    accessibilityRole="button"
-                    accessibilityLabel={t("compatibility.delete")}
+                  <IconButton
+                    icon="trash-outline"
+                    size={40}
                     onPress={() => confirmDelete(p.id)}
-                  >
-                    <Ionicons
-                      name="trash-outline"
-                      size={18}
-                      color={colors.text.tertiary}
-                    />
-                  </PressableScale>
+                    accessibilityLabel={`${t("compatibility.delete")}: ${p.label}`}
+                  />
                   <Ionicons
                     name="chevron-forward"
                     size={18}
                     color={colors.text.tertiary}
                   />
-                </ChunkyCard>
-              </PressableScale>
+              </ChunkyCard>
             </EnterView>
           ))}
         </View>
       ) : (
         <EnterView index={2}>
-          <ChunkyCard style={styles.emptyCard}>
-            <Ionicons
-              name="people-outline"
-              size={26}
-              color={colors.star[300]}
+          <ChunkyCard>
+            <StateView
+              kind="empty"
+              compact
+              message={t("profileUi.compat.emptyTitle")}
+              detail={t("profileUi.compat.emptyDetail")}
+              actionLabel={t("compatibility.addPerson")}
+              onAction={() => router.push("/compatibility/add")}
             />
-            <AppText variant="body" center>
-              {t("compatibility.noPeople")}
-            </AppText>
           </ChunkyCard>
         </EnterView>
       )}
@@ -200,10 +196,6 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: spacing.xs,
   },
-  loaderBox: {
-    alignItems: "center",
-    paddingVertical: spacing.xl,
-  },
   list: {
     gap: spacing.md,
   },
@@ -218,23 +210,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
+    backgroundColor: palette.candy.face,
   },
   personInfo: {
     flex: 1,
     minWidth: 0,
     gap: 2,
-  },
-  trash: {
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyCard: {
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.xl,
   },
 });

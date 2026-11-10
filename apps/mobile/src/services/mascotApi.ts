@@ -2,7 +2,10 @@ import { USE_HTTP } from "./config";
 import { delay } from "./delay";
 import { request } from "./httpAstrologyApi";
 import type {
+  AsterLetter,
   ConstellationEntry,
+  LessonResult,
+  SkyLessonKey,
   JourneyClaim,
   JourneyDiscovery,
   MascotDelta,
@@ -16,6 +19,15 @@ import type { Locale } from "../i18n";
 import {
   ABILITIES,
   CATALOG,
+  MAX_STAGE,
+  PASSES,
+  PASS_DAILY_MAX,
+  SKY_PATH,
+  canUnlockEarly,
+  lessonStatus,
+  passesToday,
+  skyPathView,
+  unlocksAt,
   DUPLICATE_STARDUST,
   ECLIPSE_MAX_DAYS,
   EVENT_RULES,
@@ -60,6 +72,13 @@ export interface MascotApi {
   startEclipse(days: number): Promise<MascotState>;
   endEclipse(): Promise<MascotState>;
   getConstellations(): Promise<ConstellationEntry[]>;
+  /** Finish a Harita Yolu chapter (it must be open). */
+  completeLesson(key: SkyLessonKey): Promise<LessonResult>;
+  /** Open a stage-locked chapter early for Yıldız Tozu. */
+  unlockLesson(key: SkyLessonKey): Promise<MascotState>;
+  setNovaLook(on: boolean): Promise<MascotState>;
+  /** This week's letter from Aster (stage 4). */
+  getLetter(locale: Locale): Promise<AsterLetter>;
 }
 
 const httpMascotApi: MascotApi = {
@@ -73,6 +92,10 @@ const httpMascotApi: MascotApi = {
   startEclipse: (days) => request<MascotState>("POST", "mascot/eclipse", { days }),
   endEclipse: () => request<MascotState>("DELETE", "mascot/eclipse"),
   getConstellations: () => request<ConstellationEntry[]>("GET", "mascot/constellations"),
+  completeLesson: (key) => request<LessonResult>("POST", `mascot/lessons/${key}/complete`),
+  unlockLesson: (key) => request<MascotState>("POST", `mascot/lessons/${key}/unlock`),
+  setNovaLook: (on) => request<MascotState>("PATCH", "mascot/look", { novaLook: on }),
+  getLetter: (locale) => request<AsterLetter>("GET", "mascot/letter", undefined, { locale }),
 };
 
 // ─── Offline mock (same rules as MascotService / JourneyService) ────────────
@@ -149,6 +172,11 @@ const mock = {
   journeysCompleted: 0,
   constellations: new Map<string, { count: number; firstFoundAt: string }>(),
   moods: new Map<string, { sky: MoodSky; energy: number }>(),
+  lessonsDone: [] as string[],
+  lessonsEarly: [] as string[],
+  passes: {} as Record<string, Partial<Record<keyof typeof PASSES, number>>>,
+  novaLook: false,
+  letters: new Map<string, AsterLetter>(),
 };
 
 export class MascotRequestError extends Error {}
@@ -211,7 +239,22 @@ function mockView(): MascotState {
     },
     skyCheckIn: mock.moods.get(today) ?? null,
     constellations: { found: mock.constellations.size, total: ALL_CONSTELLATIONS.length },
+    skyPath: skyPathView(mockProgress()),
+    passesToday: passesToday(mock.passes, today),
+    nextUnlocks:
+      !mock.hatched || mock.stage >= MAX_STAGE
+        ? null
+        : {
+            ...unlocksAt(mock.stage + 1),
+            items: CATALOG.filter((i) => i.minStage === mock.stage + 1).map((i) => i.id),
+            xpNeeded: Math.max(0, (next ?? 0) - mock.xp),
+          },
+    novaLook: mock.novaLook && mock.stage >= MAX_STAGE,
   };
+}
+
+function mockProgress() {
+  return { stage: mock.stage, done: mock.lessonsDone, early: mock.lessonsEarly };
 }
 
 /** Mirror of MascotService.award, used by the mock intentions API too. */
@@ -287,6 +330,11 @@ export function mockResetMascot(): void {
     journeysCompleted: 0,
     constellations: new Map(),
     moods: new Map(),
+    lessonsDone: [],
+    lessonsEarly: [],
+    passes: {},
+    novaLook: false,
+    letters: new Map(),
   });
 }
 
@@ -315,7 +363,13 @@ const mockMascotApi: MascotApi = {
     if (!item) throw new MascotRequestError("Unknown item");
     if (mock.stage < item.minStage) throw new MascotRequestError("Locked");
     if (mock.stardust < item.price) throw new MascotRequestError("Not enough stardust");
-    if (item.kind === "shield") {
+    if (item.kind === "pass" && item.pass) {
+      const today = localDay();
+      const bought = passesToday(mock.passes, today)[item.pass] ?? 0;
+      const amount = PASSES[item.pass].amount;
+      if (bought >= PASS_DAILY_MAX * amount) throw new MascotRequestError("Already bought today");
+      mock.passes = { [today]: { ...passesToday(mock.passes, today), [item.pass]: bought + amount } };
+    } else if (item.kind === "shield") {
       if (mock.shields >= MAX_SHIELDS) throw new MascotRequestError("Shield stock is full");
       mock.shields += 1;
     } else {
@@ -426,6 +480,61 @@ const mockMascotApi: MascotApi = {
       const c = mock.constellations.get(key);
       return { key, found: !!c, count: c?.count ?? 0, firstFoundAt: c?.firstFoundAt ?? null };
     });
+  },
+  async completeLesson(key) {
+    await delay(300);
+    const status = lessonStatus(key, mockProgress());
+    if (status === "lockedPrev" || status === "lockedStage") {
+      throw new MascotRequestError(`Lesson ${key} is not open yet (${status})`);
+    }
+    if (status === "open") mock.lessonsDone = [...mock.lessonsDone, key];
+    const delta = mockAward("SKY_LESSON", key);
+    return { delta, state: mockView() };
+  },
+  async unlockLesson(key) {
+    await delay(250);
+    if (!canUnlockEarly(key, mockProgress())) throw new MascotRequestError("This chapter cannot be bought early");
+    const price = SKY_PATH.find((c) => c.key === key)?.earlyPrice ?? 0;
+    if (mock.stardust < price) throw new MascotRequestError("Not enough stardust");
+    mock.stardust -= price;
+    mock.lessonsEarly = [...mock.lessonsEarly, key];
+    return mockView();
+  },
+  async setNovaLook(on) {
+    await delay(150);
+    if (on && mock.stage < MAX_STAGE) throw new MascotRequestError("The Nova look opens at Nova");
+    mock.novaLook = on;
+    return mockView();
+  },
+  async getLetter(locale) {
+    await delay(500);
+    if (mock.stage < (ABILITIES.find((a) => a.key === "weeklyLetter")?.minStage ?? 4)) {
+      throw new MascotRequestError("The weekly letter opens at Constellation");
+    }
+    const week = isoWeek(localDay());
+    const saved = mock.letters.get(week);
+    if (saved) return saved;
+    const days = new Set(mock.events.map((e) => e.day)).size;
+    const letter: AsterLetter =
+      locale === "tr"
+        ? {
+            week,
+            greeting: "Sevgili yol arkadaşım,",
+            body: `Bu hafta ${days} gün yanımdaydın. Her küçük pratik ışığımı biraz daha büyüttü; fark ettiğin işaretleri de not ettim.`,
+            highlight: "Geldiğin her gün bir yıldız yaktın.",
+            ahead: "Bu hafta tek bir manifestine odaklan ve her sabah bir kez yaz.",
+            createdAt: new Date().toISOString(),
+          }
+        : {
+            week,
+            greeting: "Dear fellow traveller,",
+            body: `You were with me on ${days} days this week. Every small practice made my light a little bigger, and I noted the signs you saw.`,
+            highlight: "Every day you came, you lit a star.",
+            ahead: "This week, focus on one manifest and write it once each morning.",
+            createdAt: new Date().toISOString(),
+          };
+    mock.letters.set(week, letter);
+    return letter;
   },
 };
 

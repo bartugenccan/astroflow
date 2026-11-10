@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
+import { AsterCameo } from "../../components/ui/AsterCameo";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { BackButton } from "../../components/ui/BackButton";
@@ -15,7 +16,7 @@ import { ChartScreen } from "../chart/ChartScreen";
 import { TransitsScreen } from "../transits/TransitsScreen";
 import { savedPersonToDto, usePerson, usePersonChartAccess } from "./savedPerson";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, surface } from "../../lib/design-system";
+import { palette, spacing, radii } from "../../lib/design-system";
 
 function formatDate(iso: string, locale: string): string {
   const [y, m, d] = iso.split("-").map(Number);
@@ -35,7 +36,8 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
   const { t, locale } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { person, loading } = usePerson(id);
+  const router = useRouter();
+  const { person, loading, error, reload } = usePerson(id);
   const { allowed, markViewed } = usePersonChartAccess(id);
   const [paywall, setPaywall] = useState(false);
 
@@ -56,7 +58,24 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
       <ScreenWrapper>
         {back}
         <View style={styles.center}>
-          <CelestialLoader label={t("common.loading")} />
+          {loading ? (
+            <StateView kind="loading" style={styles.fullWidth} />
+          ) : error ? (
+            <StateView
+              kind="error"
+              message={t("profileUi.compat.loadError")}
+              onAction={reload}
+              style={styles.fullWidth}
+            />
+          ) : (
+            <StateView
+              kind="empty"
+              message={t("profileUi.compat.personMissing")}
+              actionLabel={t("compatibility.addPerson")}
+              onAction={() => router.replace("/compatibility/add")}
+              style={styles.fullWidth}
+            />
+          )}
         </View>
       </ScreenWrapper>
     );
@@ -68,15 +87,20 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
         {back}
         <View style={styles.center}>
           <EnterView scale style={styles.fullWidth}>
-          <ChunkyCard style={styles.lockCard}>
-            <Ionicons name="lock-closed" size={24} color={colors.star[300]} />
+          <ChunkyCard tone="star" tinted depth="lg" style={styles.lockCard}>
+            <View style={styles.lockBadge}>
+              <Ionicons name="lock-closed" size={22} color={palette.star.on} />
+            </View>
             <AppText variant="title" center>
               {person.label}
             </AppText>
-            <AppText variant="body" center>
-              {t("paywall.forecastSubtitle")}
-            </AppText>
-            <ChunkyButton label={t("paywall.unlockPremium")} onPress={() => setPaywall(true)} />
+            <AsterCameo text={t("paywall.forecastSubtitle")} size={56} />
+            <ChunkyButton
+              label={t("paywall.unlockPremium")}
+              variant="star"
+              onPress={() => setPaywall(true)}
+              style={styles.fullWidth}
+            />
           </ChunkyCard>
           </EnterView>
         </View>
@@ -104,20 +128,11 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  // BackButton is already a chunky disc, legible over the chart art; just float it.
   back: {
     position: "absolute",
-    left: spacing.lg,
+    left: spacing.lg + 4,
     zIndex: 10,
-    width: 42,
-    height: 42,
-    // BackButton carries a -8 left margin for inline headers; cancel it here.
-    paddingLeft: 8,
-    borderRadius: radii.pill,
-    justifyContent: "center",
-    alignItems: "flex-start",
-    backgroundColor: surface.sheet,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
   },
   center: {
     flex: 1,
@@ -132,5 +147,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.lg,
     width: "100%",
+  },
+  lockBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: radii.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.star.face,
   },
 });

@@ -18,7 +18,8 @@ interface Props {
 
 /** On/off switch in the app's language: ink track, gold fill, springy thumb (same feel as LangSwitch). */
 export function GoldToggle({ value, onChange, disabled, accessibilityLabel }: Props) {
-  const progress = useDerivedValue(() => withSpring(value ? 1 : 0, motion.spring.snappy), [value]);
+  // No deps array: on native Reanimated tracks the worklet's closure (`value`) itself.
+  const progress = useDerivedValue(() => withSpring(value ? 1 : 0, motion.spring.snappy));
 
   const trackStyle = useAnimatedStyle(() => ({
     backgroundColor: interpolateColor(progress.value, [0, 1], [surface.sheet, colors.star[300]]),

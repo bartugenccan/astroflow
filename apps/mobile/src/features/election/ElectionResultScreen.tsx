@@ -5,12 +5,13 @@ import { useLocalSearchParams, useRouter, type Href } from "expo-router";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { BackButton } from "../../components/ui/BackButton";
-import { PressableScale } from "../../components/ui/PressableScale";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { StateView } from "../../components/ui/StateView";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import type { ElectionCheckQuery } from "../../services/types";
 import { useElectionStore } from "../../store/useElectionStore";
 import { useTranslation } from "../../i18n";
-import { colors, radii, spacing } from "../../lib/design-system";
+import { colors, spacing } from "../../lib/design-system";
 import { CheckResult } from "./CheckResult";
 import { isIsoDay } from "../../lib/ids";
 import { SearchResult } from "./SearchResult";
@@ -24,7 +25,7 @@ export function ElectionResultScreen() {
   const ask = useElectionStore((s) => s.ask);
   const scroll = useRef<ScrollViewInstance>(null);
 
-  if (!dto || !query) return <Frame title={t("election.title")} onNew={() => router.back()} />;
+  if (!dto || !query) return <Frame title={t("election.title")} onNew={() => router.back()} empty />;
 
   return (
     <Frame title={t("election.title")} onNew={() => router.back()} scrollRef={scroll}>
@@ -59,7 +60,7 @@ export function ElectionDayScreen() {
   const search = useElectionStore((s) => s.current);
   const scroll = useRef<ScrollViewInstance>(null);
 
-  if (!dto || !search || !date) return <Frame title={t("election.title")} onNew={() => router.back()} />;
+  if (!dto || !search || !date) return <Frame title={t("election.title")} onNew={() => router.back()} empty />;
   const query: ElectionCheckQuery = {
     mode: "check",
     eventId: search.eventId,
@@ -86,14 +87,18 @@ function Frame({
   title,
   onNew,
   scrollRef,
+  empty,
   children,
 }: {
   title: string;
   onNew?: () => void;
   scrollRef?: React.RefObject<ScrollViewInstance | null>;
+  /** Nothing to show (no question asked yet, or a stale deep link). */
+  empty?: boolean;
   children?: React.ReactNode;
 }) {
   const { t } = useTranslation();
+  const router = useRouter();
   return (
     <ScreenWrapper>
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -103,14 +108,26 @@ function Frame({
             {title}
           </AppText>
           {onNew ? (
-            <PressableScale onPress={onNew} scaleTo={0.95} style={styles.newBtn}>
-              <AppText variant="bodySmall" color={colors.star[200]}>
-                {t("election.newQuery")}
-              </AppText>
-            </PressableScale>
+            <ChunkyButton
+              label={t("election.newQuery")}
+              onPress={onNew}
+              variant="night"
+              size="sm"
+              uppercase={false}
+              haptic="light"
+            />
           ) : null}
         </View>
-        {children}
+        {empty ? (
+          <StateView
+            kind="empty"
+            message={t("election.noQuery")}
+            actionLabel={t("election.newQuery")}
+            onAction={() => router.replace("/election" as Href)}
+          />
+        ) : (
+          children
+        )}
       </ScrollView>
     </ScreenWrapper>
   );
@@ -129,11 +146,4 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   barTitle: { flex: 1 },
-  newBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-  },
 });

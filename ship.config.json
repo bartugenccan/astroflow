@@ -27,16 +27,17 @@
     "Kullanici hakkinda saklanan hafiza notlari (MemoryEntry)",
     "Tarot sorusu (kullanici yazarsa)",
     "Eleksiyon icin kullanicinin yazdigi olay metni ve secilen yer adi",
-    "Niyet (dilek) metni ve check-in notu (olumlama ve check-in yaniti icin)",
+    "Manifest metni ve pratik notlari: kagida yazilan metin ve 3-6-9 satirlari (olumlama ve Aster yaniti icin). Sukran satirlari cihazda kalir, AI'ya gitmez",
     "Gokyuzu check-in etiketleri - yalnizca secilen etiket ve gun (or. 'cloudy'), serbest metin yok (companion baglami)",
-    "Bugunku transitlerin natal haritaya acilari (Aster yolculugu bulgusu ve companion icin); kisisel planin odak alani"
+    "Bugunku transitlerin natal haritaya acilari (Aster yolculugu bulgusu ve companion icin); kisisel planin odak alani",
+    "Haftalik Aster mektubu icin: haftanin aktivite sayilari, aktif manifest basliklari ve kullanicinin manifestlerine yazdigi isaret notlari"
    ],
    "notShared": [
     "Ham dogum tarihi/saati/yeri - harita sunucuda hesaplanir, saglayiciya gonderilmez",
     "Sifreli not yedegi (yansima, olumlama, tarot ve eleksiyon notlari) - AI'ya hic gonderilmez"
    ],
    "declaredInAppPrivacy": true,
-   "inAppDisclosure": "Onboarding'de dogum verisi girilmeden once tek seferlik AI bildirimi + onay (features/consent/AiConsentScreen; hesapla girenler ve eski kurulumlar icin root layout'ta). Profil > Yardim ve yasal > AI yorumlari hakkinda; Aster ekraninda 'AI ile yazildi' dipnotu."
+   "inAppDisclosure": "Onboarding'de dogum verisi girilmeden once tek seferlik AI bildirimi + onay (features/consent/AiConsentScreen; hesapla girenler ve eski kurulumlar icin root layout'ta). Profil > Yardim ve yasal > AI yorumlari hakkinda; Aster ekraninda 'AI ile yazildi' dipnotu. Bildirim surumlu: AI_CONSENT_VERSION=2 (dilek/check-in notlari, tarot/eleksiyon sorulari, mood etiketi ve transitler acikca sayilir); eski onaylilar bir kez yeniden gorur."
   },
   "thirdPartySdks": [
    {
@@ -125,7 +126,7 @@
    }
   ],
   "dataSafetySubmitted": false,
-  "$note": "PostHog, RevenueCat ve AdMob kurulunca bu envantere EKLENMELIDIR. App Privacy: Contact Info > Email Address ve Identifiers > User ID (linked, App Functionality), Name (linked, App Functionality) eklenmeli. Aster: Usage Data > Product Interaction (linked, App Functionality) - yalnizca olay turu ve gun (or. CHECKIN, AFFIRMATION), kullanici metni yok. Gokyuzu check-in: Health & Fitness degil, User Content > Other User Content olarak (linked, App Functionality) - yalnizca 5 etiketten biri + 1-5 enerji. Not yedegi (yalnizca hesapli): User Content > Other User Content (linked, App Functionality), sunucuda sifreli.",
+  "$note": "PostHog, RevenueCat ve AdMob kurulunca bu envantere EKLENMELIDIR. App Privacy: Contact Info > Email Address ve Identifiers > User ID (linked, App Functionality), Name (linked, App Functionality) eklenmeli. Aster: Usage Data > Product Interaction (linked, App Functionality) - yalnizca olay turu ve gun (or. CHECKIN, AFFIRMATION), kullanici metni yok. Gokyuzu check-in (mood etiketi + 1-5 enerji): sunucuda saklanir ve companion icin AI'ya gider; ihtiyatli beyan Health & Fitness > Health (App Store) ve Health and fitness > Health info (Play), linked, App Functionality. Not yedegi (yalnizca hesapli): User Content > Other User Content (linked, App Functionality), sunucuda sifreli.",
   "localDataProtection": {
    "keychain": "Cihaz token'i ve useAppStore (dogum tarihi/saati/yeri) expo-secure-store ile, AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY",
    "secureStoreOther": "Tarot okumasi, eleksiyon sorulari, olumlamalar, Gun Kapanisi ve Ay Rituali notlari Keychain/Keystore'da. Hesapsiz kullanicida bu notlar sunucuya gitmez (yalnizca 'yapildi' olayi Aster'a raporlanir). Hesapla giris yapmis kullanicida ayni notlar sifreli yedek olarak sunucuya da yazilir (user_vaults, AES-256-GCM, sunucu anahtari - uctan uca degil; AI'ya gonderilmez; DELETE /me/data ile silinir). (eski AsyncStorage kopyasi ilk acilista tasinip silinir)",
@@ -147,6 +148,183 @@
     "Gosterim adi ve dogum yeri etiketi (yeni telefonda geri yukleme icin sunucuda DeviceChart'ta)"
    ],
    "notes": "Kayit zorunlu degil (Guideline 5.1.1). Google oldugu icin Sign in with Apple da var (4.8). Hesaplar e-postaya gore birlestirilmez. Uygulama ici hesap silme: Profil > Verilerimi sil."
+  },
+  "dataTypes": {
+   "$note": "Koddan cikarilan beyan haritasi (2026-11-10). App Store Connect App Privacy ve Play Data Safety formlari bu listeyle birebir doldurulmali. Tracking yok (ATT gerekmez), reklam yok, veri satisi yok, tum trafik HTTPS.",
+   "appStore": [
+    {
+     "category": "Contact Info > Email Address",
+     "linked": true,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "Opsiyonel hesap (e-posta kodu, Google, Apple)"
+    },
+    {
+     "category": "Contact Info > Name",
+     "linked": true,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "Gosterim adi; Apple/Google ilk giriste paylasilan ad"
+    },
+    {
+     "category": "Identifiers > User ID",
+     "linked": true,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "Cihaz token subject'i, hesap id, Apple/Google sub"
+    },
+    {
+     "category": "Health & Fitness > Health",
+     "linked": true,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "Gokyuzu check-in mood etiketi + enerji (mood_checkins); AI companion baglamina gider"
+    },
+    {
+     "category": "User Content > Other User Content",
+     "linked": true,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "Dogum tarihi/saati/yeri ve harita (device_charts), companion sohbeti ve hafiza, dilek metni ve check-in notlari, tarot/eleksiyon sorulari, kayitli kisilerin dogum verisi, hesapli kullanicida sifreli not yedegi (user_vaults)"
+    },
+    {
+     "category": "Usage Data > Product Interaction",
+     "linked": true,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "Aster olaylari (mascot_events: tur + gun), yolculuklar, takimyildiz albumu, gunluk plan"
+    },
+    {
+     "category": "Diagnostics > Crash Data",
+     "linked": false,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "Sentry (sendDefaultPii false, beforeSend ile maskeleme)"
+    },
+    {
+     "category": "Diagnostics > Performance Data",
+     "linked": false,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "Sentry tracing (SENTRY_TRACES_SAMPLE_RATE)"
+    }
+   ],
+   "notCollected": [
+    "Konum: cihaz konumu okunmaz; dogum yeri kullanicinin yazdigi bir yerdir (User Content olarak beyan)",
+    "Ses: olumlama kayitlari cihazda kalir, sunucuya gonderilmez",
+    "Open-Meteo geocoding: yazilan sehir adi gercek zamanli arama icin gider, bizde saklanmaz ve kimlikle iliskilenmez"
+   ],
+   "googlePlay": [
+    {
+     "category": "Personal info > Email address",
+     "collected": true,
+     "shared": false,
+     "optional": true,
+     "purposes": [
+      "App functionality",
+      "Account management"
+     ]
+    },
+    {
+     "category": "Personal info > Name",
+     "collected": true,
+     "shared": false,
+     "optional": true,
+     "purposes": [
+      "App functionality",
+      "Account management"
+     ]
+    },
+    {
+     "category": "Personal info > User IDs",
+     "collected": true,
+     "shared": false,
+     "optional": false,
+     "purposes": [
+      "App functionality",
+      "Account management"
+     ]
+    },
+    {
+     "category": "Personal info > Other info",
+     "collected": true,
+     "shared": true,
+     "optional": false,
+     "purposes": [
+      "App functionality"
+     ],
+     "note": "Dogum tarihi/saati/yeri; turetilmis harita AI saglayicisina (Anthropic/DeepSeek) gider - 'shared' isaretlenmeli"
+    },
+    {
+     "category": "Health and fitness > Health info",
+     "collected": true,
+     "shared": true,
+     "optional": true,
+     "purposes": [
+      "App functionality"
+     ],
+     "note": "Mood etiketi; companion icin AI saglayicisina gider"
+    },
+    {
+     "category": "Messages > Other in-app messages",
+     "collected": true,
+     "shared": true,
+     "optional": true,
+     "purposes": [
+      "App functionality"
+     ],
+     "note": "Companion sohbeti AI saglayicisina gider"
+    },
+    {
+     "category": "App activity > Other user-generated content",
+     "collected": true,
+     "shared": true,
+     "optional": true,
+     "purposes": [
+      "App functionality"
+     ],
+     "note": "Dilekler, check-in notlari, tarot/eleksiyon sorulari (AI'ya gider); not yedegi (AI'ya gitmez)"
+    },
+    {
+     "category": "App activity > App interactions",
+     "collected": true,
+     "shared": false,
+     "optional": false,
+     "purposes": [
+      "App functionality"
+     ]
+    },
+    {
+     "category": "App info and performance > Crash logs",
+     "collected": true,
+     "shared": false,
+     "optional": false,
+     "purposes": [
+      "App functionality"
+     ]
+    },
+    {
+     "category": "App info and performance > Diagnostics",
+     "collected": true,
+     "shared": false,
+     "optional": false,
+     "purposes": [
+      "App functionality"
+     ]
+    }
+   ],
+   "playSecurity": {
+    "encryptedInTransit": true,
+    "deletionRequest": "Uygulama ici: Profil > Verilerimi sil (DELETE /me/data)"
+   }
   }
  },
  "testing": {

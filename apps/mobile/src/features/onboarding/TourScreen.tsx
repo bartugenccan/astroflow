@@ -1,357 +1,199 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  useAnimatedScrollHandler,
-  interpolate,
-  Extrapolation,
-  useReducedMotion,
-  SharedValue,
-  useAnimatedRef,
-  scrollTo,
-  runOnUI,
-} from "react-native-reanimated";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { Glyph } from "../../components/Glyph";
-import { AsterMascot } from "../../components/aster/AsterMascot";
+import { AsterCameo } from "../../components/ui/AsterCameo";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
-import { useOnboardingDraft } from "../../store/useOnboardingDraft";
+import { EnterView } from "../../lib/motion";
+import { useTranslation, type TranslationKey } from "../../i18n";
 import { useAppStore } from "../../store/useAppStore";
+import { useOnboardingDraft } from "../../store/useOnboardingDraft";
+import { useReminderToggle } from "../reminders/useReminderToggle";
 import { syncProfileMeta } from "../../services/auth/account";
-import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, spacing, radii, palette, surface } from "../../lib/design-system";
+import { colors, layout, palette, radii, spacing, type Tone } from "../../lib/design-system";
+import { LessonFlow } from "../skypath/LessonFlow";
+import { clearTourCheckpoint, readTourCheckpoint, writeTourCheckpoint } from "./tourCheckpoint";
 
-interface Slide {
-  eyebrow: TranslationKey;
-  title: TranslationKey;
-  body: TranslationKey;
-  icon: keyof typeof Ionicons.glyphMap;
-  /** Optional bullet list shown under the body (`glyph` is a Glyph name). */
-  points?: { glyph: string; key: TranslationKey }[];
-  /** Show Aster's egg instead of the icon. */
-  aster?: boolean;
-}
+/** Checkpointed pages: the first lesson, then "you're ready". */
+const LESSON = 0;
+const READY = 1;
 
-const SLIDES: Slide[] = [
-  {
-    eyebrow: "tour.s1Eyebrow",
-    title: "tour.s1Title",
-    body: "tour.s1Body",
-    icon: "planet-outline",
-    points: [
-      { glyph: "Sun", key: "tour.s1Sun" },
-      { glyph: "Moon", key: "tour.s1Moon" },
-      { glyph: "Ascendant", key: "tour.s1Rising" },
-    ],
-  },
-  { eyebrow: "tour.s2Eyebrow", title: "tour.s2Title", body: "tour.s2Body", icon: "telescope-outline" },
-  { eyebrow: "tour.s3Eyebrow", title: "tour.s3Title", body: "tour.s3Body", icon: "sunny-outline" },
-  {
-    eyebrow: "tour.s4Eyebrow",
-    title: "tour.s4Title",
-    body: "tour.s4Body",
-    icon: "information-circle-outline",
-  },
-  {
-    eyebrow: "aster.meet.eyebrow",
-    title: "aster.meet.title",
-    body: "aster.meet.body",
-    icon: "star",
-    aster: true,
-  },
+const EGG_STAGE = 0;
+
+const PROMISES: { icon: keyof typeof Ionicons.glyphMap; tone: Tone; key: "p1" | "p2" | "p3" }[] = [
+  { icon: "map", tone: "sky", key: "p1" },
+  { icon: "sparkles", tone: "candy", key: "p2" },
+  { icon: "star", tone: "star", key: "p3" },
 ];
 
 /**
- * Five swipeable cards between the chart reveal and the app: what a birth
- * chart is, what the daily sky does, where the yearly birthday chart lives,
- * that every unknown word has an ⓘ, and meeting Aster (still an egg — the
- * first intention hatches it). Skippable at any point; finishing
- * (or skipping) is what completes onboarding.
+ * After the chart reveal: the first Harita Yolu chapter (your Big Three) as a
+ * real lesson — the newcomer reads their own chart and earns their first Işık
+ * before being asked for anything else — then one "you're ready" page with
+ * three promises, a soft reminder ask and two ways in (Sky, or the first
+ * manifest, which hatches Aster). Either completes onboarding. The page is
+ * checkpointed, so a reload resumes the lesson or the ready page.
  */
 export function TourScreen() {
+  const router = useRouter();
+  const profile = useOnboardingDraft((s) => s.profile);
+  const name = useOnboardingDraft((s) => s.name);
+  const setName = useOnboardingDraft((s) => s.setName);
+  const setProfile = useOnboardingDraft((s) => s.setProfile);
+  const setBirthProfile = useAppStore((s) => s.setBirthProfile);
+  const [page, setPage] = useState<number | null>(null);
+
+  // The draft is in memory only: after a reload, pick the cast chart and the
+  // page back up from the checkpoint (or start onboarding over without one).
+  useEffect(() => {
+    let active = true;
+    readTourCheckpoint().then((checkpoint) => {
+      if (!active) return;
+      let cast = profile;
+      if (!cast) {
+        if (!checkpoint) {
+          router.replace("/(onboarding)" as Href);
+          return;
+        }
+        setName(checkpoint.name);
+        setProfile(checkpoint.profile);
+        cast = checkpoint.profile;
+      }
+      // The lesson reads the chart through the app store, as the tabs will.
+      setBirthProfile(cast);
+      setPage(checkpoint?.page === READY ? READY : LESSON);
+    });
+    return () => {
+      active = false;
+    };
+    // Once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!profile || page === null) return;
+    writeTourCheckpoint({ name: name.trim(), profile, page });
+  }, [page, profile, name]);
+
+  if (!profile || page === null) {
+    return <ScreenWrapper variant="dense" edges={["top", "bottom"]}>{null}</ScreenWrapper>;
+  }
+
+  if (page === LESSON) {
+    return <LessonFlow lessonKey="bigThree" onExit={() => setPage(READY)} onFinished={() => setPage(READY)} />;
+  }
+  return <ReadyPage />;
+}
+
+function ReadyPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const reduced = useReducedMotion();
   const profile = useOnboardingDraft((s) => s.profile);
   const name = useOnboardingDraft((s) => s.name);
   const clearDraft = useOnboardingDraft((s) => s.clear);
   const completeOnboarding = useAppStore((s) => s.completeOnboarding);
-
-  const scrollRef = useAnimatedRef<Animated.ScrollView>();
-  const x = useSharedValue(0);
-  const [page, setPage] = useState(0);
+  const dailyOn = useAppStore((s) => s.reminders.daily);
+  const toggleReminder = useReminderToggle();
   const finishing = useRef(false);
 
-  // The draft is in-memory only; after a reload there is no cast chart to
-  // finish with, so start onboarding over rather than stranding the user.
-  useEffect(() => {
-    if (!profile) router.replace("/(onboarding)" as Href);
-  }, [profile, router]);
-
-  const onScroll = useAnimatedScrollHandler((e) => {
-    x.value = e.contentOffset.x;
-  });
-
-  const finish = () => {
+  const finish = (then?: Href) => {
     if (!profile || finishing.current) return;
     finishing.current = true;
-    // Flipping `hasOnboarded` swaps the protected stacks; the root layout
-    // crossfades from onboarding into the tabs.
+    // Flipping `hasOnboarded` swaps the protected stacks; the tabs open on Sky.
     completeOnboarding(name.trim() || "Traveler", profile);
     clearDraft();
+    clearTourCheckpoint();
     // Name + birth place label go next to the server chart, so a later sign-in restores them.
     syncProfileMeta();
+    if (then) setTimeout(() => router.push(then), 400);
   };
-
-  const last = page === SLIDES.length - 1;
-  const next = () => {
-    if (last) return finish();
-    const target = (page + 1) * width;
-    // Programmatic scrolls don't reliably emit momentum-end on every
-    // platform, so advance the page state here too.
-    setPage(page + 1);
-    runOnUI((to: number) => {
-      "worklet";
-      scrollTo(scrollRef, to, 0, !reduced);
-    })(target);
-  };
-
-  if (!profile) return null;
 
   return (
     <ScreenWrapper variant="dense" edges={["top", "bottom"]}>
-      <View style={styles.top}>
-        <PressableScale
-          onPress={finish}
-          hitSlop={12}
-          scaleTo={0.9}
-          style={[styles.skip, last && styles.hidden]}
-          disabled={last}
-        >
-          <AppText variant="heading" color={colors.text.secondary}>
-            {t("tour.skip")}
-          </AppText>
-        </PressableScale>
-      </View>
-
-      <Animated.ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        onMomentumScrollEnd={(e) =>
-          setPage(Math.round(e.nativeEvent.contentOffset.x / width))
-        }
-        style={styles.pager}
-      >
-        {SLIDES.map((s, i) => (
-          <SlideView key={s.title} slide={s} index={i} x={x} width={width} />
-        ))}
-      </Animated.ScrollView>
-
-      <View style={styles.footer}>
-        <View style={styles.dots}>
-          {SLIDES.map((s, i) => (
-            <Dot key={s.title} index={i} x={x} width={width} />
-          ))}
+      <View style={styles.root}>
+        <View style={styles.body}>
+          <EnterView>
+            <AsterCameo text={t("skypath.ready.aster")} stage={EGG_STAGE} size={84} action="cheer" />
+          </EnterView>
+          <EnterView index={1}>
+            <AppText variant="display" accessibilityRole="header">
+              {t("skypath.ready.title")}
+            </AppText>
+          </EnterView>
+          <View style={styles.promises}>
+            {PROMISES.map((p, i) => (
+              <EnterView key={p.key} index={i + 2} style={styles.promise}>
+                <View style={[styles.promiseIcon, { backgroundColor: palette[p.tone].face }]}>
+                  <Ionicons name={p.icon} size={20} color={palette[p.tone].on} />
+                </View>
+                <View style={styles.flex}>
+                  <AppText variant="heading">{t(`skypath.ready.${p.key}Title` as TranslationKey)}</AppText>
+                  <AppText variant="bodySmall">{t(`skypath.ready.${p.key}Body` as TranslationKey)}</AppText>
+                </View>
+              </EnterView>
+            ))}
+          </View>
+          <EnterView index={5}>
+            <ChunkyCard tone="sky" tinted style={styles.remind}>
+              <Ionicons name="notifications" size={20} color={palette.sky.face} />
+              <AppText variant="bodySmall" color={colors.text.primary} style={styles.flex}>
+                {dailyOn ? t("skypath.ready.remindOn") : t("skypath.ready.remindAsk")}
+              </AppText>
+              {!dailyOn ? (
+                <PressableScale
+                  onPress={() => void toggleReminder("daily", true)}
+                  style={styles.remindBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("skypath.ready.remindCta")}
+                >
+                  <AppText variant="label" color={palette.sky.on}>
+                    {t("skypath.ready.remindCta")}
+                  </AppText>
+                </PressableScale>
+              ) : (
+                <Ionicons name="checkmark-circle" size={22} color={palette.mint.face} />
+              )}
+            </ChunkyCard>
+          </EnterView>
         </View>
-        <ChunkyButton
-          label={last ? t("tour.start") : t("tour.next")}
-          onPress={next}
-          icon={
-            last ? undefined : (
-              <Ionicons name="arrow-forward" size={18} color={colors.text.onPrimary} />
-            )
-          }
-        />
+        <View style={styles.footer}>
+          <ChunkyButton label={t("skypath.ready.toSky")} onPress={() => finish()} size="lg" variant="sky" />
+          <ChunkyButton
+            label={t("skypath.ready.toManifest")}
+            onPress={() => finish("/intentions/create" as Href)}
+            variant="ghost"
+            uppercase={false}
+          />
+        </View>
       </View>
     </ScreenWrapper>
   );
 }
 
-function SlideView({
-  slide,
-  index,
-  x,
-  width,
-}: {
-  slide: Slide;
-  index: number;
-  x: SharedValue<number>;
-  width: number;
-}) {
-  const { t } = useTranslation();
-  const reduced = useReducedMotion();
-  const range = [(index - 1) * width, index * width, (index + 1) * width];
-
-  // Parallax: the icon travels faster than the page and swells as it
-  // centers; the text trails slightly and fades at the edges.
-  const iconStyle = useAnimatedStyle(() => {
-    if (reduced) return {};
-    return {
-      opacity: interpolate(x.value, range, [0, 1, 0], Extrapolation.CLAMP),
-      transform: [
-        { translateX: interpolate(x.value, range, [width * 0.35, 0, -width * 0.35], Extrapolation.CLAMP) },
-        { scale: interpolate(x.value, range, [0.6, 1, 0.6], Extrapolation.CLAMP) },
-        { rotate: `${interpolate(x.value, range, [-25, 0, 25], Extrapolation.CLAMP)}deg` },
-      ],
-    };
-  });
-  const textStyle = useAnimatedStyle(() => {
-    if (reduced) return {};
-    return {
-      opacity: interpolate(x.value, range, [0, 1, 0], Extrapolation.CLAMP),
-      transform: [
-        { translateX: interpolate(x.value, range, [width * 0.12, 0, -width * 0.12], Extrapolation.CLAMP) },
-      ],
-    };
-  });
-
-  return (
-    <View style={[styles.slide, { width }]}>
-      {slide.aster ? (
-        <Animated.View style={iconStyle}>
-          <AsterMascot stage={0} mood="sleepy" size={170} />
-        </Animated.View>
-      ) : (
-        <Animated.View style={[styles.iconOrb, iconStyle]}>
-          <Ionicons name={slide.icon} size={56} color={colors.star[200]} />
-        </Animated.View>
-      )}
-      <Animated.View style={[styles.textBlock, textStyle]}>
-        <AppText variant="label" color={colors.text.accent} center>
-          {t(slide.eyebrow)}
-        </AppText>
-        <AppText
-          variant="title"
-          center
-          numberOfLines={3}
-          adjustsFontSizeToFit
-          minimumFontScale={0.8}
-        >
-          {t(slide.title)}
-        </AppText>
-        <AppText variant="body" center>
-          {t(slide.body)}
-        </AppText>
-        {slide.points ? (
-          <View style={styles.points}>
-            {slide.points.map((p) => (
-              <View key={p.key} style={styles.point}>
-                <View style={styles.pointGlyph}>
-                  <Glyph name={p.glyph} size={18} color={colors.star[200]} />
-                </View>
-                <AppText variant="body" color={colors.text.primary} style={styles.pointText}>
-                  {t(p.key)}
-                </AppText>
-              </View>
-            ))}
-          </View>
-        ) : null}
-      </Animated.View>
-    </View>
-  );
-}
-
-function Dot({ index, x, width }: { index: number; x: SharedValue<number>; width: number }) {
-  const style = useAnimatedStyle(() => {
-    const range = [(index - 1) * width, index * width, (index + 1) * width];
-    return {
-      width: interpolate(x.value, range, [8, 24, 8], Extrapolation.CLAMP),
-      opacity: interpolate(x.value, range, [0.35, 1, 0.35], Extrapolation.CLAMP),
-    };
-  });
-  return <Animated.View style={[styles.dot, style]} />;
-}
-
 const styles = StyleSheet.create({
-  top: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    minHeight: 40,
-  },
-  skip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  hidden: {
-    opacity: 0,
-  },
-  pager: {
-    flex: 1,
-  },
-  slide: {
-    flex: 1,
-    paddingHorizontal: spacing.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xxl,
-  },
-  iconOrb: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: palette.primary.face,
-    borderBottomWidth: 7,
-    borderBottomColor: palette.primary.slab,
-  },
-  textBlock: {
-    gap: spacing.md,
-    alignItems: "center",
-    width: "100%",
-  },
-  points: {
-    alignSelf: "stretch",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  point: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    padding: spacing.md,
+  root: { flex: 1, paddingHorizontal: layout.gutter, paddingTop: spacing.lg },
+  body: { flex: 1, gap: spacing.lg },
+  flex: { flex: 1, minWidth: 0 },
+  promises: { gap: spacing.md },
+  promise: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  promiseIcon: {
+    width: 44,
+    height: 44,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
-    backgroundColor: surface.card,
-  },
-  pointGlyph: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: surface.sheet,
   },
-  pointText: {
-    flex: 1,
-    minWidth: 0,
-  },
-  footer: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
-    gap: spacing.xl,
-  },
-  dots: {
-    flexDirection: "row",
+  remind: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  remindBtn: {
+    minHeight: 44,
     justifyContent: "center",
-    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.pill,
+    backgroundColor: palette.sky.face,
   },
-  dot: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.star[300],
-  },
+  footer: { gap: spacing.sm, paddingBottom: spacing.md },
 });

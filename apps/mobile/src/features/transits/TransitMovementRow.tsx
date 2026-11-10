@@ -12,6 +12,7 @@ import Animated, {
 import { Ionicons } from "@expo/vector-icons";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { AppText } from "../../components/ui/AppText";
+import { StateView } from "../../components/ui/StateView";
 import { Glyph } from "../../components/Glyph";
 import { TermInfo } from "../../components/TermInfo";
 import { ShimmerLines } from "../../components/ui/Shimmer";
@@ -200,12 +201,7 @@ function TransitReading({ dto, movement, date, locale }: Props) {
       {loading ? (
         <ShimmerLines lines={4} />
       ) : error ? (
-        <PressableScale onPress={reload} haptic="none" style={styles.retry}>
-          <Ionicons name="refresh" size={16} color={colors.star[300]} />
-          <AppText variant="body" color={colors.star[300]}>
-            {t("reading.retry")}
-          </AppText>
-        </PressableScale>
+        <StateView kind="error" compact message={t("reading.error")} onAction={reload} />
       ) : (
         <EnterView distance={6}>
           <AppText variant="lead">{data?.text}</AppText>
@@ -295,11 +291,5 @@ const styles = StyleSheet.create({
   flexText: {
     flex: 1,
     minWidth: 0,
-  },
-  retry: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
   },
 });

@@ -70,7 +70,7 @@ interface Props {
  * planets on the outer orbit, a zodiac sign ring, natal house wedges, and lines
  * for the transit→natal aspects. Rotated so the natal Ascendant sits at top.
  */
-export function TransitWheel({ natal, report }: Props) {
+export const TransitWheel = React.memo(function TransitWheel({ natal, report }: Props) {
   const ascAbs = absLongitude(
     natal.angles.ascendant.sign,
     natal.angles.ascendant.degree,
@@ -357,7 +357,7 @@ export function TransitWheel({ natal, report }: Props) {
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

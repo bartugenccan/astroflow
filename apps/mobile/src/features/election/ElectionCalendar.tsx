@@ -2,9 +2,9 @@ import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { AppText } from "../../components/ui/AppText";
 import { PressableScale } from "../../components/ui/PressableScale";
-import { formatMonthYear } from "../../lib/dates";
+import { formatLongDay, formatMonthYear } from "../../lib/dates";
 import { useTranslation } from "../../i18n";
-import { colors, radii, shadows, spacing } from "../../lib/design-system";
+import { colors, radii, spacing } from "../../lib/design-system";
 import { scoreColor } from "../forecast/BestDaysGrid";
 
 interface Props {
@@ -63,6 +63,8 @@ export function ElectionCalendar({ days, topDates, onDayPress }: Props) {
                         onPress={() => onDayPress(c.item!.date)}
                         scaleTo={0.9}
                         haptic="selection"
+                        accessibilityRole="button"
+                        accessibilityLabel={`${formatLongDay(c.item.date, locale)}, ${c.item.score}`}
                         style={[
                           styles.day,
                           { backgroundColor: scoreColor(c.item.score, 0.5) },
@@ -112,9 +114,9 @@ const styles = StyleSheet.create({
   past: {
     opacity: 0.35,
   },
+  // Best picks: a solid gold ring, no glow — the heat colour already carries the score.
   top: {
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.star[400],
-    ...shadows.glow,
   },
 });

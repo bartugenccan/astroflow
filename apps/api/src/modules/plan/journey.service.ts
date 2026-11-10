@@ -1,17 +1,31 @@
-import { ConflictException, Inject, Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../common/prisma/prisma.service';
-import { localToday } from '../../common/context/request-context';
-import { safeError } from '../../common/logging/safe-error';
-import { AI_TEXT_PROVIDER, AiTextProvider } from '../ai/ai-text-provider';
-import type { Locale } from '../astrology/interpretation.types';
-import { JourneyDiscovery, MascotDelta, MascotService, MascotView } from '../mascot/mascot.service';
-import { DUPLICATE_STARDUST, JOURNEY_HOURS, journeyEarnsShield } from '../mascot/mascot-rules';
-import { pickConstellation } from '../mascot/constellations';
-import { DeviceSkyService } from './device-sky.service';
-import { PlanService } from './plan.service';
-import type { PlanTransit } from './plan-rules';
-import { discoveryPrompt, discoveryStub, discoverySystem, DiscoveryText } from './journey.prompts';
+import { ConflictException, Inject, Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../../common/prisma/prisma.service";
+import { localToday } from "../../common/context/request-context";
+import { safeError } from "../../common/logging/safe-error";
+import { AI_TEXT_PROVIDER, AiTextProvider } from "../ai/ai-text-provider";
+import type { Locale } from "../astrology/interpretation.types";
+import {
+  JourneyDiscovery,
+  MascotDelta,
+  MascotService,
+  MascotView,
+} from "../mascot/mascot.service";
+import {
+  DUPLICATE_STARDUST,
+  JOURNEY_HOURS,
+  journeyEarnsShield,
+} from "../mascot/mascot-rules";
+import { pickConstellation } from "../mascot/constellations";
+import { DeviceSkyService } from "./device-sky.service";
+import { PlanService } from "./plan.service";
+import type { PlanTransit } from "./plan-rules";
+import {
+  discoveryPrompt,
+  discoveryStub,
+  discoverySystem,
+  DiscoveryText,
+} from "./journey.prompts";
 
 export interface JourneyClaim {
   delta: MascotDelta;
@@ -24,7 +38,7 @@ export interface JourneyClaim {
 }
 
 function isUniqueViolation(err: unknown): boolean {
-  return (err as { code?: string })?.code === 'P2002';
+  return (err as { code?: string })?.code === "P2002";
 }
 
 /**
@@ -49,16 +63,18 @@ export class JourneyService {
 
   /** How long Aster is away; a dev-only override makes it testable. */
   private awayMs(): number {
-    const production = this.config.get<string>('NODE_ENV') === 'production';
-    const minutes = this.config.get<number>('JOURNEY_MINUTES');
+    const production = this.config.get<string>("NODE_ENV") === "production";
+    const minutes = this.config.get<number>("JOURNEY_MINUTES");
     if (!production && minutes) return minutes * 60_000;
     return JOURNEY_HOURS * 3_600_000;
   }
 
   async launch(deviceId: string, locale: Locale): Promise<MascotView> {
     const state = await this.mascot.getState(deviceId);
-    if (state.journey.status !== 'ready') {
-      throw new ConflictException(`Aster can't set off now (${state.journey.status})`);
+    if (state.journey.status !== "ready") {
+      throw new ConflictException(
+        `Aster can't set off now (${state.journey.status})`,
+      );
     }
     const birth = await this.sky.requireBirth(deviceId);
     const transits = DeviceSkyService.transits(this.sky.report(birth));
@@ -66,12 +82,19 @@ export class JourneyService {
     const lead = plan?.steps.find((s) => s.why)?.why ?? null;
     const pick =
       transits.find(
-        (t) => !lead || t.transitPlanet !== lead.transitPlanet || t.natalPlanet !== lead.natalPoint || t.aspect !== lead.aspect,
+        (t) =>
+          !lead ||
+          t.transitPlanet !== lead.transitPlanet ||
+          t.natalPlanet !== lead.natalPoint ||
+          t.aspect !== lead.aspect,
       ) ?? transits[0];
 
-    const owned = (await this.prisma.mascotConstellation.findMany({ where: { deviceId }, select: { key: true } })).map(
-      (c) => c.key,
-    );
+    const owned = (
+      await this.prisma.mascotConstellation.findMany({
+        where: { deviceId },
+        select: { key: true },
+      })
+    ).map((c) => c.key);
     const constellationKey = pickConstellation({
       sunSign: birth.sunSign,
       discoverySign: pick?.transitSign ?? null,
@@ -79,7 +102,9 @@ export class JourneyService {
       rolls: [Math.random(), Math.random()],
     });
     const duplicate = owned.includes(constellationKey);
-    const discovery = pick ? await this.discovery(pick, locale) : this.quietSky(locale);
+    const discovery = pick
+      ? await this.discovery(pick, locale)
+      : this.quietSky(locale);
 
     try {
       await this.prisma.mascotJourney.create({
@@ -94,7 +119,8 @@ export class JourneyService {
         },
       });
     } catch (err) {
-      if (isUniqueViolation(err)) throw new ConflictException('Aster already travelled today');
+      if (isUniqueViolation(err))
+        throw new ConflictException("Aster already travelled today");
       throw err;
     }
     return this.mascot.getState(deviceId);
@@ -104,10 +130,16 @@ export class JourneyService {
     const today = localToday();
     // Only a journey that is back and not yet opened; the guard makes it once-only.
     const res = await this.prisma.mascotJourney.updateMany({
-      where: { deviceId, localDate: today, claimedAt: null, returnsAt: { lte: new Date() } },
+      where: {
+        deviceId,
+        localDate: today,
+        claimedAt: null,
+        returnsAt: { lte: new Date() },
+      },
       data: { claimedAt: new Date() },
     });
-    if (res.count === 0) throw new ConflictException('No journey to open right now');
+    if (res.count === 0)
+      throw new ConflictException("No journey to open right now");
     const journey = await this.prisma.mascotJourney.findUniqueOrThrow({
       where: { deviceId_localDate: { deviceId, localDate: today } },
     });
@@ -123,7 +155,7 @@ export class JourneyService {
         data: { stardust: { increment: journey.bonusStardust } },
       });
     }
-    const delta = await this.mascot.award(deviceId, 'JOURNEY_RETURN', today);
+    const delta = await this.mascot.award(deviceId, "JOURNEY_RETURN", today);
     const counted = await this.prisma.mascotState.update({
       where: { deviceId },
       data: { journeysCompleted: { increment: 1 } },
@@ -144,7 +176,10 @@ export class JourneyService {
     };
   }
 
-  private async discovery(t: PlanTransit, locale: Locale): Promise<JourneyDiscovery> {
+  private async discovery(
+    t: PlanTransit,
+    locale: Locale,
+  ): Promise<JourneyDiscovery> {
     let text: DiscoveryText = discoveryStub(locale, t);
     if (this.ai.available) {
       try {
@@ -157,7 +192,10 @@ export class JourneyService {
           maxTokens: 400,
         });
         if (parsed.title && parsed.body) {
-          text = { title: parsed.title.slice(0, 80), body: parsed.body.slice(0, 400) };
+          text = {
+            title: parsed.title.slice(0, 80),
+            body: parsed.body.slice(0, 400),
+          };
         }
       } catch (err) {
         this.logger.warn(`journey discovery AI failed: ${safeError(err)}`);
@@ -179,18 +217,18 @@ export class JourneyService {
   /** No transit within orb today — rare, but Aster still comes home with something. */
   private quietSky(locale: Locale): JourneyDiscovery {
     return {
-      transitPlanet: '',
-      aspect: '',
-      natalPoint: '',
-      nature: 'neutral',
+      transitPlanet: "",
+      aspect: "",
+      natalPoint: "",
+      nature: "neutral",
       orb: 0,
-      sign: '',
-      title: locale === 'tr' ? 'Sakin bir gökyüzü' : 'A quiet sky',
+      sign: "",
+      title: locale === "tr" ? "Sakin bir gökyüzü" : "A quiet sky",
       body:
-        locale === 'tr'
-          ? 'Bugün haritana dokunan güçlü bir transit yok; gökyüzü sana nefes alanı bırakıyor. Kendine iyi bak.'
-          : 'No strong transit touches your chart today; the sky is giving you room to breathe. Be kind to yourself.',
-      link: '/chart',
+        locale === "tr"
+          ? "Bugün haritana dokunan güçlü bir transit yok; gökyüzü sana nefes alanı bırakıyor. Kendine iyi bak."
+          : "No strong transit touches your chart today; the sky is giving you room to breathe. Be kind to yourself.",
+      link: "/chart",
     };
   }
 }

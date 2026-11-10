@@ -8,6 +8,7 @@ import {
   useReducedMotion,
   withTiming,
   Easing,
+  cancelAnimation,
 } from "react-native-reanimated";
 import { AppText } from "./AppText";
 import { colors, spacing } from "../../lib/design-system";
@@ -47,6 +48,11 @@ export function CelestialLoader({ size = "lg", label }: Props) {
       -1,
       true,
     );
+    // Infinite loops outlive their component unless cancelled.
+    return () => {
+      cancelAnimation(spin);
+      cancelAnimation(pulse);
+    };
   }, [spin, pulse, reduced]);
 
   const arcPath = useMemo(() => {

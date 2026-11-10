@@ -6,7 +6,7 @@ import { EnterView } from "../../lib/motion";
 import { ScoreBar } from "./ScoreBar";
 import { BestDayScore, LifeArea } from "../../services/types";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, shadows } from "../../lib/design-system";
+import { colors, spacing, radii } from "../../lib/design-system";
 
 interface BestDaysGridProps {
   scores: BestDayScore[];
@@ -151,9 +151,12 @@ const styles = StyleSheet.create({
     gap: 1,
     overflow: "hidden",
   },
+  // Top days get a gold outline on a hard slab — cells are buttons, so no glow.
   cellTop: {
+    borderWidth: 2,
     borderColor: colors.star[400],
-    ...shadows.glow,
+    borderBottomWidth: 4,
+    borderBottomColor: colors.star[600],
   },
   cellScore: {
     fontSize: 9,

@@ -13,3 +13,17 @@ export function runAfterInteractions(task: () => void): { cancel: () => void } {
   const id = setTimeout(task, 0);
   return { cancel: () => clearTimeout(id) };
 }
+
+/** Long enough for a tab's focus ease-in or a stack push to finish. */
+const TRANSITION_MS = 320;
+
+/**
+ * Run work that a screen does on focus — a quiet re-fetch, say — once the
+ * transition that brought it into view is over, so its re-render never lands
+ * on the frames of the animation. Returns a cancel, ready to be a
+ * `useFocusEffect` cleanup.
+ */
+export function runAfterTransition(task: () => void): () => void {
+  const id = setTimeout(task, TRANSITION_MS);
+  return () => clearTimeout(id);
+}

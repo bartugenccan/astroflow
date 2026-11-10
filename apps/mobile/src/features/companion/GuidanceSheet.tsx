@@ -3,7 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { AppText } from "../../components/ui/AppText";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { astrologyApi } from "../../services/astrologyApi";
 import { CreateBirthProfileDto, GuidanceAnswer, GuidanceTopic } from "../../services/types";
@@ -28,24 +28,27 @@ export function GuidanceSheet({ topic, dto, onClose }: GuidanceSheetProps) {
   const [answer, setAnswer] = useState<GuidanceAnswer | null>(null);
   const [loading, setLoading] = useState(false);
   const [whyOpen, setWhyOpen] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (!topic || !dto) return;
     let active = true;
     setAnswer(null);
     setWhyOpen(false);
+    setFailed(false);
     setLoading(true);
     const date = new Date().toISOString().slice(0, 10);
     cachedCall(guidanceKey(dto, topic, date, locale), () =>
       astrologyApi.getGuidance(dto, topic, locale),
     )
       .then((a) => active && setAnswer(a))
-      .catch(() => {})
+      .catch(() => active && setFailed(true))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [topic, dto, locale]);
+  }, [topic, dto, locale, attempt]);
 
   return (
     <SpringBottomSheet
@@ -53,10 +56,10 @@ export function GuidanceSheet({ topic, dto, onClose }: GuidanceSheetProps) {
       onClose={onClose}
       title={topic ? t(`companion.topics.${topic}` as TranslationKey) : undefined}
     >
-      {loading || !answer ? (
-        <View style={styles.loading}>
-          <CelestialLoader label={t("companion.thinking")} />
-        </View>
+      {failed && !loading ? (
+        <StateView kind="error" compact onAction={() => setAttempt((n) => n + 1)} />
+      ) : loading || !answer ? (
+        <StateView kind="loading" compact message={t("companion.thinking")} />
       ) : (
         <View style={styles.answer}>
           <EnterView index={0}>
@@ -114,10 +117,6 @@ export function GuidanceSheet({ topic, dto, onClose }: GuidanceSheetProps) {
 }
 
 const styles = StyleSheet.create({
-  loading: {
-    alignItems: "center",
-    paddingVertical: spacing.xl,
-  },
   answer: {
     gap: spacing.lg,
   },
@@ -142,7 +141,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     gap: spacing.xs,
-    paddingVertical: spacing.xs,
+    minHeight: 44,
   },
   shrink: {
     flexShrink: 1,

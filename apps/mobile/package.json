@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@astroflow/shared": "*",
+    "@expo-google-fonts/caveat": "^0.4.2",
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",
     "@expo-google-fonts/dm-sans": "^0.4.2",
     "@expo-google-fonts/manrope": "^0.4.2",

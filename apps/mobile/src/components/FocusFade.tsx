@@ -9,15 +9,15 @@ import Animated, {
   useReducedMotion,
 } from "react-native-reanimated";
 
-/** Where a focus transition starts — deliberately never fully transparent. */
-const FROM_OPACITY = 0.55;
+/** How far below its place a tab starts when it comes into focus. */
 const FROM_Y = 6;
 
 /**
- * Soft entrance each time a tab comes into focus: content eases from 55%
- * opacity and a few px low into place. It replaces the navigator's own fade,
- * which could stall at opacity 0 and leave a tab black; starting at 0.55 means
- * the content is always visible even if the animation is cut short.
+ * Soft entrance each time a tab comes into focus: content settles a few px
+ * up into place. Transform only — an opacity below 1 on the whole tab made iOS
+ * composite the entire screen offscreen for every frame of the switch. The
+ * content is fully visible from the first frame, so a cut-short animation can
+ * never leave a tab blank.
  */
 export function FocusFade({ children }: { children: React.ReactNode }) {
   const reduced = useReducedMotion();
@@ -35,7 +35,6 @@ export function FocusFade({ children }: { children: React.ReactNode }) {
   );
 
   const style = useAnimatedStyle(() => ({
-    opacity: FROM_OPACITY + (1 - FROM_OPACITY) * p.value,
     transform: [{ translateY: (1 - p.value) * FROM_Y }],
   }));
 

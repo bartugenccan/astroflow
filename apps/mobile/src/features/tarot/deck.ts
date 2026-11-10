@@ -1,5 +1,5 @@
-import type { Locale } from "../../i18n";
-import type { TarotCategory } from "../../services/types";
+import type { Locale, TranslationKey } from "../../i18n";
+import type { TarotCategory, TarotSpreadKey } from "../../services/types";
 
 /**
  * The 78-card Rider–Waite–Smith deck, as the app needs it: ids (the contract
@@ -89,7 +89,17 @@ export const TAROT_CATEGORIES: TarotCategory[] = ["general", "love", "career", "
 export const FAN_STEP_DEG = 4.5;
 /** Cards within this angle of 12 o'clock are fully visible; they fade out by 90°. */
 export const FAN_VISIBLE_DEG = 72;
-/** Cards the reader picks. */
+/** Cards the reader picks in the default spread. */
 export const SPREAD_SIZE = 3;
+
+/** Cards in a spread: three, or five for "Yol ayrımı". */
+export function spreadSize(spread?: TarotSpreadKey): number {
+  return spread === "decision" ? 5 : SPREAD_SIZE;
+}
+
+/** i18n key of a position's name: the decision spread has its own five, the rest follow the category. */
+export function positionKey(category: TarotCategory, spread: TarotSpreadKey | undefined, i: number): TranslationKey {
+  return (spread === "decision" ? `tarot.positions.decision.p${i}` : `tarot.positions.${category}.p${i}`) as TranslationKey;
+}
 /** Chance a card lands reversed on each shuffle pass. */
 export const REVERSED_CHANCE = 0.35;

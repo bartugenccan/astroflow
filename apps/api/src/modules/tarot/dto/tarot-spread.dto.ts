@@ -15,7 +15,7 @@ import {
 } from 'class-validator';
 import { BirthInputDto } from '../../astrology/dto/birth-input.dto';
 import { TAROT_CARD_IDS } from '../tarot.deck';
-import { TAROT_CATEGORIES, TarotCategory } from '../tarot.types';
+import { TAROT_CATEGORIES, TAROT_SPREAD_KEYS, TarotCategory, TarotSpread } from '../tarot.types';
 
 export class TarotDrawnCardDto {
   @IsIn(TAROT_CARD_IDS)
@@ -25,10 +25,15 @@ export class TarotDrawnCardDto {
   reversed: boolean;
 }
 
-/** Birth data + the three drawn cards (index = spread position). */
+/** Birth data + the drawn cards (index = spread position). */
 export class TarotSpreadDto extends BirthInputDto {
   @IsIn(TAROT_CATEGORIES as unknown as string[])
   category: TarotCategory;
+
+  /** Defaults to the three-card spread. */
+  @IsOptional()
+  @IsIn(TAROT_SPREAD_KEYS as unknown as string[])
+  spread?: TarotSpread;
 
   @IsOptional()
   @IsString()
@@ -37,7 +42,7 @@ export class TarotSpreadDto extends BirthInputDto {
 
   @IsArray()
   @ArrayMinSize(3)
-  @ArrayMaxSize(3)
+  @ArrayMaxSize(5)
   @ValidateNested({ each: true })
   @Type(() => TarotDrawnCardDto)
   cards: TarotDrawnCardDto[];
@@ -46,6 +51,6 @@ export class TarotSpreadDto extends BirthInputDto {
 export class TarotCardDto extends TarotSpreadDto {
   @IsInt()
   @Min(0)
-  @Max(2)
+  @Max(4)
   index: number;
 }

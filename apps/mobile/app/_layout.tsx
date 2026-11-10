@@ -17,7 +17,8 @@ import {
   DMSans_600SemiBold,
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
-import { useAppStore } from "../src/store/useAppStore";
+import { Caveat_500Medium, Caveat_700Bold } from "@expo-google-fonts/caveat";
+import { AI_CONSENT_VERSION, useAppStore } from "../src/store/useAppStore";
 import { colors, surface } from "../src/lib/design-system";
 import { TermSheet } from "../src/features/glossary/TermSheet";
 import { ConfigErrorScreen } from "../src/components/ConfigErrorScreen";
@@ -50,11 +51,13 @@ function RootLayout() {
     DMSans_500Medium,
     DMSans_600SemiBold,
     DMSans_700Bold,
+    Caveat_500Medium,
+    Caveat_700Bold,
   });
 
   const hasHydrated = useAppStore((s) => s._hasHydrated);
   const hasOnboarded = useAppStore((s) => s.hasOnboarded);
-  const aiConsentAt = useAppStore((s) => s.aiConsentAt);
+  const aiConsentCurrent = useAppStore((s) => !!s.aiConsentAt && s.aiConsentVersion >= AI_CONSENT_VERSION);
   const acceptAiConsent = useAppStore((s) => s.acceptAiConsent);
 
   const ready = (fontsLoaded || fontError) && hasHydrated;
@@ -65,9 +68,9 @@ function RootLayout() {
 
   if (!ready) return null;
   if (API_CONFIG_ERROR) return <ConfigErrorScreen />;
-  // Onboarded without the AI notice (signed in on a new phone, or a build from
-  // before it existed): show it once before anything else.
-  if (hasOnboarded && !aiConsentAt) {
+  // Onboarded without the current AI notice (signed in on a new phone, a build
+  // from before it existed, or the notice grew since): show it once first.
+  if (hasOnboarded && !aiConsentCurrent) {
     return (
       <GestureHandlerRootView style={styles.root}>
         <SafeAreaProvider>
@@ -107,6 +110,24 @@ function RootLayout() {
             <Stack.Screen name="election" />
             <Stack.Screen name="glossary" />
             <Stack.Screen name="reports" />
+            <Stack.Screen name="plan" />
+            <Stack.Screen name="sky-today" />
+            <Stack.Screen name="learn" />
+            <Stack.Screen name="ritual" />
+            {/* Lessons and the paywall rise like a lesson and close with their X. */}
+            <Stack.Screen
+              name="lesson/[key]"
+              options={{ animation: "slide_from_bottom", fullScreenGestureEnabled: false }}
+            />
+            <Stack.Screen
+              name="premium"
+              options={{ animation: "slide_from_bottom", fullScreenGestureEnabled: false }}
+            />
+            {/* A guided manifest practice rises like a lesson and closes with its X. */}
+            <Stack.Screen
+              name="practice"
+              options={{ animation: "slide_from_bottom", fullScreenGestureEnabled: false }}
+            />
             <Stack.Screen
               name="companion"
               options={{ animation: "slide_from_bottom", fullScreenGestureEnabled: false }}

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ACCOUNTS_ENABLED } from "../services/auth/account";
+import { ACCOUNTS_ENABLED } from "../services/config";
 import { useAppStore } from "./useAppStore";
 
 /** The moments Aster asks the user to protect it: right after they've invested. */

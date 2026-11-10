@@ -24,6 +24,7 @@ export class DeviceDataService {
     const [
       chatMessages,
       memories,
+      signs,
       checkIns,
       streaks,
       intentions,
@@ -41,9 +42,11 @@ export class DeviceDataService {
       moods,
       plans,
       vaults,
+      letters,
     ] = await this.prisma.$transaction([
       this.prisma.chatMessage.deleteMany({ where }),
       this.prisma.memoryEntry.deleteMany({ where }),
+      this.prisma.intentionSign.deleteMany({ where }),
       this.prisma.intentionCheckIn.deleteMany({ where }),
       this.prisma.intentionStreak.deleteMany({ where }),
       this.prisma.intention.deleteMany({ where }),
@@ -61,6 +64,7 @@ export class DeviceDataService {
       this.prisma.moodCheckIn.deleteMany({ where }),
       this.prisma.dailyPlan.deleteMany({ where }),
       this.prisma.userVault.deleteMany({ where }),
+      this.prisma.asterLetter.deleteMany({ where }),
     ]);
     const account = await this.accounts.deleteForSubject(deviceId);
     await this.auth.revokeSubject(deviceId);
@@ -68,6 +72,7 @@ export class DeviceDataService {
       account: account ? 1 : 0,
       chatMessages: chatMessages.count,
       memories: memories.count,
+      signs: signs.count,
       checkIns: checkIns.count,
       streaks: streaks.count,
       intentions: intentions.count,
@@ -85,6 +90,7 @@ export class DeviceDataService {
       moods: moods.count,
       plans: plans.count,
       vaults: vaults.count,
+      letters: letters.count,
     };
   }
 }

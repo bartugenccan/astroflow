@@ -18,7 +18,7 @@ import { MascotDelta, MascotService } from '../mascot/mascot.service';
 import { AffirmationPreviewDto, CreateIntentionDto } from './dto/create-intention.dto';
 import { DeviceSkyService } from '../plan/device-sky.service';
 import { nextLunarPeak } from '../mascot/mascot-rules';
-import { LIFE_AREA_HOUSES, starState, visiblePowerDays } from './intention-rules';
+import { LIFE_AREA_HOUSES, intentionStats, starState, visiblePowerDays } from './intention-rules';
 import type { NatalChartData } from '../astrology/astrology-adapter.service';
 import { CheckInDto } from './dto/checkin.dto';
 import { safeError } from '../../common/logging/safe-error';
@@ -157,7 +157,56 @@ export class IntentionsService {
   async get(deviceId: string, id: string) {
     const intention = await this.prisma.intention.findFirst({ where: { id, deviceId } });
     if (!intention) throw new NotFoundException('Intention not found');
-    return this.withProgress(intention, deviceId);
+    const [withProgress, rows] = await Promise.all([
+      this.withProgress(intention, deviceId),
+      this.prisma.intentionCheckIn.findMany({
+        where: { intentionId: id },
+        orderBy: { createdAt: 'desc' },
+        select: { date: true, conviction: true },
+      }),
+    ]);
+    const today = this.today();
+    const createdDay = localDayOf(intention.createdAt, today);
+    return {
+      ...withProgress,
+      stats: intentionStats(rows, createdDay, today, withProgress.streak.longestStreak),
+    };
+  }
+
+  /** The manifest's sign log, newest first. */
+  async signs(deviceId: string, id: string) {
+    await this.owned(deviceId, id);
+    const rows = await this.prisma.intentionSign.findMany({
+      where: { deviceId, intentionId: id },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+    return rows.map((r) => ({ id: r.id, text: r.text, date: r.localDate, createdAt: r.createdAt.toISOString() }));
+  }
+
+  /** Log a sign → SIGN_LOG (+5 Işık, once a day). */
+  async addSign(deviceId: string, id: string, text: string) {
+    await this.owned(deviceId, id);
+    const clean = text.trim().slice(0, 280);
+    if (!clean) throw new ConflictException('A sign needs a few words');
+    const row = await this.prisma.intentionSign.create({
+      data: { deviceId, intentionId: id, text: clean, localDate: this.today() },
+    });
+    const mascot = await this.mascot.awardSafely(deviceId, 'SIGN_LOG');
+    return {
+      sign: { id: row.id, text: row.text, date: row.localDate, createdAt: row.createdAt.toISOString() },
+      mascot,
+    };
+  }
+
+  async removeSign(deviceId: string, id: string, signId: string) {
+    await this.prisma.intentionSign.deleteMany({ where: { id: signId, intentionId: id, deviceId } });
+    return { deleted: true };
+  }
+
+  private async owned(deviceId: string, id: string): Promise<void> {
+    const found = await this.prisma.intention.findFirst({ where: { id, deviceId }, select: { id: true } });
+    if (!found) throw new NotFoundException('Intention not found');
   }
 
   async archive(deviceId: string, id: string) {
@@ -384,6 +433,16 @@ interface CreateSuggestionsInput {
   latitude: number;
   longitude: number;
   unknownTime?: boolean;
+}
+
+/**
+ * The local day an instant fell on. The request's zone is not at hand for a
+ * stored timestamp, so the UTC day is used, capped at today so a planted-today
+ * manifest never shows "0 days".
+ */
+function localDayOf(at: Date, today: string): string {
+  const day = at.toISOString().slice(0, 10);
+  return day > today ? today : day;
 }
 
 /** Several awards from one action → one delta (summed gains, final state). */

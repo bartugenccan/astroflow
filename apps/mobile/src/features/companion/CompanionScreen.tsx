@@ -26,19 +26,21 @@ import Animated, {
   cancelAnimation,
 } from "react-native-reanimated";
 import { AsterMascot } from "../../components/aster/AsterMascot";
-import { useMascotStore } from "../../store/useMascotStore";
+import { useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { PressableScale } from "../../components/ui/PressableScale";
+import { IconButton } from "../../components/ui/IconButton";
+import { StateView } from "../../components/ui/StateView";
 import { BackButton } from "../../components/ui/BackButton";
 import { PaywallSheet } from "../../components/PaywallSheet";
+import { SpotlightCard } from "../../components/ui/SpotlightCard";
 import { astrologyApi } from "../../services/astrologyApi";
 import { ChatMessage } from "../../services/types";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore, FREE_DAILY_MESSAGES } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
-import { EnterView } from "../../lib/motion";
-import { colors, spacing, radii, fonts, motion, surface } from "../../lib/design-system";
+import { colors, depth, spacing, radii, fonts, motion, palette, surface, typography } from "../../lib/design-system";
 
 /** Springy rise for a freshly-sent / freshly-received bubble. */
 const bubbleEnter = FadeInDown.springify()
@@ -63,22 +65,41 @@ export function CompanionScreen() {
   const [whyOpen, setWhyOpen] = useState<Record<string, boolean>>({});
   const [paywall, setPaywall] = useState(false);
   const [kbShown, setKbShown] = useState(false);
+  const [history, setHistory] = useState<"loading" | "ready" | "error">("loading");
   const scrollRef = useRef<ScrollViewInstance>(null);
   // History loaded on open appears in place; only new bubbles spring in.
   const historyIds = useRef<Set<string>>(new Set());
 
   const today = new Date().toISOString().slice(0, 10);
   const usedToday = msgDate === today ? msgCount : 0;
-  const atLimit = !isPremium && usedToday >= FREE_DAILY_MESSAGES;
+  // A bought taste (chatPass, +5) adds to today's free messages.
+  const chatPasses = mascot?.passesToday?.chat ?? 0;
+  const atLimit = !isPremium && usedToday >= FREE_DAILY_MESSAGES + chatPasses;
+  const passItem = mascot?.catalog?.find((i) => i.id === "chatPass");
+  const purchase = useMascotStore((s) => s.purchase);
+  const [buyingPass, setBuyingPass] = useState(false);
+  const buyPass = async () => {
+    setBuyingPass(true);
+    await purchase("chatPass");
+    setBuyingPass(false);
+  };
 
-  useEffect(() => {
+  const loadHistory = () => {
+    setHistory("loading");
     astrologyApi
       .getChatHistory()
       .then((h) => {
         historyIds.current = new Set(h.map((m) => m.id));
-        setMessages(h);
+        // Keep anything sent while the history was still on its way.
+        setMessages((cur) => [...h, ...cur.filter((m) => !historyIds.current.has(m.id))]);
+        setHistory("ready");
       })
-      .catch(() => {});
+      .catch(() => setHistory("error"));
+  };
+
+  useEffect(() => {
+    loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Track the keyboard so the input bar doesn't add the bottom safe-area inset
@@ -152,7 +173,7 @@ export function CompanionScreen() {
           <AsterMascot
             stage={Math.max(1, mascot?.stage ?? 1)}
             mood={mascot?.mood === "sleepy" ? "happy" : mascot?.mood ?? "happy"}
-            accessories={mascot?.equipped ?? []}
+            accessories={mascot?.equipped ?? NO_EQUIPPED}
             action={sending ? "talk" : "idle"}
             size={44}
           />
@@ -160,6 +181,7 @@ export function CompanionScreen() {
             {t("companion.name")}
           </AppText>
         </View>
+        {/* Mirrors the close button so Aster sits in the true centre. */}
         <View style={styles.topSpacer} />
       </View>
 
@@ -176,18 +198,23 @@ export function CompanionScreen() {
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
         >
           {messages.length === 0 && !sending ? (
-            <EnterView delay={120} style={styles.emptyAster}>
-              <AsterMascot
-                stage={Math.max(1, mascot?.stage ?? 1)}
-                mood="happy"
-                accessories={mascot?.equipped ?? []}
-                action="talk"
-                size={140}
+            history === "loading" ? (
+              <StateView kind="loading" message={t("companion.thinking")} style={styles.state} />
+            ) : history === "error" ? (
+              <StateView
+                kind="error"
+                message={t("profileUi.companion.historyError")}
+                onAction={loadHistory}
+                style={styles.state}
               />
-              <AppText variant="lead" center color={colors.text.secondary} style={styles.empty}>
-                {t("companion.emptyChat")}
-              </AppText>
-            </EnterView>
+            ) : (
+              <StateView
+                kind="empty"
+                message={t("profileUi.companion.emptyTitle")}
+                detail={t("profileUi.companion.emptyDetail")}
+                style={styles.state}
+              />
+            )
           ) : null}
           {/* Aster is an AI: say so where the conversation happens. */}
           <AppText variant="label" center color={colors.text.tertiary}>
@@ -215,6 +242,7 @@ export function CompanionScreen() {
                         hitSlop={8}
                         style={styles.whyToggle}
                         accessibilityRole="button"
+                        accessibilityLabel={whyOpen[m.id] ? t("companion.hideWhy") : t("companion.showWhy")}
                         accessibilityState={{ expanded: !!whyOpen[m.id] }}
                       >
                         <Ionicons
@@ -252,6 +280,25 @@ export function CompanionScreen() {
           ) : null}
         </ScrollView>
 
+        {atLimit ? (
+          <SpotlightCard
+            tone="primary"
+            icon="chatbubbles"
+            eyebrow={t("companion.limitEyebrow")}
+            title={t("companion.limitTitle")}
+            cta={{ label: t("paywall.unlockPremium"), onPress: () => setPaywall(true) }}
+            secondary={
+              passItem && chatPasses === 0
+                ? {
+                    label: t("companion.passCta", { n: passItem.price }),
+                    onPress: () => void buyPass(),
+                    disabled: buyingPass || (mascot?.stardust ?? 0) < passItem.price,
+                  }
+                : undefined
+            }
+            style={styles.limitCard}
+          />
+        ) : null}
         <View
           style={[styles.inputBar, { paddingBottom: (kbShown ? 0 : insets.bottom) + spacing.sm }]}
         >
@@ -263,18 +310,16 @@ export function CompanionScreen() {
             style={styles.input}
             multiline
             onSubmitEditing={() => send(input)}
+            accessibilityLabel={t("profileUi.companion.composerLabel")}
           />
-          <PressableScale
+          <IconButton
+            icon="arrow-up"
+            tone="star"
+            size={52}
             onPress={() => send(input)}
             disabled={!canSend}
-            scaleTo={0.88}
-            haptic="light"
-            accessibilityRole="button"
             accessibilityLabel={t("companion.send")}
-            style={styles.sendBtn}
-          >
-            <Ionicons name="arrow-up" size={20} color={colors.text.onAccent} />
-          </PressableScale>
+          />
         </View>
       </KeyboardAvoidingView>
 
@@ -340,12 +385,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing.xs,
   },
-  emptyAster: {
-    alignItems: "center",
-    gap: spacing.md,
+  state: {
+    marginTop: spacing.xl,
   },
   topSpacer: {
-    width: 32,
+    width: 40,
   },
   shrink: {
     flexShrink: 1,
@@ -356,27 +400,27 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
     gap: spacing.md,
   },
-  empty: {
-    marginTop: spacing.xxxl,
-    paddingHorizontal: spacing.lg,
-  },
   userRow: { alignItems: "flex-end" },
   asterRow: { alignItems: "flex-start" },
   userBubble: {
     maxWidth: "84%",
-    backgroundColor: colors.star[400],
+    backgroundColor: palette.star.face,
     borderRadius: radii.lg,
     borderBottomRightRadius: radii.sm,
+    borderBottomWidth: depth.sm,
+    borderBottomColor: palette.star.slab,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
   asterBubble: {
     maxWidth: "88%",
-    backgroundColor: surface.sheet,
+    backgroundColor: surface.card,
     borderRadius: radii.lg,
     borderBottomLeftRadius: radii.sm,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     gap: spacing.xs,
@@ -404,43 +448,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     alignSelf: "flex-start",
     gap: spacing.xs,
-    marginTop: spacing.sm,
-    paddingVertical: 2,
+    marginTop: spacing.xs,
+    minHeight: 32,
   },
   why: {
     marginTop: spacing.xs,
   },
+  limitCard: { marginHorizontal: spacing.lg, marginBottom: spacing.sm },
   inputBar: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: spacing.sm,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border.hairline,
+    paddingTop: spacing.md,
+    borderTopWidth: 2,
+    borderTopColor: colors.border.chunky,
     backgroundColor: surface.card,
   },
   input: {
     flex: 1,
     maxHeight: 120,
-    minHeight: 44,
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    minHeight: 52,
+    borderRadius: radii.xl,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.md,
     color: colors.text.primary,
     fontFamily: fonts.sans,
-    fontSize: 15,
-  },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radii.pill,
-    backgroundColor: colors.star[400],
-    alignItems: "center",
-    justifyContent: "center",
+    fontSize: typography.body.fontSize,
   },
 });

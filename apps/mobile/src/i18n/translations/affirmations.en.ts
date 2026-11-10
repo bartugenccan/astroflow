@@ -30,6 +30,13 @@ export const affirmationsEn = {
     noStreak: "Tick one today to start a streak",
     goalsTitle: "Your goals",
     goalsSub: "Longer practices you check in on every day.",
+    subtitle: "Swipe, say it out loud, make it yours.",
+    suggested: "Today's sky suggests: {{category}}",
+    prev: "Previous affirmation",
+    next: "Next affirmation",
+    page: "Affirmation {{n}} of {{total}}",
+    addCardBody: "Write one in your own words, in the present tense.",
+    categoryA11y: "{{category}} affirmations",
   },
   categories: {
     money: { name: "Money", desc: "Abundance, worth and ease with money." },

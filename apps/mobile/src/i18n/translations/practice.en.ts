@@ -1,0 +1,147 @@
+/**
+ * The guided manifest practice — scripting, reading aloud, 3-6-9 and
+ * visualise + gratitude — plus the short "how manifesting works" guide.
+ * Registered under `practice.*`. Tone: warm and grounded. It explains why each
+ * step helps (clarity, attention, repetition, gratitude) and never promises a
+ * result.
+ */
+export const practiceEn = {
+  today: "Today's practice",
+  start: "Start",
+  continue: "Continue",
+  next: "Next",
+  done: "Done",
+  close: "Close",
+  again: "Practise again",
+  allDone: "All of today's practice is done",
+  allDoneBody: "Resting is part of it too. Come back tomorrow.",
+  forWish: "For “{{goal}}”",
+  pickWish: "Which manifestation?",
+  noWishTitle: "Write your first manifestation",
+  noWishBody: "Practice needs something to practise for. Write it as if it already happened.",
+  noWishCta: "Write a manifestation",
+  loading: "Getting your page ready…",
+  error: "I couldn't open your manifestation. Try again in a moment.",
+  sendError: "That didn't save. Try once more?",
+  stepOf: "Step {{n}} of {{total}}",
+  whyTitle: "Why it helps",
+  whyTip: "Why it helps?",
+  footnote: "Manifesting is an awareness practice; it doesn't guarantee an outcome.",
+  remind369: "Remind me at 09:00 · 14:00 · 21:00",
+  methods: {
+    script: {
+      name: "Script it",
+      short: "Write it as if it happened",
+      why: "Writing a goal down makes it clearer and keeps it on your mind. Writing in the present tense helps you feel how it is once it's real.",
+      prompt: "Write it as if it already happened, in the present tense.",
+      placeholder: "I'm so grateful that…",
+      starters: {
+        where: "Where are you?",
+        feel: "How does it feel?",
+        who: "Who's with you?",
+      },
+      starterText: {
+        where: "I'm sitting in ",
+        feel: "I feel ",
+        who: "Beside me is ",
+      },
+      minHint: "A few more words…",
+      confirm: "This is my page",
+    },
+    read: {
+      name: "Read aloud",
+      short: "Say it three times",
+      why: "Saying a sentence that matches what you value, out loud and slowly, turns your attention toward it. Hearing your own voice makes it yours.",
+      prompt: "Read it out loud, slowly, feeling each word.",
+      tap: "I read it",
+      count: "{{n}} of {{total}}",
+      other: "Choose another affirmation",
+      otherTitle: "Affirmations",
+    },
+    "369": {
+      name: "3-6-9",
+      short: "Write it 3, 6, 9 times",
+      why: "Short repetitions spread across the day keep your focus fresh: 3 lines in the morning, 6 at noon, 9 in the evening.",
+      prompt: "Write your sentence {{n}} times.",
+      firstLine: "Your sentence",
+      firstHint: "One short line in the present tense. Your affirmation is a good start.",
+      useAffirmation: "Use my affirmation",
+      traceHint: "Write it over the faint line",
+      paperMode: "I'm writing on real paper",
+      paperModeHint: "Tap each line once you've written it on your own paper.",
+      lineA11y: "Line {{n}}",
+      lineDoneA11y: "Line {{n}}, written",
+      slots: {
+        morning: "Morning",
+        noon: "Noon",
+        evening: "Evening",
+      },
+      slotDone: "{{slot}} session done",
+      sessions: "Today: {{done}} of 3 sessions",
+    },
+    visualize: {
+      name: "Visualise",
+      short: "A minute, then gratitude",
+      why: "Picturing it vividly feeds your motivation; gratitude turns your attention to what you already have.",
+      intro: "Close your eyes if you like, and breathe with Aster for one minute.",
+      cues: {
+        c1: "It has happened. Where are you?",
+        c2: "What do you see around you?",
+        c3: "What do you hear?",
+        c4: "Who is with you?",
+        c5: "How does your body feel?",
+        c6: "Stay here for one more breath.",
+      },
+      inhale: "Breathe in",
+      exhale: "Breathe out",
+      skip: "Skip to gratitude",
+      gratitudeTitle: "Three things you're grateful for",
+      gratitudePlaceholder: "I'm grateful for…",
+      privacy: "These stay on this phone.",
+    },
+  },
+  finish: {
+    title: "Your page is done",
+    asterNote: "Aster's note",
+    stronger: "Try saying it like this",
+    readDone: "You said it out loud three times.",
+    visualizeDone: "You pictured it, and you named three good things.",
+    s369Done: "{{slot}} session: {{n}} lines written.",
+    conviction: "How bright does it feel now?",
+  },
+  learn: {
+    title: "How manifesting works",
+    open: "How manifesting works",
+    cards: {
+      what: {
+        title: "What is it?",
+        body: "Manifesting is getting clear on what you want, writing it as if it's already true, and returning to it every day with small practices.",
+      },
+      script: {
+        title: "Scripting",
+        body: "Write a page as if it already happened. Present tense and feelings make it vivid and clear.",
+      },
+      read: {
+        title: "Reading aloud",
+        body: "Your own voice saying your sentence slowly, three times. Attention follows what you repeat.",
+      },
+      s369: {
+        title: "3-6-9",
+        body: "One sentence: 3 times in the morning, 6 at noon, 9 in the evening. Short, spread out, steady.",
+      },
+      visualize: {
+        title: "Visualise + gratitude",
+        body: "A minute of picturing it, then three things you're grateful for. It ends the day on what's good.",
+      },
+      moon: {
+        title: "The Moon's rhythm",
+        body: "Write and renew at the new moon, harvest or release at the full. A rhythm, not a rule.",
+      },
+    },
+  },
+  lunar: {
+    title: "The Moon today",
+  },
+  methodA11y: "{{name}}: {{short}}",
+  methodDoneA11y: "{{name}}, done today",
+};

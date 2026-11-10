@@ -4,141 +4,168 @@ import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { ChunkyProgress } from "../../components/ui/ChunkyProgress";
-import { PressableScale } from "../../components/ui/PressableScale";
-import { EVENT_RULES, lunarWindow } from "../../lib/mascotRules";
-import type { MascotEventKind, MascotState } from "../../services/types";
-import { useTranslation, TranslationKey } from "../../i18n";
-import { colors, palette, radii, spacing, surface, Tone } from "../../lib/design-system";
+import { QuestRow } from "../../components/ui/QuestRow";
+import { SectionLink } from "../../components/ui/SectionLink";
+import { StateView } from "../../components/ui/StateView";
+import { EVENT_RULES } from "../../lib/mascotRules";
+import { useTranslation, type TranslationKey } from "../../i18n";
+import { colors, spacing } from "../../lib/design-system";
+import type { DailyPlan, MascotState, PlanStep } from "../../services/types";
+import { STEP_VISUAL, stepHref, stepWhy } from "./planCopy";
 
-interface Quest {
-  kind: MascotEventKind;
-  icon: keyof typeof Ionicons.glyphMap;
-  tone: Tone;
-  href: Href | null;
-}
+/** Today shows this many goals; the rest of the plan is one tap away. */
+const SHOWN = 3;
 
-const BASE: Quest[] = [
-  { kind: "CHECKIN", icon: "checkmark-circle", tone: "candy", href: "/(tabs)/manifest" as Href },
-  { kind: "AFFIRMATION", icon: "heart", tone: "primary", href: "/(tabs)/manifest" as Href },
-  { kind: "SKY_READ", icon: "planet", tone: "sky", href: null },
-  { kind: "TAROT", icon: "albums", tone: "star", href: "/(tabs)/tarot" as Href },
-  { kind: "BREATH", icon: "leaf", tone: "mint", href: "/aster/breathe" as Href },
-];
-
-/** Today's quests: the day's list for Aster, plus the evening and moon quests when it's their time. */
-export function questsFor(now = new Date()): Quest[] {
-  const list = [...BASE];
-  if (now.getHours() >= 17) {
-    list.push({ kind: "EVENING_REFLECTION", icon: "moon", tone: "primary", href: "/(tabs)/manifest" as Href });
-  }
-  if (lunarWindow(now)) {
-    list.push({ kind: "MOON_RITUAL", icon: "ellipse", tone: "star", href: "/(tabs)/manifest" as Href });
-  }
-  return list;
+interface TodayQuestsProps {
+  plan: DailyPlan | null;
+  loading: boolean;
+  error: boolean;
+  onRetry: () => void;
+  state: MascotState | null;
+  /** The sky check-in is answered on Today itself (in a sheet). */
+  onSkyCheckIn: () => void;
+  /** "Read today's sky" opens the reading. */
+  onReading: () => void;
+  onFullPlan: () => void;
 }
 
 /**
- * Duolingo-style daily quests. Each one is an action that already lives in
- * the app; doing it feeds Aster and ticks the row. Ticks come from the
- * server's count of today's awards, so they survive restarts and devices.
+ * "Today's goals", Finch-style: the next three steps of the personal sky plan
+ * as tick rows (open ones first), each going straight to where it's done, led
+ * by the next Harita Yolu chapter. The full plan — every step, why it's there,
+ * the week strip — is its own page (`/plan`).
  */
-export function TodayQuests({ state }: { state: MascotState | null }) {
-  const { t } = useTranslation();
+export function TodayQuests({
+  plan,
+  loading,
+  error,
+  onRetry,
+  state,
+  onSkyCheckIn,
+  onReading,
+  onFullPlan,
+}: TodayQuestsProps) {
+  const { t, locale } = useTranslation();
   const router = useRouter();
-  const quests = questsFor();
-  const done = quests.filter((q) => (state?.today?.[q.kind] ?? 0) > 0).length;
-  const allDone = done === quests.length;
+  const resting = !!state?.eclipse?.active;
+
+  if (!plan) {
+    return (
+      <ChunkyCard style={styles.card}>
+        <AppText variant="heading">{t("today.questsTitle")}</AppText>
+        {error && !loading ? (
+          <StateView kind="error" compact message={t("plan.loadError")} onAction={onRetry} />
+        ) : (
+          <StateView kind="loading" compact />
+        )}
+      </ChunkyCard>
+    );
+  }
+
+  const steps: PlanStep[] = [...plan.anchors, ...plan.steps];
+  const isDone = (s: PlanStep) => (state?.today?.[s.kind] ?? 0) > 0;
+  // Harita Yolu's next chapter is a goal of its own (ticked once a lesson is done today).
+  const openChapter = state?.skyPath?.find((c) => c.status === "open") ?? null;
+  const lessonToday = (state?.today?.SKY_LESSON ?? 0) > 0;
+  const lessonQuest = openChapter || lessonToday ? { chapter: openChapter, done: lessonToday } : null;
+  const done = steps.filter(isDone).length + (lessonQuest?.done ? 1 : 0);
+  const total = steps.length + (lessonQuest ? 1 : 0);
+  const ordered = [...steps.filter((s) => !isDone(s)), ...steps.filter(isDone)];
+  const shown = ordered.slice(0, lessonQuest ? SHOWN - 1 : SHOWN);
+
+  const titleOf = (s: PlanStep) => {
+    const titled = t(s.titleKey as TranslationKey);
+    return titled === s.titleKey ? t(`aster.quests.${s.kind}` as TranslationKey) : titled;
+  };
+
+  const go = (s: PlanStep) => {
+    if (s.kind === "SKY_CHECKIN") return onSkyCheckIn;
+    if (s.kind === "SKY_READ") return onReading;
+    const href = stepHref(t, locale, s, plan.focusArea);
+    return href ? () => router.push(href as Href) : undefined;
+  };
 
   return (
     <ChunkyCard style={styles.card}>
       <View style={styles.head}>
-        <AppText variant="title" style={styles.flex}>
-          {t("aster.quests.title")}
+        <AppText variant="heading" accessibilityRole="header" style={styles.flex}>
+          {t("today.questsTitle")}
         </AppText>
-        <View style={[styles.counter, allDone && { backgroundColor: palette.mint.face }]}>
-          <AppText variant="heading" color={allDone ? palette.mint.on : colors.text.primary}>
-            {t("aster.quests.progress", { done, total: quests.length })}
+        {!resting ? (
+          <AppText variant="numeric" color={done === total ? colors.semantic.harmonic : colors.text.secondary}>
+            {t("plan.progress", { done, total })}
+          </AppText>
+        ) : null}
+      </View>
+
+      {resting ? (
+        <View style={styles.resting}>
+          <Ionicons name="moon" size={18} color={colors.text.violet} />
+          <AppText variant="bodySmall" color={colors.text.secondary} style={styles.flex}>
+            {t("plan.resting")}
           </AppText>
         </View>
-      </View>
-      <ChunkyProgress value={done / quests.length} tone="mint" segments={quests.length} height={12} />
-      {allDone ? (
-        <AppText variant="heading" color={palette.mint.face} center>
-          {t("aster.quests.allDone")}
-        </AppText>
-      ) : null}
+      ) : (
+        <View>
+          {lessonQuest ? (
+            <QuestRow
+              title={t("today.lessonQuest")}
+              subtitle={
+                lessonQuest.chapter ? t(`skypath.lessons.${lessonQuest.chapter.key}.title` as TranslationKey) : undefined
+              }
+              done={lessonQuest.done}
+              icon="map"
+              tone="sky"
+              xp={EVENT_RULES.SKY_LESSON.xp}
+              xpLabel={t("plan.xp", { n: EVENT_RULES.SKY_LESSON.xp })}
+              onPress={
+                lessonQuest.chapter ? () => router.push(`/lesson/${lessonQuest.chapter!.key}` as Href) : undefined
+              }
+            />
+          ) : null}
+          {shown.map((s, i) => {
+            const visual = STEP_VISUAL[s.kind] ?? { icon: "star" as const, tone: "primary" as const };
+            const why = stepWhy(t, s, plan.focusArea);
+            const xp = EVENT_RULES[s.kind]?.xp ?? 0;
+            const title = s.kind === "SKY_CHECKIN" ? t("today.skyCheckInTitle") : titleOf(s);
+            const finished = isDone(s);
+            return (
+              <QuestRow
+                key={`${s.kind}-${i}`}
+                title={title}
+                subtitle={why?.text}
+                done={finished}
+                icon={visual.icon}
+                tone={visual.tone}
+                xp={xp}
+                xpLabel={t("plan.xp", { n: xp })}
+                onPress={go(s)}
+                accessibilityLabel={[title, why?.text, finished ? t("plan.done") : t("plan.xp", { n: xp })]
+                  .filter(Boolean)
+                  .join(". ")}
+              />
+            );
+          })}
+        </View>
+      )}
 
-      <View style={styles.list}>
-        {quests.map((q) => {
-          const complete = (state?.today?.[q.kind] ?? 0) > 0;
-          const p = palette[q.tone];
-          const label = t(`aster.quests.${q.kind}` as TranslationKey);
-          return (
-            <PressableScale
-              key={q.kind}
-              onPress={q.href && !complete ? () => router.push(q.href as Href) : undefined}
-              disabled={!q.href || complete}
-              scaleTo={0.97}
-              style={styles.row}
-              accessibilityRole={q.href ? "button" : "text"}
-              accessibilityState={{ checked: complete, disabled: complete }}
-              accessibilityLabel={label}
-            >
-              <View style={[styles.icon, { backgroundColor: complete ? palette.mint.face : p.soft }]}>
-                <Ionicons
-                  name={complete ? "checkmark" : q.icon}
-                  size={20}
-                  color={complete ? palette.mint.on : p.face}
-                />
-              </View>
-              <AppText
-                variant="heading"
-                style={[styles.flex, complete && styles.doneText]}
-                color={complete ? colors.text.tertiary : colors.text.primary}
-                numberOfLines={2}
-              >
-                {label}
-              </AppText>
-              <View style={styles.xp}>
-                <Ionicons name="sparkles" size={13} color={palette.star.face} />
-                <AppText variant="numeric" color={palette.star.face}>
-                  {t("aster.quests.xp", { n: EVENT_RULES[q.kind].xp })}
-                </AppText>
-              </View>
-            </PressableScale>
-          );
-        })}
-      </View>
+      <SectionLink
+        label={t("today.fullPlan")}
+        icon="map"
+        tone="mint"
+        value={resting ? undefined : `${done}/${total}`}
+        bare
+        onPress={onFullPlan}
+        style={styles.link}
+      />
     </ChunkyCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  head: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  card: { gap: spacing.xs },
+  head: { flexDirection: "row", alignItems: "center", gap: spacing.md, minHeight: 32 },
   flex: { flex: 1, minWidth: 0 },
-  counter: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderRadius: radii.pill,
-    backgroundColor: surface.raised,
-  },
-  list: { gap: spacing.xs },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    minHeight: 48,
-    paddingVertical: spacing.xs,
-  },
-  icon: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.pill,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  doneText: { textDecorationLine: "line-through" },
-  xp: { flexDirection: "row", alignItems: "center", gap: 2 },
+  resting: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.sm },
+  link: { paddingHorizontal: 0, marginTop: spacing.xs },
 });

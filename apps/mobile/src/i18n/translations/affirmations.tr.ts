@@ -28,6 +28,13 @@ export const affirmationsTr: typeof affirmationsEn = {
     noStreak: "Seri başlatmak için bugün birine tik at",
     goalsTitle: "Hedeflerin",
     goalsSub: "Her gün yoklama yaptığın uzun soluklu pratikler.",
+    subtitle: "Kaydır, sesli söyle, kendinin yap.",
+    suggested: "Bugünün gökyüzü önerisi: {{category}}",
+    prev: "Önceki olumlama",
+    next: "Sonraki olumlama",
+    page: "Olumlama {{n}}/{{total}}",
+    addCardBody: "Kendi sözlerinle, şimdiki zamanda bir tane yaz.",
+    categoryA11y: "{{category}} olumlamaları",
   },
   categories: {
     money: { name: "Para", desc: "Bolluk, değer ve parayla rahat bir ilişki." },

@@ -3,7 +3,11 @@
 export const TAROT_CATEGORIES = ['general', 'love', 'career', 'money', 'health', 'spiritual'] as const;
 export type TarotCategory = (typeof TAROT_CATEGORIES)[number];
 
-/** One drawn card; its index in the spread is its position (0..2). */
+/** `three`: the category's three-card spread; `decision`: five cards, "Yol ayrımı" (Glimmer). */
+export const TAROT_SPREAD_KEYS = ['three', 'decision'] as const;
+export type TarotSpread = (typeof TAROT_SPREAD_KEYS)[number];
+
+/** One drawn card; its index in the spread is its position (0..2, or 0..4 for a decision). */
 export interface TarotDrawnCard {
   cardId: string;
   reversed: boolean;

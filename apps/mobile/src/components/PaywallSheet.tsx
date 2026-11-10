@@ -2,16 +2,17 @@ import React, { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
-import { SpringBottomSheet } from "./ui/SpringBottomSheet";
+import { FullScreenOverlay } from "./ui/FullScreenOverlay";
 import { ChunkyButton } from "./ui/ChunkyButton";
+import { ChunkyCard } from "./ui/ChunkyCard";
 import { AppText } from "./ui/AppText";
-import { PressableScale } from "./ui/PressableScale";
+import { AsterCameo } from "./ui/AsterCameo";
 import { EnterView } from "../lib/motion";
 import { useTranslation } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
 import { astrologyApi } from "../services/astrologyApi";
 import { PREMIUM_BETA } from "../services/config";
-import { colors, spacing } from "../lib/design-system";
+import { colors, palette, radii, spacing } from "../lib/design-system";
 
 export type PaywallVariant = "compat" | "forecast" | "premium";
 
@@ -23,15 +24,34 @@ interface PaywallSheetProps {
 }
 
 /**
- * Monetization gate sheet. Payments are stubbed: "compat" grants the
- * device-scoped COMPATIBILITY unlock; "forecast"/"premium" flip the subscription
- * flag. Replace `unlock()` with a real IAP/RevenueCat purchase flow.
+ * The paywall, full screen: it rises over everything like a lesson and closes
+ * with ✕, "Maybe later" or the Android back button. The API is the old sheet's,
+ * so every gate keeps calling it the same way (and still gets `onUnlocked`).
+ * `/premium` shows the same content as a page (Profile → Premium).
  */
 export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallSheetProps) {
+  return (
+    <FullScreenOverlay visible={visible} onClose={onClose}>
+      <PaywallContent variant={variant} onClose={onClose} onUnlocked={onUnlocked} />
+    </FullScreenOverlay>
+  );
+}
+
+/** What Premium opens and the way in; shared by the overlay and `/premium`. */
+export function PaywallContent({
+  variant,
+  onClose,
+  onUnlocked,
+}: {
+  variant: PaywallVariant;
+  onClose: () => void;
+  onUnlocked?: () => void;
+}) {
   const { t } = useTranslation();
   const setPremium = useAppStore((s) => s.setPremium);
   const addUnlockedFeature = useAppStore((s) => s.addUnlockedFeature);
   const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const title =
     variant === "compat"
@@ -46,14 +66,16 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
         ? t("paywall.forecastSubtitle")
         : t("paywall.subtitle");
 
+  // Premium sells volume (more AI, more of everything); depth is earned with Light.
   const perks =
     variant === "compat"
-      ? [t("paywall.perkCompat"), t("paywall.perkReadings")]
+      ? [t("paywall.perkCompat"), t("paywall.perkUnlimited")]
       : [
+          t("paywall.perkUnlimited"),
           t("paywall.perkForecast"),
           t("paywall.perkBestDays"),
           t("paywall.perkCompat"),
-          t("paywall.perkReadings"),
+          t("paywall.perkManifests"),
         ];
 
   const cta = variant === "compat" ? t("paywall.unlock") : t("paywall.unlockPremium");
@@ -73,6 +95,7 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
   const unlock = async () => {
     if (!canStubUnlock) return;
     setBusy(true);
+    setFailed(false);
     try {
       if (variant === "compat") {
         await astrologyApi.unlockFeature("COMPATIBILITY");
@@ -86,91 +109,169 @@ export function PaywallSheet({ visible, onClose, variant, onUnlocked }: PaywallS
       onClose();
     } catch {
       // Keep the sheet open on failure so the user can retry.
+      setFailed(true);
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <SpringBottomSheet visible={visible} onClose={onClose} title={t("paywall.premiumBadge")}>
-      <EnterView>
-        <AppText variant="title">{title}</AppText>
-        <AppText variant="body" style={{ marginTop: spacing.sm }}>
-          {subtitle}
-        </AppText>
-      </EnterView>
+      <View style={styles.body}>
+        <EnterView style={styles.badgeRow}>
+          <View style={styles.premiumBadge}>
+            <Ionicons name="sparkles" size={14} color={palette.star.on} />
+            <AppText variant="label" color={palette.star.on}>
+              {t("paywall.premiumBadge")}
+            </AppText>
+          </View>
+        </EnterView>
+        <EnterView>
+          <AsterCameo text={t("profileUi.paywall.asterLine")} size={64} action="cheer" />
+        </EnterView>
 
-      <View style={styles.perks}>
-        {perks.map((perk, i) => (
-          <EnterView key={perk} index={i + 1} style={styles.perkRow}>
-            <View style={styles.perkIcon}>
-              <Ionicons name="sparkles" size={16} color={colors.star[300]} />
+        {/* The plan: what Premium actually opens — no invented prices. */}
+        <EnterView index={1}>
+          <ChunkyCard tone="star" tinted depth="lg" style={styles.plan}>
+            <View style={styles.planHead}>
+              <View style={styles.planBadge}>
+                <Ionicons name="sparkles" size={20} color={palette.star.on} />
+              </View>
+              <View style={styles.grow}>
+                <AppText variant="heading">{title}</AppText>
+                <AppText variant="bodySmall" color={colors.text.secondary}>
+                  {subtitle}
+                </AppText>
+              </View>
             </View>
-            <AppText variant="body" color={colors.text.primary} style={styles.perkText}>
-              {perk}
-            </AppText>
-          </EnterView>
-        ))}
-      </View>
+            <View style={styles.perks}>
+              {perks.map((perk, i) => (
+                <EnterView key={perk} index={i + 2} style={styles.perkRow}>
+                  <View style={styles.perkCheck}>
+                    <Ionicons name="checkmark" size={14} color={palette.mint.on} />
+                  </View>
+                  <AppText variant="body" color={colors.text.primary} style={styles.grow}>
+                    {perk}
+                  </AppText>
+                </EnterView>
+              ))}
+            </View>
+            {PREMIUM_BETA && !canStubUnlock ? (
+              <View style={styles.beta}>
+                <Ionicons name="gift" size={16} color={palette.mint.face} />
+                <AppText variant="bodySmall" color={colors.text.primary} style={styles.grow}>
+                  {t("paywall.betaNote")}
+                </AppText>
+              </View>
+            ) : null}
+          </ChunkyCard>
+        </EnterView>
 
-      <EnterView index={perks.length + 1}>
-        {canStubUnlock ? (
-          <ChunkyButton label={cta} onPress={unlock} loading={busy} style={{ marginTop: spacing.lg }} />
-        ) : PREMIUM_BETA ? (
-          <>
-            <AppText variant="body" center color={colors.star[200]} style={{ marginTop: spacing.lg }}>
-              {t("paywall.betaNote")}
+        <EnterView index={perks.length + 2} style={styles.actions}>
+          {canStubUnlock ? (
+            <ChunkyButton
+              label={cta}
+              onPress={unlock}
+              loading={busy}
+              variant="star"
+              size="lg"
+              icon={<Ionicons name="lock-open" size={18} color={palette.star.on} />}
+            />
+          ) : PREMIUM_BETA ? (
+            <ChunkyButton label={t("paywall.betaCta")} onPress={continueBeta} variant="star" size="lg" />
+          ) : (
+            <AppText variant="body" center color={colors.text.accent}>
+              {t("paywall.comingSoon")}
             </AppText>
-            <ChunkyButton label={t("paywall.betaCta")} onPress={continueBeta} style={{ marginTop: spacing.md }} />
-          </>
-        ) : (
-          <AppText variant="body" center color={colors.star[200]} style={{ marginTop: spacing.lg }}>
-            {t("paywall.comingSoon")}
+          )}
+          {failed ? (
+            <AppText
+              variant="bodySmall"
+              center
+              color={colors.semantic.error}
+              accessibilityLiveRegion="polite"
+            >
+              {t("common.stateError")}
+            </AppText>
+          ) : null}
+          <ChunkyButton
+            label={t("paywall.maybeLater")}
+            onPress={onClose}
+            variant="ghost"
+            size="md"
+            uppercase={false}
+            haptic="none"
+          />
+          <AppText variant="bodySmall" center>
+            {t("profileUi.paywall.honest")}
           </AppText>
-        )}
-      </EnterView>
-      <PressableScale
-        onPress={onClose}
-        scaleTo={0.95}
-        haptic="none"
-        hitSlop={8}
-        style={styles.later}
-        accessibilityRole="button"
-      >
-        <AppText variant="bodySmall" center color={colors.text.tertiary} style={styles.laterText}>
-          {t("paywall.maybeLater")}
-        </AppText>
-      </PressableScale>
-    </SpringBottomSheet>
+          <AppText variant="bodySmall" center color={colors.text.tertiary}>
+            {t("paywall.pointsNote")}
+          </AppText>
+        </EnterView>
+      </View>
   );
 }
 
 const styles = StyleSheet.create({
+  badgeRow: { alignItems: "center" },
+  premiumBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radii.pill,
+    backgroundColor: palette.star.face,
+  },
+  body: {
+    gap: spacing.lg,
+  },
+  plan: {
+    gap: spacing.lg,
+  },
+  planHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  planBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.star.face,
+  },
+  grow: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
   perks: {
-    marginTop: spacing.lg,
     gap: spacing.md,
   },
   perkRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: spacing.sm,
   },
-  perkIcon: {
-    height: 22,
+  perkCheck: {
+    width: 24,
+    height: 24,
+    borderRadius: radii.pill,
+    alignItems: "center",
     justifyContent: "center",
+    backgroundColor: palette.mint.face,
   },
-  perkText: {
-    flex: 1,
-    minWidth: 0,
+  beta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: palette.mint.soft,
   },
-  later: {
-    alignSelf: "center",
-    maxWidth: "100%",
-    marginTop: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  laterText: {
-    flexShrink: 1,
+  actions: {
+    gap: spacing.md,
   },
 });

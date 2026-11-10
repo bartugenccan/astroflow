@@ -154,6 +154,7 @@ model Intention {
 
   checkIns    IntentionCheckIn[]
   streak      IntentionStreak?
+  signs       IntentionSign[]
 
   @@index([deviceId])
   @@map("intentions")
@@ -178,6 +179,22 @@ model IntentionCheckIn {
 
   @@index([intentionId, date])
   @@map("intention_check_ins")
+}
+
+// A sign the user noticed on the way to a manifest ("I saw it everywhere today").
+// Free text, stays on the server for the manifest's evidence log and the weekly letter.
+model IntentionSign {
+  id          String   @id @default(uuid()) @db.Uuid
+  deviceId    String
+  intentionId String   @db.Uuid
+  text        String
+  localDate   String   // YYYY-MM-DD, local
+  createdAt   DateTime @default(now())
+
+  intention   Intention @relation(fields: [intentionId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, intentionId])
+  @@map("intention_signs")
 }
 
 model IntentionStreak {
@@ -225,6 +242,14 @@ model MascotState {
   eclipseStart       String?                  // YYYY-MM-DD, local
   eclipseEnd         String?                  // YYYY-MM-DD, local, inclusive
 
+  // Harita Yolu: finished chart lessons and the ones bought early with stardust.
+  lessonsDone        Json      @default("[]")
+  lessonsEarly       Json      @default("[]")
+  // Premium tastes bought with stardust: { "YYYY-MM-DD": { tarot?: n, chat?: n } }, today only.
+  passes             Json      @default("{}")
+  // Nova look (stage 5): a brighter sky and aura across the app.
+  novaLook           Boolean   @default(false)
+
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -247,6 +272,18 @@ model MascotEvent {
   @@index([deviceId, localDate])
   @@index([deviceId, kind, refKey])
   @@map("mascot_events")
+}
+
+// Aster's weekly letter (stage 4): written once per ISO week, on first read.
+model AsterLetter {
+  deviceId  String
+  week      String   // "2026-W46"
+  /// { greeting, body, highlight, ahead }
+  body      Json
+  createdAt DateTime @default(now())
+
+  @@id([deviceId, week])
+  @@map("aster_letters")
 }
 
 // Aster's cosmic journey: launched once a day when energy is high, back a few

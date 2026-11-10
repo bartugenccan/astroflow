@@ -6,6 +6,7 @@ import type { Locale } from '../astrology/interpretation.types';
 import { PlanService } from './plan.service';
 import { JourneyService } from './journey.service';
 import { MoodService } from './mood.service';
+import { LetterService } from './letter.service';
 import { MoodCheckInDto } from './dto/plan.dto';
 
 const locale = (v?: string): Locale => (v === 'tr' ? 'tr' : 'en');
@@ -31,7 +32,16 @@ export class SkyController {
   constructor(
     private readonly journeys: JourneyService,
     private readonly moods: MoodService,
+    private readonly letters: LetterService,
   ) {}
+
+  @AiRoute()
+  @Get('letter')
+  @ApiOperation({ summary: "This week's letter from Aster (stage 4); written once per ISO week on first read" })
+  @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
+  letter(@DeviceId() deviceId: string, @Query('locale') loc?: string) {
+    return this.letters.thisWeek(deviceId, locale(loc));
+  }
 
   @AiRoute()
   @Post('journey/launch')

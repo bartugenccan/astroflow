@@ -10,14 +10,15 @@ import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { StatPill, StatRow } from "../../components/ui/StatPill";
 import { AsterMascot } from "../../components/aster/AsterMascot";
 import { EnterView } from "../../lib/motion";
-import { useMascotStore } from "../../store/useMascotStore";
+import { useAppStore } from "../../store/useAppStore";
+import { useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
 import type { MascotCatalogItem } from "../../services/types";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { colors, palette, spacing } from "../../lib/design-system";
 import { stageName } from "./asterCopy";
 import { useMascot } from "./useMascot";
 
-const SLOT_ORDER = ["head", "neck", "hand", "aura", "shield"] as const;
+const SLOT_ORDER = ["pass", "head", "neck", "hand", "aura", "shield"] as const;
 
 /**
  * Aster's shop and wardrobe in one: tap an item to try it on the big Aster,
@@ -33,7 +34,7 @@ export function AsterShopScreen() {
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const equipped = state?.equipped ?? [];
+  const equipped = state?.equipped ?? NO_EQUIPPED;
   const catalog = state?.catalog ?? [];
   const stage = state?.stage ?? 0;
 
@@ -43,9 +44,12 @@ export function AsterShopScreen() {
     return [...equipped.filter((id) => id !== sameSlot?.id), preview.id];
   }, [preview, equipped, catalog]);
 
+  const isPremium = useAppStore((st) => st.isPremium);
   const groups = SLOT_ORDER.map((slot) => ({
     slot,
-    items: catalog.filter((c) => (slot === "shield" ? c.kind === "shield" : c.slot === slot)),
+    items: catalog.filter((c) =>
+      slot === "shield" ? c.kind === "shield" : slot === "pass" ? c.kind === "pass" && !isPremium : c.slot === slot,
+    ),
   })).filter((g) => g.items.length > 0);
 
   const buy = async (item: MascotCatalogItem) => {
@@ -145,6 +149,14 @@ export function AsterShopScreen() {
                       <View style={styles.shieldIcon}>
                         <Ionicons name="shield-checkmark" size={44} color={palette.primary.face} />
                       </View>
+                    ) : item.kind === "pass" ? (
+                      <View style={styles.shieldIcon}>
+                        <Ionicons
+                          name={item.pass === "tarot" ? "albums" : "chatbubbles"}
+                          size={40}
+                          color={palette.star.face}
+                        />
+                      </View>
                     ) : (
                       <AsterMascot stage={Math.max(1, stage)} mood="happy" accessories={[item.id]} size={84} action="sleep" />
                     )}
@@ -167,6 +179,10 @@ export function AsterShopScreen() {
                         onPress={() => toggleWear(item, !isWorn)}
                         style={styles.btn}
                       />
+                    ) : item.kind === "pass" && (state?.passesToday?.[item.pass ?? "tarot"] ?? 0) > 0 ? (
+                      <AppText variant="bodySmall" center color={palette.mint.face}>
+                        {t("aster.shop.passBought")}
+                      </AppText>
                     ) : (
                       <ChunkyButton
                         label={t("aster.shop.buy", { n: item.price })}

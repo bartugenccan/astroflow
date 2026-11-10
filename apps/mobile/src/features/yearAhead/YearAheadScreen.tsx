@@ -1,22 +1,17 @@
 import React, { useState } from "react";
 import { StyleSheet, View, ScrollView } from "react-native";
-import Animated, {
-  FadeInDown,
-  FadeOut,
-  LinearTransition,
-  useReducedMotion,
-} from "react-native-reanimated";
+import Animated, { FadeOut, useReducedMotion } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
 import { StarDivider } from "../../components/ui/StarDivider";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { BackButton } from "../../components/ui/BackButton";
 import { TermInfo } from "../../components/TermInfo";
-import { EnterView } from "../../lib/motion";
+import { EnterView, enterAnim, layoutAnim } from "../../lib/motion";
 import { useUiStore } from "../../store/useUiStore";
 import { astrologyApi } from "../../services/astrologyApi";
 import { YearAhead } from "../../services/types";
@@ -88,8 +83,10 @@ export function YearAheadScreen() {
               onPress={() => openTerm("solarReturn")}
               style={styles.learnMore}
               scaleTo={0.96}
+              accessibilityRole="button"
+              accessibilityLabel={t("yearAhead.learnMore")}
             >
-              <AppText variant="heading" color={colors.star[300]} style={styles.learnMoreText}>
+              <AppText variant="heading" color={colors.star[300]}>
                 {t("yearAhead.learnMore")}
               </AppText>
               <Ionicons name="arrow-forward" size={14} color={colors.star[300]} />
@@ -99,9 +96,7 @@ export function YearAheadScreen() {
 
         {year.loading ? (
           <ChunkyCard>
-            <View style={styles.loaderBox}>
-              <CelestialLoader label={t("yearAhead.loading")} />
-            </View>
+            <StateView kind="loading" compact message={t("yearAhead.loading")} />
           </ChunkyCard>
         ) : year.data ? (
           <Reading
@@ -113,12 +108,7 @@ export function YearAheadScreen() {
           />
         ) : (
           <ChunkyCard style={styles.errorCard}>
-            <AppText variant="body">{t("yearAhead.error")}</AppText>
-            <PressableScale onPress={year.reload} style={styles.learnMore}>
-              <AppText variant="heading" color={colors.star[300]} style={styles.learnMoreText}>
-                {t("common.retry")}
-              </AppText>
-            </PressableScale>
+            <StateView kind="error" compact message={t("yearAhead.error")} onAction={year.reload} />
           </ChunkyCard>
         )}
       </ScrollView>
@@ -210,7 +200,7 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
 
       {/* Everything technical lives below this line, and only on request. */}
       <Animated.View
-        layout={reduced ? undefined : LinearTransition.springify().damping(18)}
+        layout={layoutAnim(reduced)}
         style={styles.section}
       >
         <PressableScale onPress={onToggleWhy} style={styles.whyToggle} scaleTo={0.95}>
@@ -226,7 +216,7 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
 
         {whyOpen ? (
           <Animated.View
-            entering={reduced ? undefined : FadeInDown.springify().damping(18)}
+            entering={enterAnim("rise", reduced)}
             exiting={reduced ? undefined : FadeOut.duration(160)}
             style={styles.section}
           >
@@ -386,10 +376,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xs,
     alignSelf: "flex-start",
+    minHeight: 44,
     paddingVertical: spacing.xs,
-  },
-  learnMoreText: {
-    fontSize: 15,
   },
   errorCard: {
     gap: spacing.sm,
@@ -467,10 +455,5 @@ const styles = StyleSheet.create({
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.border.hairline,
-  },
-  loaderBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: spacing.xl,
   },
 });

@@ -16,6 +16,9 @@ import { StyleSheet, TextStyle } from "react-native";
 
 // ─── Font families ────────────────────────────────────────────────────────────
 export const fonts = {
+  // Caveat — handwriting, only on paper (manifest practice)
+  script: "Caveat_500Medium",
+  scriptBold: "Caveat_700Bold",
   // Nunito — rounded, chunky voice for headings, numbers and buttons
   display: "Nunito_900Black",
   heading: "Nunito_800ExtraBold",
@@ -51,14 +54,43 @@ export const palette: Record<Tone, { face: string; slab: string; on: string; sof
 };
 
 // ─── Surfaces ─────────────────────────────────────────────────────────────────
+/**
+ * "Soft night": a lavender-leaning night that reads calmer than pure ink, with
+ * one card fill and one raised fill so screens don't stack five shades of
+ * purple. Text contrast on every surface stays ≥ 4.8:1 (tertiary) and ≥ 7.4:1
+ * (secondary).
+ */
 export const surface = {
-  base: "#1A1240", // app background
-  card: "#261A5A", // cards
-  sheet: "#2B1F66", // bottom sheets
-  raised: "#33257A", // raised / pressed / inputs
+  base: "#211853", // app background
+  card: "#2C2168", // cards
+  sheet: "#30236E", // bottom sheets
+  raised: "#372A7E", // raised / pressed / inputs
   accent: "#45349A", // indigo accent surface
-  slab: "#120C30", // hard shadow under night cards
-  outline: "#3D2D8A", // chunky 2px card border
+  slab: "#150E38", // hard shadow under night cards
+  outline: "#43348F", // chunky 2px card border
+} as const;
+
+/**
+ * Paper — the manifest practice surface. Cream sheet, faint ruled lines, a
+ * candy margin rule and violet "ink" (12.6:1 on the face). Only practice and
+ * writing surfaces use it, so it always means "this is your page".
+ */
+export const paper = {
+  face: "#FFF6E5",
+  /** Slightly darker cream for the hard slab under the sheet. */
+  slab: "#D9C7A6",
+  /** Ruled lines. */
+  line: "rgba(124,77,255,0.16)",
+  /** The vertical margin rule. */
+  margin: "rgba(255,111,181,0.55)",
+  /** Primary ink (handwriting, headings on paper). */
+  ink: "#2E2463",
+  /** Secondary ink (hints, Aster's margin notes) — 4.5:1+ on the face. */
+  inkSoft: "rgba(46,36,99,0.72)",
+  /** Trace guide for the 3-6-9 lines (decorative; the sentence is also shown in full). */
+  inkTrace: "rgba(46,36,99,0.22)",
+  /** Margin note highlight. */
+  note: "rgba(255,200,61,0.35)",
 } as const;
 
 // ─── Colour tokens ────────────────────────────────────────────────────────────
@@ -104,6 +136,19 @@ export const colors = {
     star: "rgba(255,200,61,0.40)",
     starSoft: "rgba(255,200,61,0.16)",
     violet: "rgba(124,77,255,0.45)",
+    /** The running-light ring around "this needs you" cards: dim tail and bright head. */
+    ringDim: "rgba(150,118,47,0.15)",
+    ringBright: "rgba(247,240,221,0.95)",
+  },
+  overlay: {
+    /** Dim behind sheets and modals. */
+    scrim: "rgba(6, 8, 16, 0.55)",
+    /** Glossy highlight on a filled progress bar. */
+    gloss: "rgba(255,255,255,0.38)",
+    /** Faint gold sheen along a sheet's top edge. */
+    sheen: "rgba(255,210,92,0.08)",
+    /** Deep night scrim behind full-screen celebrations (isolates the card). */
+    celebration: "rgba(14,9,40,0.6)",
   },
 } as const;
 
@@ -146,7 +191,7 @@ export const areaTone: Record<string, Tone> = {
 
 // ─── Gradients ────────────────────────────────────────────────────────────────
 export const gradients = {
-  sky: ["#261A5E", "#1A1240"] as const,
+  sky: ["#2C2068", "#211853"] as const,
   skyRadialCenter: "#3A2A8C",
   nebula: ["rgba(124,77,255,0.35)", "rgba(255,111,181,0.10)", "rgba(26,18,64,0)"] as const,
   primaryButton: ["#8F66FF", "#7C4DFF"] as const,
@@ -241,6 +286,20 @@ export const typography = StyleSheet.create({
     lineHeight: 26,
     color: colors.text.primary,
   } as TextStyle,
+  /** Handwriting on paper (manifest practice). Line height = the paper's ruling. */
+  script: {
+    fontFamily: fonts.script,
+    fontSize: 24,
+    lineHeight: 32,
+    color: paper.ink,
+  } as TextStyle,
+  /** The big handwritten sentence (reading aloud, the manifest itself). */
+  scriptLarge: {
+    fontFamily: fonts.scriptBold,
+    fontSize: 30,
+    lineHeight: 38,
+    color: paper.ink,
+  } as TextStyle,
 });
 
 // ─── Spacing ──────────────────────────────────────────────────────────────────
@@ -252,6 +311,12 @@ export const spacing = {
   xl: 24,
   xxl: 32,
   xxxl: 48,
+} as const;
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+export const layout = {
+  /** Horizontal screen padding. Full-bleed rows (`BleedRow`) cancel exactly this. */
+  gutter: spacing.xl,
 } as const;
 
 // ─── Radii ────────────────────────────────────────────────────────────────────
@@ -292,19 +357,48 @@ export const shadows = {
 } as const;
 
 // ─── Motion tokens ────────────────────────────────────────────────────────────
+/**
+ * One rhythm for the whole app. Reach for the semantic names first:
+ *   press  — a face going down under a finger
+ *   enter  — a block arriving on screen
+ *   pop    — a reward, a tick, a star appearing (small overshoot)
+ *   sheet  — sheets and panels sliding in
+ * Exits are faster than entrances (`duration.exit`), and nothing decorative loops.
+ */
+const springs = {
+  gentle: { damping: 18, stiffness: 120, mass: 1 },
+  snappy: { damping: 14, stiffness: 260, mass: 0.7 },
+  slow: { damping: 24, stiffness: 80, mass: 1.2 },
+  mystic: { damping: 15, stiffness: 150, mass: 1.1 },
+  /** Overshooting pop — counters, mascot cheer. */
+  bouncy: { damping: 8, stiffness: 220, mass: 0.8 },
+  /** Squash & stretch recovery. */
+  squash: { damping: 6, stiffness: 300, mass: 0.6 },
+} as const;
+
 export const motion = {
   spring: {
-    gentle: { damping: 18, stiffness: 120, mass: 1 },
-    snappy: { damping: 14, stiffness: 260, mass: 0.7 },
-    slow: { damping: 24, stiffness: 80, mass: 1.2 },
-    mystic: { damping: 15, stiffness: 150, mass: 1.1 },
-    /** Overshooting pop — rewards, counters, mascot cheer. */
-    bouncy: { damping: 8, stiffness: 220, mass: 0.8 },
-    /** Squash & stretch recovery. */
-    squash: { damping: 6, stiffness: 300, mass: 0.6 },
+    ...springs,
+    press: springs.snappy,
+    enter: springs.gentle,
+    pop: { damping: 12, stiffness: 220, mass: 0.8 },
+    sheet: springs.mystic,
   },
-  duration: { fast: 160, base: 280, slow: 500, reveal: 1400 },
-  stagger: 60,
+  duration: {
+    fast: 160,
+    base: 280,
+    slow: 500,
+    reveal: 1400,
+    /** Leaving is quicker than arriving (~65% of an entrance). */
+    exit: 180,
+    /** How long a reward pill stays before it leaves on its own. */
+    toast: 1600,
+    /** A milestone / shield pill stays a little longer. */
+    toastLong: 2200,
+  },
+  stagger: 40,
+  /** Only the first few blocks of a screen stagger; the rest just fade in. */
+  staggerMax: 3,
 } as const;
 
 // ─── Blur ─────────────────────────────────────────────────────────────────────

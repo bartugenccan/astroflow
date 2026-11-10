@@ -6,7 +6,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { motion, palette, surface, Tone } from "../../lib/design-system";
+import { colors, motion, palette, surface, Tone } from "../../lib/design-system";
 
 interface ChunkyProgressProps {
   /** 0 → 1 */
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
     top: 3,
     left: 8,
     right: 8,
-    backgroundColor: "rgba(255,255,255,0.38)",
+    backgroundColor: colors.overlay.gloss,
   },
   segRow: { flexDirection: "row", gap: 6 },
   segment: { flex: 1, overflow: "hidden" },

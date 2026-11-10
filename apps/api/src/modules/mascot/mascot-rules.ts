@@ -25,6 +25,8 @@ export const MASCOT_EVENT_KINDS = [
   'JOURNEY_RETURN',
   'MANIFESTED',
   'ACCOUNT_LINKED',
+  'SKY_LESSON',
+  'SIGN_LOG',
 ] as const;
 
 export type MascotEventKind = (typeof MASCOT_EVENT_KINDS)[number];
@@ -70,6 +72,10 @@ export const EVENT_RULES: Record<MascotEventKind, EventRule> = {
   JOURNEY_RETURN: { xp: 30, dailyCap: 1, energy: 0, mode: 'ref' },
   MANIFESTED: { xp: 75, dailyCap: 3, energy: 20, mode: 'once' },
   ACCOUNT_LINKED: { xp: 0, stardust: 50, dailyCap: 1, energy: 0, mode: 'once' },
+  // A Harita Yolu lesson finished: once per chapter, at most two paid lessons a day.
+  SKY_LESSON: { xp: 20, dailyCap: 2, energy: 15, mode: 'once' },
+  // A sign logged on a manifest ("I noticed something").
+  SIGN_LOG: { xp: 5, dailyCap: 1, energy: 5, mode: 'slot' },
 };
 
 /** Yıldız Tozu one award of `kind` drops. */
@@ -115,9 +121,122 @@ export const ABILITIES = [
   { key: 'skyWhisper', minStage: 1, available: true },
   { key: 'streakShield', minStage: 2, available: true },
   { key: 'powerDays', minStage: 3, available: true },
-  { key: 'weeklyLetter', minStage: 4, available: false },
-  { key: 'novaTheme', minStage: 5, available: false },
+  { key: 'weeklyLetter', minStage: 4, available: true },
+  { key: 'novaTheme', minStage: 5, available: true },
 ] as const;
+
+// ─── Harita Yolu: the chart, chapter by chapter ──────────────────────────────
+
+/**
+ * The guided chart lessons, in path order. A chapter opens once the one before
+ * it is done AND Aster has reached `minStage` — or early, for `earlyPrice`
+ * Yıldız Tozu. The full wheel and placements stay free; only the guided
+ * readings sit on the path. Points buy depth, Premium sells volume.
+ */
+export const SKY_PATH = [
+  { key: 'bigThree', minStage: 0, earlyPrice: 0 },
+  { key: 'chartMood', minStage: 0, earlyPrice: 0 },
+  { key: 'personal', minStage: 0, earlyPrice: 0 },
+  { key: 'housesSelf', minStage: 2, earlyPrice: 150 },
+  { key: 'housesWorld', minStage: 2, earlyPrice: 150 },
+  { key: 'aspects', minStage: 3, earlyPrice: 250 },
+  { key: 'jupiterSaturn', minStage: 3, earlyPrice: 250 },
+  { key: 'nodes', minStage: 4, earlyPrice: 400 },
+] as const;
+
+export type SkyLessonKey = (typeof SKY_PATH)[number]['key'];
+export type LessonStatus = 'done' | 'open' | 'lockedPrev' | 'lockedStage';
+
+export function isSkyLessonKey(key: string): key is SkyLessonKey {
+  return SKY_PATH.some((c) => c.key === key);
+}
+
+export interface LessonProgress {
+  stage: number;
+  done: readonly string[];
+  early: readonly string[];
+}
+
+/** Where one chapter stands. Order wins over stage: a chapter never opens before the one above it. */
+export function lessonStatus(key: SkyLessonKey, p: LessonProgress): LessonStatus {
+  const i = SKY_PATH.findIndex((c) => c.key === key);
+  if (p.done.includes(key)) return 'done';
+  const prev = i > 0 ? SKY_PATH[i - 1].key : null;
+  if (prev && !p.done.includes(prev)) return 'lockedPrev';
+  if (p.stage >= SKY_PATH[i].minStage || p.early.includes(key)) return 'open';
+  return 'lockedStage';
+}
+
+export function skyPathView(p: LessonProgress) {
+  return SKY_PATH.map((c) => ({
+    key: c.key,
+    status: lessonStatus(c.key, p),
+    minStage: c.minStage,
+    earlyPrice: c.earlyPrice,
+    early: p.early.includes(c.key),
+  }));
+}
+
+/** Can this chapter be bought early right now? Only when stage is the one thing in the way. */
+export function canUnlockEarly(key: SkyLessonKey, p: LessonProgress): boolean {
+  const c = SKY_PATH.find((x) => x.key === key);
+  if (!c || c.earlyPrice <= 0 || p.early.includes(key) || p.done.includes(key)) return false;
+  return p.stage < c.minStage;
+}
+
+// ─── Tarot spreads unlocked by stage ─────────────────────────────────────────
+
+export const TAROT_SPREAD_STAGE = { three: 0, decision: 3 } as const;
+export type TarotSpreadKey = keyof typeof TAROT_SPREAD_STAGE;
+
+export function spreadUnlocked(spread: TarotSpreadKey, stage: number): boolean {
+  return stage >= TAROT_SPREAD_STAGE[spread];
+}
+
+// ─── What the next stage opens ──────────────────────────────────────────────
+
+export interface StageUnlocks {
+  stage: number;
+  lessons: SkyLessonKey[];
+  spreads: TarotSpreadKey[];
+  abilities: string[];
+}
+
+/**
+ * Everything that opens on reaching `stage` (catalog items are added by the
+ * caller, which owns the catalog). Shown as "Sıradaki açılım" so Işık always
+ * points at something worth having.
+ */
+export function unlocksAt(stage: number): StageUnlocks {
+  return {
+    stage,
+    lessons: SKY_PATH.filter((c) => c.minStage === stage && c.minStage > 0).map((c) => c.key),
+    spreads: (Object.keys(TAROT_SPREAD_STAGE) as TarotSpreadKey[]).filter(
+      (k) => TAROT_SPREAD_STAGE[k] === stage && stage > 0,
+    ),
+    abilities: ABILITIES.filter((a) => a.minStage === stage && a.available).map((a) => a.key),
+  };
+}
+
+// ─── Premium tastes bought with stardust ─────────────────────────────────────
+
+/** One-off extra uses of a metered feature, for free users. One of each per local day. */
+export const PASSES = { tarot: { amount: 1 }, chat: { amount: 5 } } as const;
+export type PassFeature = keyof typeof PASSES;
+export const PASS_DAILY_MAX = 1;
+
+/** Today's bought passes from the stored `{ day: { feature: n } }` map; other days are dropped. */
+export function passesToday(stored: unknown, today: string): Partial<Record<PassFeature, number>> {
+  if (!stored || typeof stored !== 'object') return {};
+  const day = (stored as Record<string, unknown>)[today];
+  if (!day || typeof day !== 'object') return {};
+  const out: Partial<Record<PassFeature, number>> = {};
+  for (const f of Object.keys(PASSES) as PassFeature[]) {
+    const n = (day as Record<string, unknown>)[f];
+    if (typeof n === 'number' && n > 0) out[f] = n;
+  }
+  return out;
+}
 
 // ─── Energy & mood ───────────────────────────────────────────────────────────
 
@@ -362,6 +481,9 @@ export interface MergeableMascot {
   journeysCompleted: number;
   eclipseStart: string | null;
   eclipseEnd: string | null;
+  lessonsDone: string[];
+  lessonsEarly: string[];
+  novaLook: boolean;
 }
 
 /**
@@ -371,7 +493,8 @@ export interface MergeableMascot {
  * unspent. Purchases are united, the account keeps what it is wearing, and
  * the earliest hatch wins. The orbit whose last counted day is most recent
  * carries on (ties: the longer run); journeys add up; the account's eclipse
- * stays. The caller recomputes the stage with `stageFor`.
+ * stays. Finished and early-bought lessons are united. The caller recomputes
+ * the stage with `stageFor`.
  */
 export function mergeMascotState(
   into: MergeableMascot | null,
@@ -393,6 +516,9 @@ export function mergeMascotState(
     journeysCompleted: into.journeysCompleted + from.journeysCompleted,
     eclipseStart: into.eclipseStart,
     eclipseEnd: into.eclipseEnd,
+    lessonsDone: [...new Set([...into.lessonsDone, ...from.lessonsDone])],
+    lessonsEarly: [...new Set([...into.lessonsEarly, ...from.lessonsEarly])],
+    novaLook: into.novaLook || from.novaLook,
   };
 }
 

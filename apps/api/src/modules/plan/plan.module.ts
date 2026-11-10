@@ -6,6 +6,7 @@ import { DeviceSkyService } from './device-sky.service';
 import { PlanService } from './plan.service';
 import { JourneyService } from './journey.service';
 import { MoodService } from './mood.service';
+import { LetterService } from './letter.service';
 import { PlanController, SkyController } from './plan.controller';
 
 /**
@@ -16,7 +17,7 @@ import { PlanController, SkyController } from './plan.controller';
 @Module({
   imports: [AIModule, AstrologyModule, MascotModule],
   controllers: [PlanController, SkyController],
-  providers: [DeviceSkyService, PlanService, JourneyService, MoodService],
+  providers: [DeviceSkyService, PlanService, JourneyService, MoodService, LetterService],
   exports: [DeviceSkyService, PlanService, MoodService],
 })
 export class PlanModule {}

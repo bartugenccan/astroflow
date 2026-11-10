@@ -2,16 +2,15 @@ import React, { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { PressableScale } from "../../components/ui/PressableScale";
 import { EnterView } from "../../lib/motion";
 import { formatDayMonthYear, formatLongDay } from "../../lib/dates";
 import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { astrologyApi } from "../../services/astrologyApi";
 import { electionKey } from "../../services/interpretationCache";
 import type { CreateBirthProfileDto, ElectionSearchQuery } from "../../services/types";
-import { useTranslation } from "../../i18n";
+import { useTranslation, type TranslationKey } from "../../i18n";
 import { colors, radii, spacing } from "../../lib/design-system";
 import { scoreColor } from "../forecast/BestDaysGrid";
 import { ElectionCalendar } from "./ElectionCalendar";
@@ -40,11 +39,7 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
   const topDates = useMemo(() => new Set(result.data?.top.map((p) => p.date) ?? []), [result.data]);
 
   if (result.loading && !result.data) {
-    return (
-      <View style={styles.loading}>
-        <CelestialLoader size="lg" label={t("election.computing")} />
-      </View>
-    );
+    return <StateView kind="loading" message={t("election.computing")} />;
   }
   if (!result.data) return <ErrorCard onRetry={result.reload} />;
   const r = result.data;
@@ -82,10 +77,17 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
         {r.top.map((p, i) => {
           const good = p.factors.find((f) => f.tone === "good");
           return (
-            <PressableScale key={p.date} onPress={() => onOpenDate(p.date)} scaleTo={0.98}>
-              <ChunkyCard style={[styles.pick, i === 0 && styles.pickFirst]}>
+              <ChunkyCard
+                key={p.date}
+                tone={i === 0 ? "star" : "night"}
+                tinted={i === 0}
+                style={styles.pick}
+                onPress={() => onOpenDate(p.date)}
+                accessibilityLabel={`${formatLongDay(p.date, locale)}, ${t(`election.verdict.${p.verdict}` as TranslationKey)}, ${p.score}`}
+                accessibilityHint={t("election.tapForDetail")}
+              >
                 <View style={[styles.rank, { backgroundColor: scoreColor(p.score, 0.6) }]}>
-                  <AppText variant="numeric" color={colors.text.primary} style={styles.rankScore}>
+                  <AppText variant="heading" color={colors.text.primary}>
                     {p.score}
                   </AppText>
                 </View>
@@ -112,7 +114,6 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
               </ChunkyCard>
-            </PressableScale>
           );
         })}
       </EnterView>
@@ -155,7 +156,6 @@ export function SearchResult({ dto, query, onOpenDate }: Props) {
 
 const styles = StyleSheet.create({
   root: { gap: spacing.lg },
-  loading: { paddingVertical: spacing.xxxl, alignItems: "center" },
   head: { gap: spacing.xs },
   card: { gap: spacing.md },
   tip: { flexDirection: "row", gap: spacing.sm },
@@ -167,9 +167,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.md,
   },
-  pickFirst: {
-    borderColor: colors.star[400],
-  },
   rank: {
     width: 50,
     height: 50,
@@ -177,7 +174,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  rankScore: { fontSize: 18 },
   pickText: { flex: 1, minWidth: 0, gap: 4 },
   pickMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.sm },
   hour: { flexDirection: "row", alignItems: "center", gap: 3 },

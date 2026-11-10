@@ -4,7 +4,7 @@ import * as Crypto from "expo-crypto";
 import type { Locale } from "../../i18n";
 import { useAppStore } from "../../store/useAppStore";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
-import { API_URL } from "../config";
+import { ACCOUNTS_ENABLED } from "../config";
 import { request } from "../httpAstrologyApi";
 import { setDeviceToken } from "../deviceAuth";
 import { clearInterpretationCache } from "../interpretationCache";
@@ -23,7 +23,7 @@ import type { AccountInfo, AuthProviderId, BirthProfileResponse, LinkResult, Sav
  * shows that account's chart. All of it needs the real API.
  */
 
-export const ACCOUNTS_ENABLED = API_URL.length > 0;
+export { ACCOUNTS_ENABLED };
 
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "";
 const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";

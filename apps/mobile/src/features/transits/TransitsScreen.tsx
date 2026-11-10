@@ -7,7 +7,6 @@ import {
   Dimensions,
 } from "react-native";
 import Animated, { useReducedMotion } from "react-native-reanimated";
-import { Ionicons } from "@expo/vector-icons";
 import {
   Canvas,
   Circle as SkCircle,
@@ -18,11 +17,10 @@ import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { PressableScale } from "../../components/ui/PressableScale";
 import { TermInfo } from "../../components/TermInfo";
 import { EnterView } from "../../lib/motion";
 import { ShimmerLines } from "../../components/ui/Shimmer";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
 import { TransitWheel } from "../../components/TransitWheel";
 import { TransitMovementRow, rowLayoutTransition } from "./TransitMovementRow";
 import { ReportCta } from "../reports/ReportCta";
@@ -77,7 +75,7 @@ interface TransitsContentProps extends TransitsScreenProps {
  * at the top of its own scroll, and `TransitsScreen` wraps it for a saved
  * person.
  */
-export function TransitsContent({
+export const TransitsContent = React.memo(function TransitsContent({
   dto: dtoProp,
   title,
   enterIndex = 0,
@@ -186,7 +184,19 @@ export function TransitsContent({
         </EnterView>
       ) : (
         <View style={styles.wheelLoading}>
-          <CelestialLoader label={t("common.loading")} />
+          {chart.error || report.error ? (
+            <StateView
+              kind="error"
+              compact
+              message={t("screens.states.transitsError")}
+              onAction={() => {
+                if (chart.error) chart.reload();
+                if (report.error) report.reload();
+              }}
+            />
+          ) : (
+            <StateView kind="loading" compact />
+          )}
         </View>
       )}
 
@@ -246,7 +256,7 @@ export function TransitsContent({
       {isOwn ? <ReportCta kind="transit" /> : null}
     </View>
   );
-}
+});
 
 function Loader({
   loading,
@@ -262,15 +272,7 @@ function Loader({
   children: React.ReactNode;
 }) {
   if (loading) return <ShimmerLines lines={3} />;
-  if (error)
-    return (
-      <PressableScale style={styles.retry} onPress={onRetry} haptic="none">
-        <Ionicons name="refresh" size={16} color={colors.star[300]} />
-        <AppText variant="body" color={colors.star[300]}>
-          {retryLabel}
-        </AppText>
-      </PressableScale>
-    );
+  if (error) return <StateView kind="error" compact actionLabel={retryLabel} onAction={onRetry} />;
   return <>{children}</>;
 }
 
@@ -295,8 +297,6 @@ const styles = StyleSheet.create({
   titleText: {
     flexShrink: 1,
     minWidth: 0,
-    fontSize: 24,
-    lineHeight: 30,
   },
   hero: {
     gap: spacing.lg,
@@ -343,11 +343,5 @@ const styles = StyleSheet.create({
   sep: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border.hairline,
-  },
-  retry: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
   },
 });

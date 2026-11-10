@@ -30,6 +30,9 @@ import { art, colors as tokens, palette } from "../../lib/design-system";
 
 const AnimatedEllipse = Animated.createAnimatedComponent(Ellipse);
 
+/** Shared empty default, so an Aster without accessories keeps a stable prop. */
+const NO_ACCESSORIES: string[] = [];
+
 const INK = art.ink;
 const CHEEK = art.blush;
 
@@ -38,11 +41,14 @@ const CHEEK = art.blush;
  * that hatches from a cosmic egg and grows through five stages, wearing what
  * the user bought with Yıldız Tozu. Implements MascotRendererProps so a
  * designer-made Rive/Lottie Aster can replace it later.
+ *
+ * Memoised: its SVG trees are the heaviest thing on most screens, and a parent
+ * re-rendering for something unrelated shouldn't redraw them.
  */
-export function AsterMascot({
+export const AsterMascot = React.memo(function AsterMascot({
   stage,
   mood = "happy",
-  accessories = [],
+  accessories = NO_ACCESSORIES,
   size = 160,
   action = "idle",
   playKey = 0,
@@ -150,7 +156,7 @@ export function AsterMascot({
       </Animated.View>
     </View>
   );
-}
+});
 
 function Face({
   sleepy,

@@ -1,20 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
-import * as Haptics from "expo-haptics";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { BackButton } from "../../components/ui/BackButton";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { ChunkyProgress } from "../../components/ui/ChunkyProgress";
 import { AsterMascot } from "../../components/aster/AsterMascot";
-import { useMascotStore } from "../../store/useMascotStore";
+import { useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
 import { useTranslation } from "../../i18n";
 import { palette, spacing } from "../../lib/design-system";
+import { useBreathClock } from "./useBreathClock";
 
 const TOTAL = 60; // seconds — five 4·4·4 cycles
-const PHASE = 4;
-const PHASES = ["inhale", "hold", "exhale"] as const;
 
 /**
  * One guided minute: Aster swells as you breathe in, rests while you hold and
@@ -25,34 +23,12 @@ export function AsterBreatheScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const stage = useMascotStore((s) => s.state?.stage ?? 0);
-  const accessories = useMascotStore((s) => s.state?.equipped ?? []);
+  const accessories = useMascotStore((s) => s.state?.equipped ?? NO_EQUIPPED);
   const report = useMascotStore((s) => s.report);
-  const [running, setRunning] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [done, setDone] = useState(false);
+  const [started, setStarted] = useState(false);
+  const { elapsed, done, phase } = useBreathClock(started, TOTAL);
+  const running = started && !done;
   const reported = useRef(false);
-
-  useEffect(() => {
-    if (!running) return;
-    const started = Date.now() - elapsed * 1000;
-    const timer = setInterval(() => {
-      const s = Math.min(TOTAL, Math.floor((Date.now() - started) / 1000));
-      setElapsed((prev) => {
-        if (s !== prev && s % PHASE === 0 && s < TOTAL) {
-          Haptics.selectionAsync().catch(() => undefined);
-        }
-        return s;
-      });
-      if (s >= TOTAL) {
-        clearInterval(timer);
-        setRunning(false);
-        setDone(true);
-      }
-    }, 250);
-    return () => clearInterval(timer);
-    // `elapsed` only seeds the clock when (re)starting.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running]);
 
   useEffect(() => {
     if (done && !reported.current) {
@@ -61,7 +37,6 @@ export function AsterBreatheScreen() {
     }
   }, [done, report]);
 
-  const phase = PHASES[Math.floor(elapsed / PHASE) % PHASES.length];
   const label = done ? t("aster.breathe.done") : running ? t(`aster.breathe.${phase}`) : t("aster.breathe.subtitle");
 
   return (
@@ -104,7 +79,7 @@ export function AsterBreatheScreen() {
         {done ? (
           <ChunkyButton label={t("aster.breathe.finish")} variant="mint" onPress={() => router.back()} />
         ) : !running ? (
-          <ChunkyButton label={t("aster.breathe.start")} variant="mint" onPress={() => setRunning(true)} />
+          <ChunkyButton label={t("aster.breathe.start")} variant="mint" onPress={() => setStarted(true)} />
         ) : null}
       </View>
     </ScreenWrapper>

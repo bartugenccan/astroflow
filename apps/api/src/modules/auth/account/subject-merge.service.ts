@@ -59,6 +59,7 @@ export class SubjectMergeService {
       await tx.intention.updateMany({ where, data: move });
       await tx.intentionCheckIn.updateMany({ where, data: move });
       await tx.intentionStreak.updateMany({ where, data: move });
+      await tx.intentionSign.updateMany({ where, data: move });
       await tx.savedPerson.updateMany({ where, data: move });
       await tx.interpretation.updateMany({ where, data: move });
       await tx.report.updateMany({ where, data: move });
@@ -87,6 +88,11 @@ export class SubjectMergeService {
           await tx.mascotConstellation.update({ where: { id: c.id }, data: move });
         }
       }
+
+      // Weekly letters: the account's letter for a week wins.
+      const weeks = await tx.asterLetter.findMany({ where: { deviceId: into }, select: { week: true } });
+      await tx.asterLetter.deleteMany({ where: { deviceId: from, week: { in: weeks.map((w) => w.week) } } });
+      await tx.asterLetter.updateMany({ where, data: move });
 
       // Vault: the account's copy stays; the device re-merges its local notes and pushes.
       const vaultNs = await tx.userVault.findMany({ where: { deviceId: into }, select: { namespace: true } });
@@ -159,6 +165,9 @@ function asMergeable(row: {
   journeysCompleted: number;
   eclipseStart: string | null;
   eclipseEnd: string | null;
+  lessonsDone: unknown;
+  lessonsEarly: unknown;
+  novaLook: boolean;
 }): MergeableMascot {
   return {
     xp: row.xp,
@@ -174,5 +183,8 @@ function asMergeable(row: {
     journeysCompleted: row.journeysCompleted,
     eclipseStart: row.eclipseStart,
     eclipseEnd: row.eclipseEnd,
+    lessonsDone: ids(row.lessonsDone),
+    lessonsEarly: ids(row.lessonsEarly),
+    novaLook: row.novaLook,
   };
 }

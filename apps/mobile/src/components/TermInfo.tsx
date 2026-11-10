@@ -23,7 +23,7 @@ export function TermInfo({ term, size = 15, color = colors.star[300] }: TermInfo
   return (
     <PressableScale
       onPress={() => openTerm(term)}
-      hitSlop={12}
+      hitSlop={16}
       scaleTo={0.8}
       haptic="light"
       style={styles.hit}

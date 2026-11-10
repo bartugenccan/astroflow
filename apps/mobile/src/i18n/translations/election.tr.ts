@@ -62,6 +62,7 @@ export const electionTr: typeof electionEn = {
   recent: "Son soruların",
   interpretedAs: "“{{text}}” şöyle değerlendirildi: {{event}}",
   newQuery: "Yeni soru",
+  noQuery: "Önce bana bir şey sor — ne için olduğunu ve tarihi seç, gökyüzünü senin için okuyayım.",
   pickEvent: "Bir olay seç ya da kendin yaz",
   scoreLabel: "Uygunluk",
 };

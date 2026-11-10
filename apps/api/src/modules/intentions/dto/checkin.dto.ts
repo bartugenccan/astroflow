@@ -20,3 +20,10 @@ export class CheckInDto {
   @MaxLength(2000)
   transcript?: string;
 }
+
+/** A sign noticed on the way to a manifest. */
+export class SignDto {
+  @IsString()
+  @MaxLength(280)
+  text: string;
+}

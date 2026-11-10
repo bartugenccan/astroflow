@@ -59,6 +59,7 @@ export function BirthDateScreen() {
       step={0}
       question={t("onboarding.dateQuestion")}
       hint={t("onboarding.dateHint")}
+      asterLine={t("screens.onboarding.asterDate")}
       ctaLabel={t("common.continue")}
       onNext={onNext}
     >

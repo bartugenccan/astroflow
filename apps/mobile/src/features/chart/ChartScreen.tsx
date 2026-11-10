@@ -1,13 +1,18 @@
-import React, { useState } from "react";
-import { StyleSheet, View, ScrollView } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { StyleSheet, View, ScrollView, LayoutChangeEvent, type ScrollViewInstance } from "react-native";
+import { useRouter, type Href } from "expo-router";
+import { useReducedMotion } from "react-native-reanimated";
 import { Canvas, Circle, RadialGradient, vec } from "@shopify/react-native-skia";
 import { Dimensions } from "react-native";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { Disclosure } from "../../components/ui/Disclosure";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
+import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { IconButton } from "../../components/ui/IconButton";
 import { AstroMap } from "../../components/AstroMap";
 import { Glyph } from "../../components/Glyph";
 import { TermInfo } from "../../components/TermInfo";
@@ -26,12 +31,46 @@ import { useAppStore } from "../../store/useAppStore";
 import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { dtoKey } from "../../services/interpretationCache";
 import { houseLabel } from "../../lib/astroLanguage";
-import { useTranslation } from "../../i18n";
+import { SIGNS } from "../../lib/zodiac";
+import { useTranslation, type TFunction, type TranslationKey } from "../../i18n";
 import { colors, spacing, gradients, motion } from "../../lib/design-system";
 
 const { width: W } = Dimensions.get("window");
 
+/** Planets a transit can come from (the moving sky). */
+const TRANSIT_PLANETS = [
+  "Sun", "Moon", "Mercury", "Venus", "Mars",
+  "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto",
+];
+
+/**
+ * What a deep link asks the chart to show:
+ * `/chart?planet=<NatalPlanet>&transit=<TransitPlanet>` (a journey discovery)
+ * or `/chart?sign=<Sign>` (a zodiac constellation). Values are untrusted.
+ */
+export interface ChartFocus {
+  planet?: string;
+  transit?: string;
+  sign?: string;
+}
+
+/** Case-insensitive match of a link value against the names we know. */
+function matchName(value: string | undefined, options: readonly string[]): string | null {
+  if (typeof value !== "string") return null;
+  const v = value.trim().toLowerCase();
+  if (!v) return null;
+  return options.find((o) => o.toLowerCase() === v) ?? null;
+}
+
+function nameOf(t: TFunction, group: "planets" | "signs", value: string): string {
+  const key = `${group}.${value}` as TranslationKey;
+  const out = t(key);
+  return out === key ? value : out;
+}
+
 interface ChartScreenProps {
+  /** Deep-link focus (own chart only). */
+  focus?: ChartFocus;
   /** Override the chart subject; defaults to the logged-in user. */
   dto?: CreateBirthProfileDto;
   /** Override the header title (e.g. a saved person's name). */
@@ -40,8 +79,13 @@ interface ChartScreenProps {
   birthLine?: string;
 }
 
-export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: ChartScreenProps = {}) {
+export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp, focus }: ChartScreenProps = {}) {
   const { t, locale } = useTranslation();
+  const router = useRouter();
+  const reduced = useReducedMotion();
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const [placementsY, setPlacementsY] = useState<number | null>(null);
+  const [bannerHidden, setBannerHidden] = useState(false);
   const ownDto = useBirthDto();
   const dto = dtoProp ?? ownDto;
   const profile = useAppStore((s) => s.birthProfile);
@@ -51,10 +95,11 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
   // Cached like every other section, so switching back to "In a picture"
   // renders the wheel instantly instead of re-fetching behind a loader.
   const key = dto ? dtoKey(dto) : null;
-  const { data: chart } = useCachedAsync<NatalChartData>(
+  const chartQ = useCachedAsync<NatalChartData>(
     key && `chart|${key}`,
     () => astrologyApi.getNatalChart(dto!),
   );
+  const chart = chartQ.data;
   const placementsQ = useCachedAsync<PlacementInterpretation[]>(
     key && `placements|${key}|${locale}`,
     () => astrologyApi.getPlacementInterpretations(dto!, locale),
@@ -62,6 +107,43 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
   const placements = placementsQ.data;
   const placementsLoading = placementsQ.loading;
   const placementsError = !!placementsQ.error;
+
+  // ── Deep-link focus ────────────────────────────────────────────────────────
+  const focusPlanet = chart ? matchName(focus?.planet, chart.planets.map((p) => p.name)) : null;
+  const focusTransit = matchName(focus?.transit, TRANSIT_PLANETS);
+  const focusSign = matchName(focus?.sign, SIGNS);
+  const signPlanets = chart && focusSign ? chart.planets.filter((p) => p.sign === focusSign) : [];
+  const focusKey = `${focus?.planet ?? ""}|${focus?.transit ?? ""}|${focus?.sign ?? ""}`;
+
+  // A new link shows its banner again even if the last one was dismissed.
+  useEffect(() => setBannerHidden(false), [focusKey]);
+
+  // Open the linked placement once the wheel has had a moment to draw.
+  const openedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!chart || !focusPlanet || openedFor.current === focusKey) return;
+    const target = chart.planets.find((p) => p.name === focusPlanet);
+    if (!target) return;
+    const timer = setTimeout(() => {
+      openedFor.current = focusKey;
+      setSelected(target);
+    }, reduced ? 0 : 700);
+    return () => clearTimeout(timer);
+  }, [chart, focusPlanet, focusKey, reduced]);
+
+  // A sign link scrolls down to the (highlighted) placements.
+  const scrolledFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focusSign || focusPlanet || placementsY === null || scrolledFor.current === focusKey) return;
+    const timer = setTimeout(() => {
+      scrolledFor.current = focusKey;
+      scrollRef.current?.scrollTo({ y: Math.max(0, placementsY - spacing.lg), animated: !reduced });
+    }, reduced ? 0 : 700);
+    return () => clearTimeout(timer);
+  }, [focusSign, focusPlanet, placementsY, focusKey, reduced]);
+
+  const isHighlighted = (p: PlanetPlacement) =>
+    p.name === focusPlanet || (!!focusSign && p.sign === focusSign);
 
   const selectedReading = selected
     ? placements?.find((p) => p.planet === selected.name)
@@ -78,6 +160,7 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
   return (
     <ScreenWrapper>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -98,10 +181,43 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
           ) : null}
         </EnterView>
 
+        {chart && !bannerHidden && focusPlanet && focusTransit ? (
+          <FocusBanner
+            tone="sky"
+            glyphs={[focusTransit, focusPlanet]}
+            title={t("screens.chart.transitBanner", {
+              transit: nameOf(t, "planets", focusTransit),
+              planet: nameOf(t, "planets", focusPlanet),
+            })}
+            body={t("screens.chart.transitBannerBody", { planet: nameOf(t, "planets", focusPlanet) })}
+            ctaLabel={t("screens.chart.transitCta")}
+            // The day's transits live on the Today tab.
+            onCta={() => router.push("/(tabs)" as Href)}
+            onDismiss={() => setBannerHidden(true)}
+          />
+        ) : chart && !bannerHidden && focusSign ? (
+          <FocusBanner
+            tone="star"
+            glyphs={[focusSign]}
+            title={t("screens.chart.signBanner", { sign: nameOf(t, "signs", focusSign) })}
+            body={
+              signPlanets.length === 0
+                ? t("screens.chart.signEmpty", { sign: nameOf(t, "signs", focusSign) })
+                : t(signPlanets.length === 1 ? "screens.chart.signPlanetsOne" : "screens.chart.signPlanets", {
+                    sign: nameOf(t, "signs", focusSign),
+                    planets: signPlanets.map((p) => nameOf(t, "planets", p.name)).join(", "),
+                  })
+            }
+            onDismiss={() => setBannerHidden(true)}
+          />
+        ) : null}
+
         {!chart ? (
-          <View style={styles.loading}>
-            <CelestialLoader label={t("common.loading")} />
-          </View>
+          chartQ.error ? (
+            <StateView kind="error" message={t("screens.chart.error")} onAction={chartQ.reload} />
+          ) : (
+            <StateView kind="loading" />
+          )
         ) : (
           <>
             {/* Wheel over a soft radial glow */}
@@ -131,16 +247,39 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
             </AppText>
 
             {/* Placements */}
-            <View style={styles.section}>
+            <View
+              style={styles.section}
+              onLayout={(e: LayoutChangeEvent) => setPlacementsY(e.nativeEvent.layout.y)}
+            >
               <SectionHeader eyebrow={t("chart.placementsTitle")} />
               <ChunkyCard style={styles.placementsCard}>
-                {chart.planets.map((planet, i) => (
+                {chart.planets.slice(0, 3).map((planet, i) => (
                   <EnterView key={planet.name} index={i} delay={motion.stagger * 2} distance={10}>
-                    <PlacementRow planet={planet} onPress={setSelected} />
-                    {i < chart.planets.length - 1 ? <View style={styles.sep} /> : null}
+                    <PlacementRow planet={planet} onPress={setSelected} highlighted={isHighlighted(planet)} />
+                    {i < 2 ? <View style={styles.sep} /> : null}
                   </EnterView>
                 ))}
               </ChunkyCard>
+              {chart.planets.length > 3 ? (
+                <Disclosure
+                  key={focusKey}
+                  title={t("chart.morePlacements", { n: chart.planets.length - 3 })}
+                  summary={chart.planets
+                    .slice(3)
+                    .map((p) => t(`planets.${p.name}` as "planets.Sun"))
+                    .join(" · ")}
+                  icon="planet"
+                  tone="star"
+                  initiallyOpen={chart.planets.slice(3).some(isHighlighted)}
+                >
+                  {chart.planets.slice(3).map((planet, i, rest) => (
+                    <View key={planet.name}>
+                      <PlacementRow planet={planet} onPress={setSelected} highlighted={isHighlighted(planet)} />
+                      {i < rest.length - 1 ? <View style={styles.sep} /> : null}
+                    </View>
+                  ))}
+                </Disclosure>
+              ) : null}
             </View>
           </>
         )}
@@ -186,6 +325,51 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp }: C
         ) : null}
       </SpringBottomSheet>
     </ScreenWrapper>
+  );
+}
+
+/**
+ * The note a deep link leaves above the wheel, never over it: what the link
+ * is about, and (for a transit) the way on to the day's sky.
+ */
+function FocusBanner({
+  tone,
+  glyphs,
+  title,
+  body,
+  ctaLabel,
+  onCta,
+  onDismiss,
+}: {
+  tone: "sky" | "star";
+  glyphs: string[];
+  title: string;
+  body: string;
+  ctaLabel?: string;
+  onCta?: () => void;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <EnterView scale>
+      <ChunkyCard tone={tone} tinted style={styles.banner}>
+        <View style={styles.bannerHead}>
+          <View style={styles.bannerGlyphs}>
+            {glyphs.map((g) => (
+              <Glyph key={g} name={g} size={22} color={colors.star[200]} />
+            ))}
+          </View>
+          <AppText variant="heading" style={styles.bannerTitle} accessibilityRole="header">
+            {title}
+          </AppText>
+          <IconButton icon="close" size={40} onPress={onDismiss} accessibilityLabel={t("screens.chart.dismiss")} />
+        </View>
+        <AppText variant="body">{body}</AppText>
+        {ctaLabel && onCta ? (
+          <ChunkyButton label={ctaLabel} onPress={onCta} variant={tone} size="md" />
+        ) : null}
+      </ChunkyCard>
+    </EnterView>
   );
 }
 
@@ -242,9 +426,21 @@ const styles = StyleSheet.create({
   birthLine: {
     marginTop: spacing.xs,
   },
-  loading: {
-    paddingVertical: spacing.xxxl,
+  banner: {
+    gap: spacing.md,
+  },
+  bannerHead: {
+    flexDirection: "row",
     alignItems: "center",
+    gap: spacing.md,
+  },
+  bannerGlyphs: {
+    flexDirection: "row",
+    gap: spacing.xs,
+  },
+  bannerTitle: {
+    flex: 1,
+    minWidth: 0,
   },
   wheelWrap: {
     alignItems: "center",

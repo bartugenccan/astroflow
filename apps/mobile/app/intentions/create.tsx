@@ -1,3 +1,3 @@
-import { CreateIntentionScreen } from "../../src/features/intentions/CreateIntentionScreen";
+import { CreateWishFlow } from "../../src/features/manifest/CreateWishFlow";
 
-export default CreateIntentionScreen;
+export default CreateWishFlow;

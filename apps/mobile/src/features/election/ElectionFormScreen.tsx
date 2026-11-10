@@ -7,7 +7,8 @@ import { AppText } from "../../components/ui/AppText";
 import { BackButton } from "../../components/ui/BackButton";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { PressableScale } from "../../components/ui/PressableScale";
+import { Chip } from "../../components/ui/Chip";
+import { AsterCameo } from "../../components/ui/AsterCameo";
 import { Segmented } from "../../components/ui/Segmented";
 import { WheelItem, WheelPicker } from "../../components/ui/WheelPicker";
 import { PaywallSheet } from "../../components/PaywallSheet";
@@ -17,7 +18,7 @@ import type { ElectionEventId, ElectionPlace, ElectionQuery } from "../../servic
 import { useAppStore } from "../../store/useAppStore";
 import { useElectionStore } from "../../store/useElectionStore";
 import { TranslationKey, useTranslation } from "../../i18n";
-import { colors, fonts, radii, spacing, surface } from "../../lib/design-system";
+import { colors, depth, fonts, palette, radii, spacing, surface, typography } from "../../lib/design-system";
 import { PlaceSheet } from "./PlaceSheet";
 
 type Mode = "check" | "search";
@@ -129,7 +130,7 @@ export function ElectionFormScreen() {
             {t("election.eyebrow")}
           </AppText>
           <AppText variant="title">{t("election.title")}</AppText>
-          <AppText variant="body">{t("election.intro")}</AppText>
+          <AsterCameo text={t("election.intro")} size={60} style={styles.cameo} />
         </EnterView>
 
         <EnterView index={1} style={styles.block}>
@@ -158,37 +159,30 @@ export function ElectionFormScreen() {
                 {g.events.map((id) => {
                   const active = !custom && eventId === id;
                   return (
-                    <PressableScale
+                    <Chip
                       key={id}
+                      label={t(`election.events.${id}` as TranslationKey)}
+                      tone="star"
+                      selected={active}
                       onPress={() => {
                         setCustom(false);
                         setEventId(id);
                       }}
-                      scaleTo={0.94}
-                      haptic={active ? "none" : "selection"}
-                      style={[styles.chip, active && styles.chipActive]}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected: active }}
-                    >
-                      <AppText variant="bodySmall" color={active ? colors.text.onAccent : colors.text.primary}>
-                        {t(`election.events.${id}` as TranslationKey)}
-                      </AppText>
-                    </PressableScale>
+                      style={styles.chip}
+                    />
                   );
                 })}
               </View>
             </View>
           ))}
-          <PressableScale
+          <Chip
+            label={t("election.custom")}
+            icon="create-outline"
+            tone="star"
+            selected={custom}
             onPress={() => setCustom((c) => !c)}
-            scaleTo={0.96}
-            style={[styles.chip, styles.customChip, custom && styles.chipActive]}
-          >
-            <Ionicons name="create-outline" size={15} color={custom ? colors.text.onAccent : colors.star[300]} />
-            <AppText variant="bodySmall" color={custom ? colors.text.onAccent : colors.star[200]}>
-              {t("election.custom")}
-            </AppText>
-          </PressableScale>
+            style={styles.chip}
+          />
           {custom ? (
             <TextInput
               value={eventText}
@@ -198,6 +192,7 @@ export function ElectionFormScreen() {
               maxLength={120}
               autoFocus
               style={styles.input}
+              accessibilityLabel={t("election.custom")}
             />
           ) : null}
         </EnterView>
@@ -205,8 +200,12 @@ export function ElectionFormScreen() {
         {/* Where */}
         <EnterView index={3} style={styles.block}>
           <AppText variant="heading">{t("election.placeTitle")}</AppText>
-          <PressableScale onPress={() => setPlaceOpen(true)} scaleTo={0.98}>
-            <ChunkyCard style={styles.placeCard}>
+            <ChunkyCard
+              style={styles.placeCard}
+              onPress={() => setPlaceOpen(true)}
+              accessibilityLabel={`${t("election.placeTitle")}: ${place?.name ?? "—"}`}
+              accessibilityHint={t("election.placeChange")}
+            >
               <Ionicons name="location" size={18} color={colors.star[300]} />
               <View style={styles.placeText}>
                 <AppText variant="heading" numberOfLines={1}>
@@ -216,11 +215,10 @@ export function ElectionFormScreen() {
                   {t("election.placeHint")}
                 </AppText>
               </View>
-              <AppText variant="bodySmall" color={colors.star[300]}>
+              <AppText variant="labelLong" color={colors.text.accent}>
                 {t("election.placeChange")}
               </AppText>
             </ChunkyCard>
-          </PressableScale>
         </EnterView>
 
         {/* When */}
@@ -290,7 +288,7 @@ export function ElectionFormScreen() {
           onPress={onSubmit}
           icon={
             mode === "search" && !isPremium ? (
-              <Ionicons name="lock-closed" size={15} color={colors.text.onAccent} />
+              <Ionicons name="lock-closed" size={16} color={palette.primary.on} />
             ) : undefined
           }
         />
@@ -301,8 +299,12 @@ export function ElectionFormScreen() {
               {t("election.recent")}
             </AppText>
             {recent.map((r) => (
-              <PressableScale key={r.askedAt} onPress={() => submit(r.query)} scaleTo={0.98}>
-                <ChunkyCard style={styles.recentRow}>
+                <ChunkyCard
+                  key={r.askedAt}
+                  style={styles.recentRow}
+                  onPress={() => submit(r.query)}
+                  accessibilityLabel={`${eventName(r.query)}, ${r.query.place.name}`}
+                >
                   <Ionicons
                     name={r.query.mode === "check" ? "calendar-outline" : "search-outline"}
                     size={16}
@@ -322,7 +324,6 @@ export function ElectionFormScreen() {
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
                 </ChunkyCard>
-              </PressableScale>
             ))}
           </View>
         ) : null}
@@ -347,6 +348,7 @@ const styles = StyleSheet.create({
     gap: spacing.xl,
   },
   header: { gap: spacing.xs },
+  cameo: { marginTop: spacing.sm },
   block: { gap: spacing.md },
   group: { gap: spacing.sm },
   chips: {
@@ -355,34 +357,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
-  },
-  chipActive: {
-    backgroundColor: colors.star[400],
-    borderColor: colors.star[400],
-  },
-  customChip: {
-    alignSelf: "flex-start",
-    borderStyle: "dashed",
-    borderColor: colors.star[500],
+    minHeight: 44,
   },
   input: {
+    minHeight: 56,
     padding: spacing.lg,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     color: colors.text.primary,
     fontFamily: fonts.sansMedium,
-    fontSize: 16,
+    fontSize: typography.heading.fontSize,
   },
   placeCard: {
     flexDirection: "row",

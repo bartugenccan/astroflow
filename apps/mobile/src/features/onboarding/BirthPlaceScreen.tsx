@@ -7,13 +7,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { MotiView } from "moti";
 import { OnboardingFrame } from "./OnboardingFrame";
 import { AppText } from "../../components/ui/AppText";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
+import { StateView } from "../../components/ui/StateView";
 import { searchCities } from "../../services/mock/cities";
 import { searchCitiesRemote } from "../../services/geocoding";
 import { City } from "../../services/types";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
 import { useTranslation } from "../../i18n";
-import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
+import { colors, spacing, radii, palette, surface, typography } from "../../lib/design-system";
 
 function cityLabel(c: City): string {
   const region = c.admin1 && c.admin1 !== c.name ? `, ${c.admin1}` : "";
@@ -91,6 +91,7 @@ export function BirthPlaceScreen() {
       step={2}
       question={t("onboarding.placeQuestion")}
       hint={t("onboarding.placeHint")}
+      asterLine={t("screens.onboarding.asterPlace")}
       ctaLabel={t("common.continue")}
       onNext={onNext}
       nextDisabled={!canContinue}
@@ -107,11 +108,11 @@ export function BirthPlaceScreen() {
               placeholderTextColor={colors.text.tertiary}
               style={styles.searchInput}
               autoCorrect={false}
+              accessibilityLabel={t("onboarding.placeQuestion")}
             />
-            {searching ? <CelestialLoader size="sm" /> : null}
           </View>
 
-          {offline ? (
+          {offline && results.length > 0 ? (
             <AppText variant="bodySmall" color={colors.text.tertiary} style={styles.note}>
               {t("onboarding.placeOffline")}
             </AppText>
@@ -122,10 +123,16 @@ export function BirthPlaceScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {showNoResults ? (
-              <AppText variant="body" color={colors.text.tertiary} style={styles.empty}>
-                {t("onboarding.placeNoResults")}
-              </AppText>
+            {searching ? (
+              <StateView kind="loading" compact message={t("screens.onboarding.placeLoading")} />
+            ) : showNoResults ? (
+              <StateView
+                kind={offline ? "error" : "empty"}
+                compact
+                message={offline ? t("screens.onboarding.placeOffline") : t("screens.onboarding.placeEmpty")}
+                actionLabel={t("onboarding.manualCoords")}
+                onAction={() => setManual(true)}
+              />
             ) : (
               results.map((c, i) => {
                 const selected = city?.id === c.id;
@@ -142,6 +149,9 @@ export function BirthPlaceScreen() {
                       onPress={() => selectCity(c)}
                       scaleTo={0.98}
                       style={[styles.cityRow, selected && styles.cityRowSelected]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={cityLabel(c)}
                     >
                       <View style={styles.cityText}>
                         <AppText variant="heading" color={colors.text.primary}>
@@ -152,7 +162,7 @@ export function BirthPlaceScreen() {
                         </AppText>
                       </View>
                       {selected ? (
-                        <Ionicons name="checkmark-circle" size={20} color={colors.star[300]} />
+                        <Ionicons name="checkmark-circle" size={22} color={palette.star.face} />
                       ) : null}
                     </PressableScale>
                   </MotiView>
@@ -174,6 +184,7 @@ export function BirthPlaceScreen() {
               placeholderTextColor={colors.text.tertiary}
               keyboardType="numbers-and-punctuation"
               style={styles.coordInput}
+              accessibilityLabel={t("onboarding.latitude")}
             />
           </View>
           <View style={styles.coordField}>
@@ -187,12 +198,19 @@ export function BirthPlaceScreen() {
               placeholderTextColor={colors.text.tertiary}
               keyboardType="numbers-and-punctuation"
               style={styles.coordInput}
+              accessibilityLabel={t("onboarding.longitude")}
             />
           </View>
         </View>
       )}
 
-      <PressableScale onPress={() => setManual((m) => !m)} scaleTo={0.95} style={styles.toggle}>
+      <PressableScale
+        onPress={() => setManual((m) => !m)}
+        scaleTo={0.95}
+        style={styles.toggle}
+        accessibilityRole="button"
+        accessibilityLabel={manual ? t("onboarding.placeSearchPlaceholder") : t("onboarding.manualCoords")}
+      >
         <Ionicons
           name={manual ? "search" : "location-outline"}
           size={16}
@@ -212,18 +230,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    height: 52,
+    height: 56,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: 4,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     paddingHorizontal: spacing.lg,
   },
   searchInput: {
     flex: 1,
+    height: "100%",
     color: colors.text.primary,
-    fontFamily: fonts.sansMedium,
-    fontSize: 16,
+    fontFamily: typography.heading.fontFamily,
+    fontSize: typography.heading.fontSize,
   },
   note: {
     marginTop: spacing.sm,
@@ -235,11 +256,10 @@ const styles = StyleSheet.create({
     flex: 1,
     marginTop: spacing.md,
   },
-  empty: {
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
   cityRow: {
+    minHeight: 56,
+    borderWidth: 2,
+    borderColor: "transparent",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -254,9 +274,8 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   cityRowSelected: {
-    backgroundColor: surface.sheet,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
+    backgroundColor: palette.star.soft,
+    borderColor: palette.star.face,
   },
   manualWrap: {
     gap: spacing.lg,
@@ -265,17 +284,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   coordInput: {
-    height: 52,
+    height: 56,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.border.hairlineStrong,
-    backgroundColor: surface.sheet,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: 4,
+    borderBottomColor: surface.slab,
+    backgroundColor: surface.raised,
     paddingHorizontal: spacing.lg,
     color: colors.text.primary,
-    fontFamily: fonts.sansMedium,
-    fontSize: 16,
+    fontFamily: typography.heading.fontFamily,
+    fontSize: typography.heading.fontSize,
   },
   toggle: {
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

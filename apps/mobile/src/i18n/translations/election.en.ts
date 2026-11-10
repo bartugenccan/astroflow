@@ -60,6 +60,7 @@ export const electionEn = {
   recent: "Your recent questions",
   interpretedAs: "Read “{{text}}” as: {{event}}",
   newQuery: "New question",
+  noQuery: "Ask me something first — pick what it’s for and a date, and I’ll read the sky for it.",
   pickEvent: "Pick an event or write your own",
   scoreLabel: "Suitability",
 };

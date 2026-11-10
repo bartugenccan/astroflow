@@ -1,16 +1,18 @@
 import React, { useMemo, useState } from "react";
 import { StyleSheet, View, ScrollView, TextInput } from "react-native";
-import Animated, { LinearTransition, useReducedMotion } from "react-native-reanimated";
+import Animated, { useReducedMotion } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
+import { AsterCameo } from "../../components/ui/AsterCameo";
+import { StateView } from "../../components/ui/StateView";
 import { BackButton } from "../../components/ui/BackButton";
-import { EnterView } from "../../lib/motion";
+import { EnterView, layoutAnim } from "../../lib/motion";
 import { useTranslation } from "../../i18n";
 import { GLOSSARY, GlossaryTermId, termText } from "../../lib/glossary";
-import { colors, spacing, radii, fonts, surface } from "../../lib/design-system";
+import { colors, depth, spacing, radii, fonts, palette, surface, typography } from "../../lib/design-system";
 import { TermBody } from "./TermBody";
 import { TermMark } from "./TermMark";
 
@@ -48,7 +50,7 @@ export function GlossaryScreen() {
             {t("glossary.ui.screenEyebrow")}
           </AppText>
           <AppText variant="title">{t("glossary.ui.screenTitle")}</AppText>
-          <AppText variant="body">{t("glossary.ui.screenSub")}</AppText>
+          <AsterCameo text={t("glossary.ui.screenSub")} size={56} style={styles.cameo} />
         </EnterView>
 
         <EnterView index={1} style={styles.search}>
@@ -61,25 +63,33 @@ export function GlossaryScreen() {
             style={styles.input}
             autoCorrect={false}
             maxFontSizeMultiplier={1.3}
+            accessibilityLabel={t("glossary.ui.searchPlaceholder")}
           />
         </EnterView>
 
         {items.length === 0 ? (
-          <AppText variant="bodySmall" center>
-            {t("glossary.ui.noResults")}
-          </AppText>
+          <StateView
+            kind="empty"
+            compact
+            message={t("glossary.ui.noResults")}
+            actionLabel={t("glossary.ui.clearSearch")}
+            onAction={() => setQuery("")}
+          />
         ) : null}
 
         {items.map((e, i) => {
           const isOpen = open === e.id;
           return (
             <EnterView key={e.id} index={i + 2}>
-              <Animated.View layout={reduced ? undefined : LinearTransition.springify().damping(18)}>
+              <Animated.View layout={layoutAnim(reduced)}>
                 <ChunkyCard padded={false}>
                   <PressableScale
                     onPress={() => setOpen(isOpen ? null : e.id)}
                     scaleTo={0.98}
                     style={styles.row}
+                    accessibilityRole="button"
+                    accessibilityLabel={termText(t, e.id, "title")}
+                    accessibilityState={{ expanded: isOpen }}
                   >
                     <View style={styles.glyph}>
                       <TermMark mark={e.mark} size={18} />
@@ -129,32 +139,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.sm,
     paddingHorizontal: spacing.lg,
-    height: 48,
+    height: 56,
     borderRadius: radii.pill,
-    backgroundColor: surface.sheet,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
+    backgroundColor: surface.raised,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    borderBottomWidth: depth.sm + 1,
+    borderBottomColor: surface.slab,
     marginBottom: spacing.sm,
   },
   input: {
     flex: 1,
+    alignSelf: "stretch",
     color: colors.text.primary,
     fontFamily: fonts.sans,
-    fontSize: 15,
+    fontSize: typography.body.fontSize,
+  },
+  cameo: {
+    marginTop: spacing.sm,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
+    minHeight: 64,
     padding: spacing.lg,
   },
   glyph: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: surface.sheet,
-    borderWidth: 1,
-    borderColor: colors.border.hairline,
+    width: 40,
+    height: 40,
+    borderRadius: radii.pill,
+    backgroundColor: palette.star.soft,
     alignItems: "center",
     justifyContent: "center",
   },
