@@ -1,6 +1,8 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../../../generated/prisma';
+// The `prisma-client` generator writes no index file; import client.ts directly
+// (a fresh `prisma generate`, as in Docker/Railway, has nothing else to resolve).
+import { PrismaClient } from '../../../generated/prisma/client';
 
 @Injectable()
 export class PrismaService
