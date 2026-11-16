@@ -8,6 +8,7 @@ import { JourneyService } from './journey.service';
 import { MoodService } from './mood.service';
 import { LetterService } from './letter.service';
 import { MoodCheckInDto } from './dto/plan.dto';
+import { SkyMomentsService } from './sky-moments.service';
 
 const locale = (v?: string): Locale => (v === 'tr' ? 'tr' : 'en');
 
@@ -15,12 +16,26 @@ const locale = (v?: string): Locale => (v === 'tr' ? 'tr' : 'en');
 @ApiBearerAuth()
 @Controller('plan')
 export class PlanController {
-  constructor(private readonly plan: PlanService) {}
+  constructor(
+    private readonly plan: PlanService,
+    private readonly moments: SkyMomentsService,
+  ) {}
 
   @Get('today')
   @ApiOperation({ summary: "Today's personal sky plan from the natal chart and today's transits (no AI)" })
   today(@DeviceId() deviceId: string) {
     return this.plan.today(deviceId);
+  }
+
+  @Get('moments')
+  @ApiOperation({
+    summary:
+      'Key personal sky moments (returns, stations on natal points, eclipses on the chart, slow transits), ranked. No AI.',
+  })
+  @ApiQuery({ name: 'from', required: false, description: 'YYYY-MM-DD, default today − 30 days' })
+  @ApiQuery({ name: 'to', required: false, description: 'YYYY-MM-DD, default today + 365 days (max range 3 years)' })
+  skyMoments(@DeviceId() deviceId: string, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.moments.forDevice(deviceId, from, to);
   }
 }
 
