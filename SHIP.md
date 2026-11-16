@@ -62,7 +62,7 @@ Dogrulama: scratch API + PGlite + sahte Anthropic ile 17/17 e2e + 4 OTP kontrolu
 1. Railway: proje + Postgres + yukaridaki env, repo baglaninca `railway.json` kullanilir; `/api/v1/health/ready` yesil.
 2. `cd apps/mobile && eas init` (projectId), `eas env:create --environment production --name EXPO_PUBLIC_API_URL --value https://<railway-domain>` (`/api/v1` EKLEME - istemci ekliyor).
 3. Apple Developer: App ID `com.astroflow.app` + App Store Connect kaydi, `eas.json` submit alanlari (`appleId`, `ascAppId`, `appleTeamId`).
-4. getastroflow.com yayinda (apps/web, Vercel) - gizlilik URL'si harici TestFlight icin zorunlu.
+4. Site yayinda: https://astroflow-web.vercel.app (apps/web statik cikti, Vercel CLI ile `vercel deploy --prod`); getastroflow.com alininca EXPO_PUBLIC_SITE_URL ve ship.config.json URL'leri ona cevrilir. Gizlilik URL'si harici TestFlight icin zorunlu.
 5. App Store Connect: App Privacy beyani (bkz. ship.config.json), TestFlight Test Information.
 6. Commit, `eas build -p ios --profile production`, `eas submit -p ios`.
 
@@ -82,7 +82,7 @@ dogum haritasi **astro.com ile karsilastirilmali**; en az bir sira disi durum
 |---|---|
 | Apple Developer / Google Play hesaplari | ☐ |
 | Gizlilik + destek URL yayinda | ☐ |
-| `ship.config.json` URL alanlari dolduruldu | ✅ (getastroflow.com, site yayinda olmali) |
+| `ship.config.json` URL alanlari dolduruldu | ✅ (astroflow-web.vercel.app, yayinda) |
 | Mock katmani release build disinda, gercek API bagli | ✅ (API URL EAS env ile verilecek) |
 | Odeme SDK entegre, sandbox'ta satin alma calisti | ☐ |
 | Sentry kuruldu | ◐ kod hazir; DSN + EAS SENTRY_AUTH_TOKEN bekleniyor |

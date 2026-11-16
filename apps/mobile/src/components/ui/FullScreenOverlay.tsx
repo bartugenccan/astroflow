@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { BackHandler, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
+import Animated, { Easing, FadeIn, FadeOut, SlideInDown, SlideOutDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackButton } from "./BackButton";
 import { AppText } from "./AppText";
@@ -19,7 +19,7 @@ interface FullScreenOverlayProps {
  * A full-screen page that rises over the current screen and keeps it alive
  * underneath: for flows that need a callback when they finish (paywall,
  * account) but are too big for a sheet. Closes with ✕ or the Android back
- * button. Slides up on a spring; under Reduce Motion it fades.
+ * button. Slides up on an ease-out curve (no overshoot); under Reduce Motion it fades.
  */
 export function FullScreenOverlay({ visible, onClose, title, children }: FullScreenOverlayProps) {
   const insets = useSafeAreaInsets();
@@ -43,7 +43,13 @@ export function FullScreenOverlay({ visible, onClose, title, children }: FullScr
   if (!visible) return null;
   return (
     <Animated.View
-      entering={reduced ? FadeIn.duration(motion.duration.fast) : SlideInDown.springify().damping(22).stiffness(180)}
+      // A full-screen page travels the whole screen height, so even a 1% spring
+      // overshoot reads as the page flying past the top: ease out on a curve instead.
+      entering={
+        reduced
+          ? FadeIn.duration(motion.duration.fast)
+          : SlideInDown.duration(motion.duration.base + 60).easing(Easing.out(Easing.cubic))
+      }
       exiting={reduced ? FadeOut.duration(motion.duration.fast) : SlideOutDown.duration(motion.duration.exit)}
       style={[styles.overlay, { paddingTop: insets.top }]}
       accessibilityViewIsModal

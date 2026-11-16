@@ -73,6 +73,11 @@ export interface ReminderSettings {
    * before it existed still read as "off".
    */
   practice369?: boolean;
+  /**
+   * Key sky moments (a station on a natal point, an exact pass, an eclipse on
+   * the chart): the day before, at 10:00. Optional for older saved settings.
+   */
+  skyMoments?: boolean;
 }
 
 export const DEFAULT_REMINDERS: ReminderSettings = {
@@ -81,6 +86,7 @@ export const DEFAULT_REMINDERS: ReminderSettings = {
   minute: 0,
   intention: false,
   practice369: false,
+  skyMoments: false,
 };
 
 /** How many distinct saved people can be viewed before Premium is required. */

@@ -217,6 +217,8 @@ export class InterpretationService {
     deviceId: string,
     locale: Locale,
     date: string,
+    /** Key personal sky moments active today, as short fact lines (may be empty). */
+    keyMoments: string[] = [],
   ): Promise<DailyInsight> {
     const energyState = this.energyStateFromTransits(transits);
     return this.cached<DailyInsight>(
@@ -231,7 +233,7 @@ export class InterpretationService {
           const lines = transits.transits
             .slice(0, 4)
             .map((t) => `${t.transitPlanet} ${t.aspect} ${t.natalPlanet}`);
-          const { user, schemaHint } = dailyInsightPrompt(locale, chart.summary.sunSign, lines);
+          const { user, schemaHint } = dailyInsightPrompt(locale, chart.summary.sunSign, lines, keyMoments);
           const parsed = await this.ai.generateJson<{
             energyState?: string;
             title?: string;

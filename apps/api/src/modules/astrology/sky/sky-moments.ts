@@ -678,6 +678,62 @@ export function rankMoments(moments: SkyMoment[]): SkyMoment[] {
   );
 }
 
+// ─── Prompt lines (daily insight) ───────────────────────────────────────────
+
+/** Moments must clear this bar to be mentioned in the daily insight. */
+const PROMPT_MIN_SALIENCE = 50;
+
+const targetLabel = (t: NatalTarget | null) =>
+  t === 'NorthNode' ? 'North Node' : t === 'SouthNode' ? 'South Node' : (t ?? '');
+
+/** One short, factual English line for the model (the prompt itself is localized). */
+export function momentPromptLine(m: SkyMoment, nowMs: number): string {
+  const d = (iso: string) => iso.slice(0, 10);
+  const next = m.passes.find((p) => Date.parse(p) >= nowMs);
+  const exact = next ? `exact ${d(next)}` : m.passes.length ? `exact was ${d(m.passes[m.passes.length - 1])}` : '';
+  const target = targetLabel(m.target);
+  switch (m.kind) {
+    case 'saturn_return':
+      return `Saturn return season: Saturn is back in its birth sign ${m.detail.sign ?? ''}${exact ? `, ${exact}` : ''} (a ~29-year life cycle)`;
+    case 'jupiter_return':
+      return `Jupiter return${exact ? `, ${exact}` : ''} (12-year growth cycle)`;
+    case 'nodal_return':
+      return `Nodal return${exact ? `, ${exact}` : ''} (~18.6-year direction cycle)`;
+    case 'nodal_reversal':
+      return `Nodal reversal${exact ? `, ${exact}` : ''}`;
+    case 'outer_transit':
+      return `Transiting ${m.planet} ${m.aspect} natal ${target}, a months-long transit${exact ? `, ${exact}` : ''}`;
+    case 'generational':
+      return `${m.planet} ${m.aspect} its natal position, a life-cycle transit at age ${m.detail.age ?? '?'}${exact ? `, ${exact}` : ''}`;
+    case 'station_on_natal':
+      return `${m.planet} stations ${m.detail.stationKind ?? ''} on natal ${target} (${d(m.peak)})`;
+    case 'chart_ruler_station':
+      return `Chart ruler ${m.planet} stations ${m.detail.stationKind ?? ''} (${d(m.peak)})`;
+    case 'eclipse_on_natal':
+      return `${m.detail.eclipseType ?? ''} ${m.planet === 'Sun' ? 'solar' : 'lunar'} eclipse on natal ${target} (${d(m.peak)}; opens a ~6-month chapter)`.trim();
+    case 'lunation_on_natal':
+      return `${m.detail.lunationKind === 'full' ? 'Full' : 'New'} Moon on natal ${target} (${d(m.peak)})`;
+    case 'retrograde_period':
+      return `${m.planet} retrograde ${d(m.start)} to ${d(m.end)}${m.detail.house ? ` in the natal ${m.detail.house}th house` : ''}`;
+    case 'double_retrograde':
+      return `${m.planet} is retrograde now and was retrograde at birth (a soft, reflective note, not a classic technique)`;
+  }
+}
+
+/**
+ * The few moments worth a sentence in today's insight: active today, certain,
+ * above the bar, best first, at most `max`. The soft double-retrograde note
+ * only fills a slot nothing bigger needs.
+ */
+export function promptMomentLines(moments: SkyMoment[], nowMs: number, max = 2): string[] {
+  const active = moments.filter(
+    (m) => m.certainty === 'exact' && Date.parse(m.start) <= nowMs && Date.parse(m.end) >= nowMs,
+  );
+  const strong = rankMoments(active.filter((m) => m.salience >= PROMPT_MIN_SALIENCE));
+  const soft = active.filter((m) => m.kind === 'double_retrograde');
+  return [...strong, ...soft].slice(0, max).map((m) => momentPromptLine(m, nowMs));
+}
+
 /** Where a moment stands relative to now. */
 export function momentStatus(m: SkyMoment, nowMs: number): 'upcoming' | 'active' | 'past' {
   if (nowMs < Date.parse(m.start)) return 'upcoming';

@@ -7,6 +7,7 @@ import { reportsTr } from "./reports.tr";
 import { glossaryTr } from "./glossary.tr";
 import { asterTr, manifestTr } from "./aster.tr";
 import { planTr, moodTr } from "./plan.tr";
+import { momentsTr } from "./moments.tr";
 import { profileUiTr } from "./profile.tr";
 import { practiceTr } from "./practice.tr";
 import { letterTr, skypathTr } from "./skypath.tr";
@@ -481,6 +482,7 @@ export const tr: TranslationShape = {
     reminderTime: "Hatırlatma saati",
     reminderIntention: "Akşam manifest hatırlatıcısı",
     reminder369: "3-6-9 hatırlatıcıları (09:00 · 14:00 · 21:00)",
+    reminderMoments: "Önemli gökyüzü anları (bir gün önce)",
     reminderTimeTitle: "Bana şu saatte hatırlat",
     remindersBlockedTitle: "Bildirimler kapalı",
     remindersBlockedBody: "Hatırlatıcı alabilmek için Ayarlar'dan AstroFlow bildirimlerine izin ver.",
@@ -504,6 +506,9 @@ export const tr: TranslationShape = {
     powerBody: "{{planet}} bugün haritanın o köşesini aydınlatıyor. Küçük bir adım bile sayılır.",
     orbitTitle: "Yörüngen parlıyor",
     orbitBody: "Üst üste {{n}} gün. Devam etmesi için bir anlığına uğra — baskı yok.",
+    momentTomorrowTitle: "Yarın gökyüzünde önemli bir an",
+    momentTodayTitle: "Bugün gökyüzünde önemli bir an",
+    momentBody: "{{title}}. Ne anlama geldiğine birlikte bakalım.",
     s369: {
       morningTitle: "Sabah 3-6-9: 3 satır",
       noonTitle: "Öğlen 3-6-9: 6 satır",
@@ -656,6 +661,7 @@ export const tr: TranslationShape = {
   glossary: glossaryTr,
   aster: asterTr,
   plan: planTr,
+  moments: momentsTr,
   mood: moodTr,
   manifest: manifestTr,
   wish: wishTr,

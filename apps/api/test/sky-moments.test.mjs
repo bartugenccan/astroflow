@@ -22,6 +22,8 @@ import {
   toLongitude,
   rankMoments,
   momentStatus,
+  promptMomentLines,
+  momentPromptLine,
   WEIGHTS,
 } from '../src/modules/astrology/sky/sky-moments.ts';
 
@@ -227,4 +229,40 @@ test('rankMoments: equal salience falls back to the headline kind', () => {
   const m = (kind, salience) => ({ kind, salience, peak: '2027-01-01T00:00:00.000Z' });
   const ranked = rankMoments([m('outer_transit', 100), m('saturn_return', 100)]);
   assert.equal(ranked[0].kind, 'saturn_return');
+});
+
+// ─── Daily insight prompt lines ──────────────────────────────────────────────
+
+test('promptMomentLines: the strongest certain moments of today, at most two, no "possible" ones', () => {
+  const now = at('2026-11-16T12:00:00Z');
+  const moments = run(natalAt(at('1997-09-24T12:00:00Z')));
+  const lines = promptMomentLines(moments, now);
+  assert.ok(lines.length >= 1 && lines.length <= 2, lines.join(' | '));
+  assert.match(lines[0], /^Saturn return season/);
+  assert.match(lines[0], /exact 2027-04-1\d/);
+  // The natal Moon contact is "possible" without a birth time: never stated as fact.
+  assert.ok(!lines.some((l) => /natal Moon/.test(l)), lines.join(' | '));
+});
+
+test('promptMomentLines: the soft double-retrograde note only fills a free slot', () => {
+  const now = at('2026-11-16T12:00:00Z');
+  const moments = run(natalAt(at('1997-09-24T12:00:00Z')));
+  const onlySoft = moments.filter((m) => m.kind === 'double_retrograde');
+  const lines = promptMomentLines(onlySoft, now);
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /not a classic technique/);
+  const withBig = promptMomentLines(moments, now, 1);
+  assert.ok(!/double|retrograde at birth/.test(withBig[0]), withBig[0]);
+});
+
+test('momentPromptLine: a station names the planet, direction, target and day', () => {
+  const line = momentPromptLine(
+    {
+      kind: 'station_on_natal', planet: 'Mercury', target: 'Venus', aspect: 'conjunction',
+      start: '2027-02-06T00:00:00.000Z', peak: '2027-02-09T10:00:00.000Z', end: '2027-02-12T00:00:00.000Z',
+      passes: ['2027-02-09T10:00:00.000Z'], detail: { stationKind: 'retrograde' },
+    },
+    at('2027-02-01T00:00:00Z'),
+  );
+  assert.equal(line, 'Mercury stations retrograde on natal Venus (2027-02-09)');
 });

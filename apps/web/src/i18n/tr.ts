@@ -40,7 +40,7 @@ export const tr: Dict = {
     cardBody:
       'Güzel olanı yüksek sesle söylemek için iyi bir gün. Konuşmalar yumuşar — birinin seninle yarı yolda buluşmasına izin ver.',
     score: 'Günün enerjisi',
-    aster: 'Aster’a sor',
+    aster: 'Aster’e sor',
   },
   trust: [
     'Gerçek gezegen konumlarından hesaplanır',
@@ -96,7 +96,7 @@ export const tr: Dict = {
       {
         icon: 'spark',
         title: 'Niyetler ve olumlamalar',
-        body: 'Küçük bir günlük pratik. Bir niyet belirle, check-in yap ve olumlamalarını kendi sesinle kaydet — kayıtlar telefonunda kalır.',
+        body: 'Küçük bir günlük pratik. Bir manifest yaz, check-in yap ve olumlamalarını kendi sesinle kaydet — kayıtlar telefonunda kalır.',
       },
     ],
   },
@@ -258,7 +258,7 @@ export const tr: Dict = {
           h: 'Neleri topluyoruz',
           p: [
             'Girdiğin doğum bilgileri — tarih, saat ve yer — haritanı hesaplamak için. Okumaların çalışsın ve geri yüklenebilsin diye cihazındaki güvenli depolamada ve sunucumuzda tutulur.',
-            'Uygulamada yazdıkların: Aster’a mesajların, Aster’ın tuttuğu kısa hafıza notları, niyetler ve check-in’ler, tarot soruları, olumlama metinleri, uyum için kaydettiğin kişiler ve eleksiyon aramaları için olay açıklamaları.',
+            'Uygulamada yazdıkların: Aster’e mesajların, Aster’in tuttuğu kısa hafıza notları, manifestler ve check-in’ler, tarot soruları, olumlama metinleri, uyum için kaydettiğin kişiler ve eleksiyon aramaları için olay açıklamaları.',
             'Verilerini ayrı tutmak ve adil kullanım limitlerini uygulamak için anonim bir kurulum kimliği.',
             'Hesap açmayı seçersen: e-posta adresin, Apple ya da Google hesap kimliğin ve bu servislerin paylaştığı ad.',
             'Çökme ve hata raporları (yığın izi, cihaz modeli, işletim sistemi ve uygulama sürümü). Bunlar seninle ilişkilendirilmez; doğum verisi ya da IP adresi içermez.',
@@ -275,7 +275,7 @@ export const tr: Dict = {
         {
           h: 'Yapay zekâ nasıl kullanılıyor',
           p: [
-            'Okumalar ve Aster’ın yanıtları büyük bir dil modeli tarafından yazılır. Modele türetilmiş harita yerleşimlerini, günün transit özetini ve o özellik için yazdığın metni göndeririz — başka hiçbir şey değil. Mevcut sağlayıcılarımız Anthropic (Claude) ve DeepSeek’tir; sunucumuzdan çağrılırlar.',
+            'Okumalar ve Aster’in yanıtları büyük bir dil modeli tarafından yazılır. Modele türetilmiş harita yerleşimlerini, günün transit özetini ve o özellik için yazdığın metni göndeririz — başka hiçbir şey değil. Mevcut sağlayıcılarımız Anthropic (Claude) ve DeepSeek’tir; sunucumuzdan çağrılırlar.',
           ],
         },
         {
@@ -293,7 +293,7 @@ export const tr: Dict = {
         {
           h: 'Seçeneklerin ve hakların',
           p: [
-            'Her şeyi uygulamanın içinden sil: Profil → Verilerimi sil. Sohbetlerin, notların, niyetlerin, kayıtlı kişilerin, okumaların ve hesabın silinir; hesaba bağlı tüm cihazların oturumu kapatılır.',
+            'Her şeyi uygulamanın içinden sil: Profil → Verilerimi sil. Sohbetlerin, notların, manifestlerin, kayıtlı kişilerin, okumaların ve hesabın silinir; hesaba bağlı tüm cihazların oturumu kapatılır.',
             'Verilerine erişmek, düzeltmek, dışa aktarmak ya da bekleme listesinden çıkmak için bize e-posta gönder. KVKK ve GDPR kapsamında işlemeye itiraz etme ve veri koruma otoritesine şikâyette bulunma hakkın da vardır.',
           ],
         },
@@ -322,7 +322,7 @@ export const tr: Dict = {
         {
           h: 'Yapay zekâ ile üretilen içerik',
           p: [
-            'Okumalar ve Aster’ın yanıtları, hesaplanmış harita verisinden yapay zekâ ile üretilir. Yanlış, eksik ya da uygunsuz olabilirler. Kendi muhakemeni kullan.',
+            'Okumalar ve Aster’in yanıtları, hesaplanmış harita verisinden yapay zekâ ile üretilir. Yanlış, eksik ya da uygunsuz olabilirler. Kendi muhakemeni kullan.',
           ],
         },
         {

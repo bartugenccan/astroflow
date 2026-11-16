@@ -36,8 +36,9 @@ export const PREMIUM_BETA = (process.env.EXPO_PUBLIC_PREMIUM_BETA ?? "true") !==
 /**
  * Public website with the privacy policy, terms and support pages
  * (apps/web, one page per language: /{locale}/privacy, /terms, /support).
+ * Served from Vercel until the getastroflow.com domain exists (F25).
  */
-const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL ?? "https://getastroflow.com").trim().replace(/\/+$/, "");
+const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL ?? "https://astroflow-web.vercel.app").trim().replace(/\/+$/, "");
 
 export type LegalPage = "privacy" | "terms" | "support";
 

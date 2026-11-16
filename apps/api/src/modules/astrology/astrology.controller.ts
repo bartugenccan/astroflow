@@ -6,6 +6,7 @@ import {
   Delete,
   ForbiddenException,
   Get,
+  Logger,
   Param,
   ParseUUIDPipe,
   Post,
@@ -37,6 +38,8 @@ import { LifeArea } from './astrology.constants';
 import { Locale } from './interpretation.types';
 import { MascotService } from '../mascot/mascot.service';
 import { AiRoute } from '../../common/auth/route-tags';
+import { SkyMomentsEngine } from './sky/sky-moments.engine';
+import { promptMomentLines } from './sky/sky-moments';
 
 /**
  * Plain-language stand-ins for the houses, used to ground the year-ahead prompt
@@ -64,6 +67,8 @@ const HOUSE_THEME_HINT: Record<number, string> = {
 @ApiBearerAuth()
 @Controller('astrology')
 export class AstrologyController {
+  private readonly logger = new Logger(AstrologyController.name);
+
   constructor(
     private readonly adapter: AstrologyAdapterService,
     private readonly interpretation: InterpretationService,
@@ -73,6 +78,7 @@ export class AstrologyController {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     private readonly mascot: MascotService,
+    private readonly skyMoments: SkyMomentsEngine,
   ) {}
 
   @Post('natal')
@@ -209,7 +215,14 @@ export class AstrologyController {
     );
     // The user's local day, so the cached insight and the SKY_READ award agree.
     const date = localToday();
-    const insight = await this.interpretation.getDailyInsight(chart, transits, deviceId, this.locale(locale), date);
+    const insight = await this.interpretation.getDailyInsight(
+      chart,
+      transits,
+      deviceId,
+      this.locale(locale),
+      date,
+      this.keyMomentLines(dto, chart, date),
+    );
     // Reading today's sky feeds Aster (once per local day; never blocks the reading).
     await this.mascot.awardSafely(deviceId, 'SKY_READ');
     return insight;
@@ -508,6 +521,27 @@ export class AstrologyController {
 
   private hash(input: string): string {
     return createHash('sha256').update(input).digest('hex');
+  }
+
+  /**
+   * Today's key personal sky moments as short facts for the insight prompt.
+   * Shares the engine's daily sky cache with GET /plan/moments; a failure only
+   * means the insight is written without them.
+   */
+  private keyMomentLines(dto: BirthInputDto, chart: NatalChartData, today: string): string[] {
+    try {
+      const moments = this.skyMoments.moments({
+        chart,
+        birthDate: dto.birthDate,
+        birthTime: dto.unknownTime ? '12:00' : dto.birthTime,
+        unknownTime: !!dto.unknownTime,
+        ...SkyMomentsEngine.defaultRange(today),
+      });
+      return promptMomentLines(moments, Date.now());
+    } catch (err) {
+      this.logger.warn(`key moments for insight failed: ${err instanceof Error ? err.message : String(err)}`);
+      return [];
+    }
   }
 
   private compute(dto: BirthInputDto): NatalChartData {

@@ -26,6 +26,9 @@ import { JourneySheet } from "../aster/JourneyDiscovery";
 import { AsterHero } from "./AsterHero";
 import { SkyCheckInCard } from "./SkyCheckInCard";
 import { TodayQuests } from "./TodayQuests";
+import { SkyMomentCard } from "./SkyMomentCard";
+import { visibleMoments } from "./momentCopy";
+import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
 
 function greetingKey():
   | "today.greetingMorning"
@@ -65,10 +68,22 @@ export function TodayScreen() {
   const planError = usePlanStore((s) => s.error);
   const refreshPlan = usePlanStore((s) => s.refresh);
   const offerProtect = useAccountPromptStore((s) => s.offer);
+  const moments = useSkyMomentsStore((s) => s.data);
+  const loadMoments = useSkyMomentsStore((s) => s.load);
 
   const reloadPlan = useCallback(() => {
     if (dto) refreshPlan(dto);
   }, [dto, refreshPlan]);
+
+  // Key sky moments change day to day: the store fetches once per local day,
+  // after first paint so it never competes with the plan and the reading.
+  useEffect(() => {
+    if (!dto) return;
+    const task = runAfterInteractions(() => {
+      loadMoments(dto);
+    });
+    return () => task.cancel();
+  }, [dto, loadMoments]);
 
   // The plan follows the server's view of mood and wishes: reload on every
   // focus — after the tab has eased in, so the re-render misses the animation.
@@ -182,8 +197,15 @@ export function TodayScreen() {
           />
         </EnterView>
 
-        {/* 3 — The day's reading, short; the whole of it and the sky are a tap away. */}
-        <EnterView index={3} style={styles.readingWrap}>
+        {/* 3 — A key moment in the user's own sky (returns, stations, eclipses…), when there is one. */}
+        {moments && visibleMoments(moments.moments).length ? (
+          <EnterView index={3}>
+            <SkyMomentCard moments={moments.moments} />
+          </EnterView>
+        ) : null}
+
+        {/* 4 — The day's reading, short; the whole of it and the sky are a tap away. */}
+        <EnterView index={4} style={styles.readingWrap}>
           {failed && !insight ? (
             <ChunkyCard style={styles.reading}>
               <StateView

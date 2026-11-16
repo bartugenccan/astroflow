@@ -10,6 +10,7 @@ import { InterpretationService } from './interpretation.service';
 import { SynastryService } from './synastry.service';
 import { SolarReturnService } from './solar-return.service';
 import { TransitTimelineService } from './transit-timeline.service';
+import { SkyMomentsEngine } from './sky/sky-moments.engine';
 import { AIModule } from '../ai/ai.module';
 import { DeviceEntitlementService } from '../../common/device/device-entitlement.service';
 
@@ -27,8 +28,10 @@ import { DeviceEntitlementService } from '../../common/device/device-entitlement
     SolarReturnService,
     TransitTimelineService,
     DeviceEntitlementService,
+    SkyMomentsEngine,
   ],
   exports: [
+    SkyMomentsEngine,
     AstrologyService,
     AstrologyEngine,
     AIInsightEngine,

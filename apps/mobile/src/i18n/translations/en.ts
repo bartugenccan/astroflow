@@ -7,6 +7,7 @@ import { reportsEn } from "./reports.en";
 import { glossaryEn } from "./glossary.en";
 import { asterEn, manifestEn } from "./aster.en";
 import { planEn, moodEn } from "./plan.en";
+import { momentsEn } from "./moments.en";
 import { profileUiEn } from "./profile.en";
 import { practiceEn } from "./practice.en";
 import { letterEn, skypathEn } from "./skypath.en";
@@ -478,6 +479,7 @@ export const en = {
     reminderTime: "Reminder time",
     reminderIntention: "Evening manifestation reminder",
     reminder369: "3-6-9 reminders (09:00 · 14:00 · 21:00)",
+    reminderMoments: "Key sky moments (the day before)",
     reminderTimeTitle: "Remind me at",
     remindersBlockedTitle: "Notifications are off",
     remindersBlockedBody: "Allow notifications for AstroFlow in Settings to get reminders.",
@@ -501,6 +503,9 @@ export const en = {
     powerBody: "{{planet}} is lighting up that part of your chart today. One small step counts.",
     orbitTitle: "Your orbit is glowing",
     orbitBody: "{{n}} days in a row. Pop in for a moment to keep it going — no pressure.",
+    momentTomorrowTitle: "Tomorrow: a key moment in your sky",
+    momentTodayTitle: "Today: a key moment in your sky",
+    momentBody: "{{title}}. Let's look at what it means together.",
     s369: {
       morningTitle: "Morning 3-6-9: 3 lines",
       noonTitle: "Noon 3-6-9: 6 lines",
@@ -653,6 +658,7 @@ export const en = {
   glossary: glossaryEn,
   aster: asterEn,
   plan: planEn,
+  moments: momentsEn,
   mood: moodEn,
   manifest: manifestEn,
   wish: wishEn,

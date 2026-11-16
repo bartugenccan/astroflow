@@ -12,6 +12,7 @@ import { wipeAllLocalData } from "../dataWipe";
 import { startVaultSync, syncVaultNow } from "../vaultSync";
 import { useMascotStore } from "../../store/useMascotStore";
 import { usePlanStore } from "../../store/usePlanStore";
+import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
 import type { AccountInfo, AuthProviderId, BirthProfileResponse, LinkResult, SavedProfile } from "../types";
 
 /**
@@ -158,6 +159,7 @@ async function finish(result: LinkResult): Promise<LinkResult> {
   store.setAccount(result.account);
   // The account now holds Aster, the plan and (from here on) the notes backup.
   usePlanStore.getState().reset();
+  useSkyMomentsStore.getState().reset();
   const mascot = useMascotStore.getState();
   void mascot.refresh();
   if (result.mascot && result.mascot.stardustGained > 0) {

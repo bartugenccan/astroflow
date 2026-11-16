@@ -6,6 +6,13 @@
  */
 export const profileUiEn = {
   profile: {
+    premiumBetaRow: "Premium · free in beta",
+    premiumBetaA11y: "Premium is free during the beta. Opens what's included.",
+    premiumBetaTitle: "Premium beta",
+    premiumBetaBody: "During the beta every Premium feature is open to you, for free. You don't need to do anything.",
+    premiumBetaIncluded: "What's included",
+    premiumBetaPromise: "When the paid version arrives, we'll tell you clearly before anything costs money. Nothing will start charging on its own.",
+    premiumBetaOk: "Got it",
     premiumTitle: "Premium",
     premiumSub: "Unlimited tarot and Aster, monthly forecast, every compatibility report",
     dataTitle: "My data",

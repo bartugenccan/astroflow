@@ -5,6 +5,7 @@ import * as Notifications from "expo-notifications";
 import { useAppStore } from "../../store/useAppStore";
 import { useMascotStore } from "../../store/useMascotStore";
 import { usePlanStore } from "../../store/usePlanStore";
+import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
 import { useReflectionStore } from "../../store/useReflectionStore";
 import { localDay } from "../../store/useAffirmationStore";
 import { reminderRoute, syncReminders } from "../../services/notifications";
@@ -14,8 +15,9 @@ const DEBOUNCE_MS = 1500;
 
 /**
  * Keeps the device's scheduled reminders in step with the settings, the
- * language, Aster's day (what's done, the orbit, a journey, a rest) and the
- * personal plan — and opens the right screen when a reminder is tapped.
+ * language, Aster's day (what's done, the orbit, a journey, a rest), the
+ * personal plan and the key sky moments — and opens the right screen when a
+ * reminder is tapped.
  * Renders nothing; mounted once the user has onboarded.
  */
 export function ReminderBridge() {
@@ -24,6 +26,7 @@ export function ReminderBridge() {
   const locale = useAppStore((s) => s.locale);
   const mascot = useMascotStore((s) => s.state);
   const plan = usePlanStore((s) => s.plan);
+  const moments = useSkyMomentsStore((s) => s.data?.moments);
   // Today's practice: a 3-6-9 session already written isn't reminded again.
   const practice = useReflectionStore((s) => s.practice[localDay()]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -31,12 +34,12 @@ export function ReminderBridge() {
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      syncReminders({ settings: reminders, locale, mascot, plan, practice }).catch(() => undefined);
+      syncReminders({ settings: reminders, locale, mascot, plan, practice, moments }).catch(() => undefined);
     }, DEBOUNCE_MS);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [reminders, locale, mascot, plan, practice]);
+  }, [reminders, locale, mascot, plan, practice, moments]);
 
   // A new day may have started while the app slept: re-plan on return.
   useEffect(() => {

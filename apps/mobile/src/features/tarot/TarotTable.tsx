@@ -642,7 +642,9 @@ const FanCard = React.memo(function FanCard({ index, g, mode, slot, spin, focuse
 
   useEffect(() => {
     if (drawn) return;
-    const spring = motion.spring.snappy;
+    // Cards travel across the table: the low-overshoot travel spring, not the
+    // press spring (ζ 0.52 sent each card ~15% past the pile and back).
+    const spring = motion.spring.mystic;
     if (mode === "stack") {
       x.value = withSpring(pileX, spring);
       y.value = withSpring(pileY, spring);

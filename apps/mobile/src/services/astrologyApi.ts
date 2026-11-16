@@ -50,7 +50,9 @@ import {
   TransitDetail,
   TransitOverview,
   YearAhead,
+  SkyMomentsResponse,
 } from "./types";
+import { mockSkyMoments } from "./mock/skyMoments";
 import { mockAward, mockResetMascot, mockTodayMood } from "./mascotApi";
 import { buildPlan, focusAreaOf, weekStrip, type PlanTransit } from "../lib/planRules";
 import { LIFE_AREA_HOUSES, intentionStats, starState, visiblePowerDays } from "../lib/intentionRules";
@@ -205,6 +207,8 @@ export interface AstrologyApi {
 
   // Personal sky plan (built on the server from the stored chart; the dto feeds the mock).
   getTodayPlan(dto: CreateBirthProfileDto): Promise<DailyPlan>;
+  /** Key personal sky moments, ranked (server reads the stored chart; the dto feeds the mock). */
+  getSkyMoments(dto: CreateBirthProfileDto): Promise<SkyMomentsResponse>;
   getIntentionSuggestions(
     dto: CreateBirthProfileDto,
     locale: Locale,
@@ -596,6 +600,11 @@ const mockAstrologyApi: AstrologyApi = {
       mood: mockTodayMood(),
       lunar: lunar ? { phase: lunar.phase, peakDate: lunar.peakDate } : null,
     });
+  },
+
+  async getSkyMoments(dto) {
+    await delay();
+    return mockSkyMoments(dto, new Date());
   },
 
   async getIntention(id) {

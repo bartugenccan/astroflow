@@ -364,16 +364,24 @@ export const shadows = {
  *   pop    — a reward, a tick, a star appearing (small overshoot)
  *   sheet  — sheets and panels sliding in
  * Exits are faster than entrances (`duration.exit`), and nothing decorative loops.
+ *
+ * Overshoot is budgeted by distance: anything that travels far (sheets,
+ * full-screen pages, cards across the table) settles without passing its
+ * target; only small scale pops may overshoot, and modestly. Damping ratio
+ * ζ = damping / (2·√(stiffness·mass)); the % is the first overshoot.
  */
 const springs = {
+  /** ζ 0.82, ~1% — blocks arriving. */
   gentle: { damping: 18, stiffness: 120, mass: 1 },
+  /** ζ 0.52, ~15% of a few px — presses only. */
   snappy: { damping: 14, stiffness: 260, mass: 0.7 },
   slow: { damping: 24, stiffness: 80, mass: 1.2 },
-  mystic: { damping: 15, stiffness: 150, mass: 1.1 },
-  /** Overshooting pop — counters, mascot cheer. */
-  bouncy: { damping: 8, stiffness: 220, mass: 0.8 },
-  /** Squash & stretch recovery. */
-  squash: { damping: 6, stiffness: 300, mass: 0.6 },
+  /** ζ 0.82, ~1% — large moves (tarot cards, reveals). Was ζ 0.58 (~11%). */
+  mystic: { damping: 21, stiffness: 150, mass: 1.1 },
+  /** ζ 0.45, ~20% of a small scale — counters, the wordmark. Was ζ 0.30 (~37%). */
+  bouncy: { damping: 12, stiffness: 220, mass: 0.8 },
+  /** ζ 0.34, ~32% of a small scale — Aster's squash & stretch recovery. Was ζ 0.22 (~49%). */
+  squash: { damping: 9, stiffness: 300, mass: 0.6 },
 } as const;
 
 export const motion = {
@@ -381,8 +389,10 @@ export const motion = {
     ...springs,
     press: springs.snappy,
     enter: springs.gentle,
-    pop: { damping: 12, stiffness: 220, mass: 0.8 },
-    sheet: springs.mystic,
+    /** ζ 0.57, ~11% of a small scale — a tick, a star. Was ζ 0.45 (~20%). */
+    pop: { damping: 15, stiffness: 220, mass: 0.8 },
+    /** ζ 0.88, no visible overshoot — a sheet must land, not bounce past its edge. */
+    sheet: { damping: 26, stiffness: 220, mass: 1 },
   },
   duration: {
     fast: 160,

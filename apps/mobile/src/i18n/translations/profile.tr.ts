@@ -2,6 +2,13 @@ import type { profileUiEn } from "./profile.en";
 
 export const profileUiTr: typeof profileUiEn = {
   profile: {
+    premiumBetaRow: "Premium · Beta'da ücretsiz",
+    premiumBetaA11y: "Premium beta boyunca ücretsiz. Neleri kapsadığını açar.",
+    premiumBetaTitle: "Premium beta",
+    premiumBetaBody: "Beta boyunca tüm Premium özellikler sana açık, ücretsiz. Senin bir şey yapmana gerek yok.",
+    premiumBetaIncluded: "Neler dahil",
+    premiumBetaPromise: "Ücretli sürüm geldiğinde, herhangi bir şey ücretli olmadan önce sana açıkça haber vereceğiz. Hiçbir şey kendiliğinden ücretlendirilmeye başlamaz.",
+    premiumBetaOk: "Anladım",
     premiumTitle: "Premium",
     premiumSub: "Sınırsız tarot ve Aster, aylık öngörü, tüm uyum raporları",
     dataTitle: "Verilerim",

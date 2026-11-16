@@ -4,7 +4,7 @@ import { useAppStore, type ReminderSettings } from "../../store/useAppStore";
 import { requestReminderPermission } from "../../services/notifications";
 import { useTranslation } from "../../i18n";
 
-export type ReminderKind = "daily" | "intention" | "practice369";
+export type ReminderKind = "daily" | "intention" | "practice369" | "skyMoments";
 
 /**
  * Turning a reminder on asks for notification permission first; a blocked

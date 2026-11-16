@@ -1180,3 +1180,77 @@ export interface MascotEventResult {
   delta: MascotDelta;
   state: MascotState;
 }
+
+// ─── Key sky moments (GET /plan/moments) — mirrors apps/api sky-moments.ts ───
+
+export type SkyMomentKind =
+  | "saturn_return"
+  | "jupiter_return"
+  | "nodal_return"
+  | "nodal_reversal"
+  | "outer_transit"
+  | "generational"
+  | "station_on_natal"
+  | "chart_ruler_station"
+  | "eclipse_on_natal"
+  | "lunation_on_natal"
+  | "retrograde_period"
+  | "double_retrograde";
+
+export type SkyMomentTarget =
+  | "Sun"
+  | "Moon"
+  | "Mercury"
+  | "Venus"
+  | "Mars"
+  | "Jupiter"
+  | "Saturn"
+  | "Uranus"
+  | "Neptune"
+  | "Pluto"
+  | "Ascendant"
+  | "Midheaven"
+  | "NorthNode"
+  | "SouthNode";
+
+export interface SkyMoment {
+  id: string;
+  kind: SkyMomentKind;
+  planet: string;
+  target: SkyMomentTarget | null;
+  aspect: "conjunction" | "square" | "opposition" | null;
+  /** ISO instants. */
+  start: string;
+  peak: string;
+  end: string;
+  passes: string[];
+  orb: number;
+  /** 0–100, the server's ranking (a product synthesis, not an astrological standard). */
+  salience: number;
+  personal: boolean;
+  needsBirthTime: boolean;
+  /** "possible" when the natal Moon is involved but the birth time is unknown. */
+  certainty: "exact" | "possible";
+  openEnded: boolean;
+  status: "upcoming" | "active" | "past";
+  detail: {
+    stationKind?: "retrograde" | "direct";
+    eclipseType?: string;
+    lunationKind?: "new" | "full";
+    sign?: string;
+    degree?: number;
+    house?: number;
+    age?: number;
+    cycle?: number;
+    seasonStart?: string;
+    seasonEnd?: string;
+  };
+}
+
+export interface SkyMomentsResponse {
+  from: string;
+  to: string;
+  unknownTime: boolean;
+  /** Ranked: highest salience first. */
+  moments: SkyMoment[];
+}

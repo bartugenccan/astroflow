@@ -21,6 +21,7 @@ import {
   HouseInterpretation,
   Intention,
   DailyPlan,
+  SkyMomentsResponse,
   LifeAreaContext,
   PowerDays,
   IntentionCheckInHistory,
@@ -288,6 +289,8 @@ export const httpAstrologyApi: AstrologyApi = {
   },
 
   getTodayPlan: () => request<DailyPlan>("GET", "plan/today"),
+
+  getSkyMoments: () => request<SkyMomentsResponse>("GET", "plan/moments"),
 
   getIntention: (id) => request<Intention>("GET", `intentions/${encodeURIComponent(id)}`),
 

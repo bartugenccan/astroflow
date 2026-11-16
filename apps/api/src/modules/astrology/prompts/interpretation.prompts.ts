@@ -85,12 +85,23 @@ export function dailyInsightPrompt(
   locale: Locale,
   sun: string,
   topTransits: string[],
+  /** Key personal sky moments active today (computed facts, see sky-moments.ts); at most two. */
+  keyMoments: string[] = [],
 ): { user: string; schemaHint: string } {
   const transitLine = topTransits.slice(0, 4).join('; ') || 'a calm sky';
+  const moments = keyMoments
+    .slice(0, 2)
+    .map((m, i) => `${i + 1}) ${m}`)
+    .join('; ');
+  const momentLine = !moments
+    ? ''
+    : locale === 'tr'
+      ? ` Bu dönemin kişisel önemli gökyüzü anları (önem sırasıyla, hesaplanmış gerçekler): ${moments}. Özette 1 numaralı anı mutlaka, bugünle bağını kurarak tek cümleyle doğal biçimde an (transit listesinde geçse de geçmese de); gezegen ve burç adlarını Türkçe yaz (Aries → Koç, Saturn → Satürn); tarih uydurma, korku dili ve kesin kehanet kullanma, sağlık ya da ilişki bitişi tahmini yapma.`
+      : ` This period's key personal sky moments (most important first, computed facts): ${moments}. The summary must mention moment 1 naturally in one sentence and tie it to today (whether or not it is among the transits); do not invent dates, avoid fear language and certain predictions, and never predict health issues or breakups.`;
   const user =
     locale === 'tr'
-      ? `Kullanıcının Güneş burcu ${sun}. Bugünkü öne çıkan transitler: ${transitLine}. Bugüne dair pratik, kaderci olmayan bir rehberlik yaz. JSON alanları: energyState (HARMONY|MOMENTUM|STRESS|OVERLOAD), title (kısa başlık), summary (2-3 cümle).`
-      : `The user's Sun sign is ${sun}. Today's notable transits: ${transitLine}. Write practical, non-fatalistic guidance for today. JSON fields: energyState (HARMONY|MOMENTUM|STRESS|OVERLOAD), title (short), summary (2-3 sentences).`;
+      ? `Kullanıcının Güneş burcu ${sun}. Bugünkü öne çıkan transitler: ${transitLine}.${momentLine} Bugüne dair pratik, kaderci olmayan bir rehberlik yaz; "niyet" ya da "dilek" yerine "manifest" de. JSON alanları: energyState (HARMONY|MOMENTUM|STRESS|OVERLOAD), title (kısa başlık), summary (2-3 cümle).`
+      : `The user's Sun sign is ${sun}. Today's notable transits: ${transitLine}.${momentLine} Write practical, non-fatalistic guidance for today. JSON fields: energyState (HARMONY|MOMENTUM|STRESS|OVERLOAD), title (short), summary (2-3 sentences).`;
   return {
     user,
     schemaHint: '{ "energyState": "HARMONY"|"MOMENTUM"|"STRESS"|"OVERLOAD", "title": string, "summary": string }',

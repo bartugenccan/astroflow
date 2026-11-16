@@ -28,7 +28,8 @@ import { colors, palette, radii, spacing, type Tone } from "../../lib/design-sys
 import { Disclosure } from "../../components/ui/Disclosure";
 import { GoldToggle } from "../../components/ui/GoldToggle";
 import { ReminderTimeSheet } from "./ReminderTimeSheet";
-import { legalUrl, type LegalPage } from "../../services/config";
+import { PREMIUM_BETA, legalUrl, type LegalPage } from "../../services/config";
+import { PremiumBetaSheet } from "./PremiumBetaSheet";
 import { asterA11y, stageName } from "../aster/asterCopy";
 import type { TranslationKey } from "../../i18n";
 import type { AccountInfo, AuthProviderId } from "../../services/types";
@@ -65,6 +66,7 @@ export function ProfileScreen() {
 
   const account = useAppStore((s) => s.account);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [premiumOpen, setPremiumOpen] = useState(false);
 
   // The link may have changed on another phone (method added/removed, account deleted).
   useEffect(() => {
@@ -324,7 +326,37 @@ export function ProfileScreen() {
                 accessibilityLabel={t("profile.reminder369")}
               />
             </View>
-            {isPremium ? (
+            <View style={styles.sep} />
+            <View style={styles.settingRow}>
+              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                {t("profile.reminderMoments")}
+              </AppText>
+              <GoldToggle
+                value={!!reminders.skyMoments}
+                onChange={(on) => toggleReminder("skyMoments", on)}
+                accessibilityLabel={t("profile.reminderMoments")}
+              />
+            </View>
+            {isPremium && PREMIUM_BETA ? (
+              <>
+                <View style={styles.sep} />
+                {/* F15: in the beta "Premium" is explained, not a silent badge. */}
+                <PressableScale
+                  onPress={() => setPremiumOpen(true)}
+                  scaleTo={0.98}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("profileUi.profile.premiumBetaA11y")}
+                >
+                  <View style={styles.settingRow}>
+                    <Ionicons name="sparkles" size={18} color={palette.star.face} />
+                    <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                      {t("profileUi.profile.premiumBetaRow")}
+                    </AppText>
+                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+                  </View>
+                </PressableScale>
+              </>
+            ) : isPremium ? (
               <>
                 <View style={styles.sep} />
                 <View style={styles.settingRow}>
@@ -410,6 +442,7 @@ export function ProfileScreen() {
       </ScrollView>
 
       <AccountSheet visible={accountOpen} onClose={() => setAccountOpen(false)} intent="secure" />
+      <PremiumBetaSheet visible={premiumOpen} onClose={() => setPremiumOpen(false)} />
 
       {timeOpen ? (
         <ReminderTimeSheet

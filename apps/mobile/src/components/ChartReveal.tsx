@@ -161,7 +161,7 @@ export function ChartReveal({ onComplete }: Props) {
               opacity: show ? 1 : 0,
               scale: show ? 1 : 0.2,
             }}
-            transition={mt({ type: "spring", damping: 12, stiffness: 200 })}
+            transition={mt({ type: "spring", damping: 18, stiffness: 200 })}
             style={[styles.glyphWrap, { left: x - 11, top: y - 11 }]}
           >
             <Glyph name={name} size={22} color={colors.star[200]} />

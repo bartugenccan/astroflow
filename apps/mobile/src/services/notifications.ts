@@ -1,8 +1,9 @@
 import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
-import { translate, type Locale, type TranslationKey } from "../i18n";
+import { translate, type Locale, type TFunction, type TranslationKey } from "../i18n";
 import type { ReminderSettings } from "../store/useAppStore";
-import type { DailyPlan, MascotState, PracticeDay, PracticeSlot } from "./types";
+import type { DailyPlan, MascotState, PracticeDay, PracticeSlot, SkyMoment } from "./types";
+import { momentTitle } from "../features/today/momentCopy";
 
 /**
  * Local reminders, scheduled on the device. No push token is ever created and
@@ -85,7 +86,50 @@ export interface ReminderContext {
   plan: DailyPlan | null;
   /** Today's practice so far (a 3-6-9 session already written isn't reminded). */
   practice?: PracticeDay;
+  /** The user's key sky moments (GET /plan/moments), ranked. */
+  moments?: SkyMoment[];
   now?: Date;
+}
+
+/** Key-moment reminders: how far ahead, how many at most, and the bar a moment must clear. */
+const MOMENT_HORIZON_DAYS = 14;
+const MOMENT_MAX = 3;
+const MOMENT_MIN_SALIENCE = 50;
+const MOMENT_HOUR = 10;
+
+/**
+ * Pure: a gentle heads-up for the few moments that matter. Only certain,
+ * personal moments above the bar; the day before each exact date at 10:00
+ * (or the morning of the day itself if that has already passed); at most
+ * three, nearest first. Like the other reminders they are re-planned on every
+ * app open, so nothing far ahead piles up.
+ */
+export function planMomentReminders(moments: SkyMoment[], locale: Locale, now: Date): PlannedReminder[] {
+  const nowMs = now.getTime();
+  const horizon = nowMs + MOMENT_HORIZON_DAYS * 86_400_000;
+  const t: TFunction = (key, params) => translate(locale, key, params);
+  const candidates: PlannedReminder[] = [];
+  for (const m of moments) {
+    if (m.certainty !== "exact" || !m.personal || m.salience < MOMENT_MIN_SALIENCE) continue;
+    const exact = m.passes.length ? m.passes : [m.peak];
+    exact.forEach((iso, i) => {
+      const hit = new Date(iso);
+      if (hit.getTime() <= nowMs || hit.getTime() > horizon) return;
+      const dayBefore = at(hit, -1, MOMENT_HOUR, 0);
+      const sameDay = at(hit, 0, MOMENT_HOUR, 0);
+      const when = dayBefore.getTime() > nowMs + 60_000 ? dayBefore : sameDay.getTime() > nowMs + 60_000 ? sameDay : null;
+      if (!when) return;
+      candidates.push({
+        id: `${PREFIX}moment.${m.id.replace(/[^A-Za-z0-9_.-]/g, "_")}.${i}`,
+        at: when,
+        titleKey: when === dayBefore ? "reminders.momentTomorrowTitle" : "reminders.momentTodayTitle",
+        bodyKey: "reminders.momentBody",
+        params: { title: momentTitle(t, m) },
+        route: "/",
+      });
+    });
+  }
+  return candidates.sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, MOMENT_MAX);
 }
 
 export interface PlannedReminder {
@@ -111,6 +155,7 @@ export function planReminders({
   mascot,
   plan,
   practice,
+  moments,
   now = new Date(),
 }: ReminderContext): PlannedReminder[] {
   if (mascot?.eclipse.active) return [];
@@ -191,6 +236,9 @@ export function planReminders({
         route: "/intentions",
       });
     }
+  }
+  if (settings.skyMoments && moments?.length) {
+    out.push(...planMomentReminders(moments, locale, now));
   }
   if (settings.practice369) {
     for (let d = 0; d < DAYS_AHEAD; d++) {
