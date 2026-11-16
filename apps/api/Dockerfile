@@ -28,7 +28,11 @@ CMD ["npx", "prisma", "migrate", "deploy"]
 
 # ---- prod-deps: runtime node_modules without dev tooling --------------------
 FROM build AS prod-deps
-RUN npm prune --omit=dev --workspaces --include-workspace-root
+# npm hoists every API dependency to /app/node_modules, so apps/api/node_modules
+# usually doesn't exist; create it so the runtime COPY below never fails (it only
+# holds something when a version conflict forces a nested install).
+RUN npm prune --omit=dev --workspaces --include-workspace-root \
+  && mkdir -p apps/api/node_modules
 
 # ---- runtime --------------------------------------------------------------
 FROM node:22-slim AS runtime
