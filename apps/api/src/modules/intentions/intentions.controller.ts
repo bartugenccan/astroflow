@@ -43,8 +43,12 @@ export class IntentionsController {
   @Post('affirmation-preview')
   @ApiOperation({ summary: 'Generate the chart-framed affirmation for a wish before planting it' })
   @ApiQuery({ name: 'locale', enum: ['en', 'tr'], required: false })
-  previewAffirmation(@Body() dto: AffirmationPreviewDto, @Query('locale') locale?: string) {
-    return this.intentions.previewAffirmation(dto, this.locale(locale));
+  previewAffirmation(
+    @DeviceId() deviceId: string,
+    @Body() dto: AffirmationPreviewDto,
+    @Query('locale') locale?: string,
+  ) {
+    return this.intentions.previewAffirmation(deviceId, dto, this.locale(locale));
   }
 
   @AiRoute()

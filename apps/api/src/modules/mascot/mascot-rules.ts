@@ -27,6 +27,9 @@ export const MASCOT_EVENT_KINDS = [
   'ACCOUNT_LINKED',
   'SKY_LESSON',
   'SIGN_LOG',
+  'VOICE_RECORD',
+  'SKY_MOMENT',
+  'WELCOME_BACK',
 ] as const;
 
 export type MascotEventKind = (typeof MASCOT_EVENT_KINDS)[number];
@@ -38,6 +41,8 @@ export const CLIENT_EVENT_KINDS: readonly MascotEventKind[] = [
   'MOON_RITUAL',
   'EVENING_REFLECTION',
   'BREATH',
+  'VOICE_RECORD',
+  'SKY_MOMENT',
 ];
 
 interface EventRule {
@@ -76,6 +81,12 @@ export const EVENT_RULES: Record<MascotEventKind, EventRule> = {
   SKY_LESSON: { xp: 20, dailyCap: 2, energy: 15, mode: 'once' },
   // A sign logged on a manifest ("I noticed something").
   SIGN_LOG: { xp: 5, dailyCap: 1, energy: 5, mode: 'slot' },
+  // The affirmation read aloud and recorded (the audio stays on the device).
+  VOICE_RECORD: { xp: 10, dailyCap: 1, energy: 15, mode: 'slot' },
+  // One of "your sky moments" opened and read.
+  SKY_MOMENT: { xp: 5, dailyCap: 1, energy: 10, mode: 'slot' },
+  // A return after days away (refKey = days away). No Işık: the welcome gift is stardust, granted with the orbit.
+  WELCOME_BACK: { xp: 0, stardust: 0, dailyCap: 1, energy: 0, mode: 'ref' },
 };
 
 /** Yıldız Tozu one award of `kind` drops. */
@@ -383,6 +394,77 @@ export function viewOrbit(
   const plan = planStreak({ currentStreak: stored.streak, lastActiveDate: stored.lastDate }, today, shields, pausedDays);
   const streak = countedToday ? stored.streak : plan.effectiveStreak;
   return { streak, best: stored.best, countedToday, atRisk: !countedToday && streak > 0 };
+}
+
+// ─── Gentle longing: Aster misses you, it never punishes ─────────────────────
+
+/**
+ * How Aster feels about the time since you last showed up. It only colours
+ * Aster's words and face; Işık, stage, stardust and the orbit are untouched
+ * (the shield rules above stay the only thing that touches a streak).
+ */
+export type Longing = 'content' | 'misses' | 'longs';
+
+/** Days away from which Aster "misses" you, and from which it "longs" for you. */
+export const LONGING_MISSES_DAYS = 2;
+export const LONGING_LONGS_DAYS = 4;
+
+/**
+ * Days since Aster last saw you (`lastActiveDay` = the orbit's last counted
+ * day). Eclipse days are a chosen rest and don't count as away; a rest that
+ * covers today means Aster is asleep, not missing you. Never-seen, today,
+ * and a clock that went backwards (zone change) are all 0.
+ */
+export function daysAway(
+  lastActiveDay: string | null,
+  today: string,
+  pausedDays: ReadonlySet<string> = new Set(),
+): number {
+  if (!lastActiveDay || pausedDays.has(today)) return 0;
+  const gap = daysBetween(lastActiveDay, today);
+  if (gap <= 0) return 0;
+  let paused = 0;
+  for (let i = 1; i < gap; i++) if (pausedDays.has(shiftDays(lastActiveDay, i))) paused++;
+  return gap - paused;
+}
+
+export function longingFor(away: number): Longing {
+  if (away >= LONGING_LONGS_DAYS) return 'longs';
+  if (away >= LONGING_MISSES_DAYS) return 'misses';
+  return 'content';
+}
+
+/** Stardust amounts for a return that brought a constellation you already have. */
+export const WELCOME_GIFTS = [10, 15, 15, 20, 20, 30] as const;
+
+/** Stable 32-bit FNV-1a hash, so the same return always gives the same gift. */
+function hash(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Two stable rolls in [0, 1) for one return — they pick the constellation
+ * Aster brings back, so a retried award can never pick a different one.
+ */
+export function welcomeRolls(seed: string, today: string): [number, number] {
+  const a = hash(`${seed}|${today}|a`);
+  const b = hash(`${seed}|${today}|b`);
+  return [(a % 10000) / 10000, (b % 10000) / 10000];
+}
+
+/**
+ * The stardust that comes with a return: none when Aster brought a new
+ * constellation (that is the gift), a small variable amount when it brought one
+ * you already have. Never Işık, never bigger for staying away longer.
+ */
+export function welcomeGift(away: number, seed: string, today: string): number {
+  if (longingFor(away) === 'content') return 0;
+  return WELCOME_GIFTS[hash(`${seed}|${today}`) % WELCOME_GIFTS.length];
 }
 
 // ─── Cosmic journey ──────────────────────────────────────────────────────────

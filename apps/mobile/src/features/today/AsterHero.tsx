@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AsterMascot } from "../../components/aster/AsterMascot";
+import { faceLonging } from "../aster/asterCopy";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { AppText } from "../../components/ui/AppText";
 import { SpeechBubble } from "../../components/ui/SpeechBubble";
@@ -251,6 +252,7 @@ export function AsterHero({
           <AsterMascot
             stage={stage}
             mood={resting ? "sleepy" : mood}
+            longing={faceLonging(state)}
             action={asterAction}
             accessories={state?.equipped ?? NO_EQUIPPED}
             size={ASTER_SIZE}

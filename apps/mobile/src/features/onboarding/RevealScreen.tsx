@@ -24,6 +24,7 @@ import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { SpeechBubble } from "../../components/ui/SpeechBubble";
 import { StarDivider } from "../../components/ui/StarDivider";
 import { StateView } from "../../components/ui/StateView";
+import { isConnectionError } from "../../services/httpAstrologyApi";
 import { astrologyApi } from "../../services/astrologyApi";
 import { BirthProfileResponse, CreateBirthProfileDto } from "../../services/types";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
@@ -65,7 +66,8 @@ export function RevealScreen() {
   const setDraftProfile = useOnboardingDraft((s) => s.setProfile);
 
   const [profile, setProfile] = useState<BirthProfileResponse | null>(null);
-  const [failed, setFailed] = useState(false);
+  // Why casting failed decides what Aster says: no connection vs. our server (F3).
+  const [failed, setFailed] = useState<null | "offline" | "server">(null);
   const [revealed, setRevealed] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
@@ -79,14 +81,14 @@ export function RevealScreen() {
       latitude: lat,
       longitude: lon,
     };
-    setFailed(false);
+    setFailed(null);
     astrologyApi
       .saveBirthProfile(dto)
       .then((p) => {
         if (active) setProfile({ ...p, placeName: draft.city?.name, unknownTime: draft.unknownTime });
       })
-      .catch(() => {
-        if (active) setFailed(true);
+      .catch((err: unknown) => {
+        if (active) setFailed(isConnectionError(err) ? "offline" : "server");
       });
     return () => {
       active = false;
@@ -130,8 +132,12 @@ export function RevealScreen() {
               <StateView
                 kind="error"
                 compact
-                message={t("screens.reveal.error")}
+                message={failed === "offline" ? t("screens.reveal.errorOffline") : t("screens.reveal.error")}
+                detail={failed === "offline" ? t("screens.reveal.errorOfflineDetail") : t("screens.reveal.errorServerDetail")}
                 onAction={() => setAttempt((n) => n + 1)}
+                // iOS has no system Back: the way out is on screen.
+                secondaryLabel={t("screens.reveal.back")}
+                onSecondary={() => router.back()}
                 style={styles.below}
               />
             ) : (
@@ -160,6 +166,7 @@ export function RevealScreen() {
                   sunSign={profile.sunSign}
                   moonSign={profile.moonSign}
                   risingSign={profile.risingSign}
+                  risingUnknown={!!profile.unknownTime}
                 />
                 <View style={styles.divider}>
                   <StarDivider />

@@ -50,7 +50,7 @@ export function PowerDaysCalendar({ intentionId, dto }: PowerDaysCalendarProps) 
   let body: React.ReactNode;
   if (data.loading && !data.data) body = <StateView kind="loading" compact />;
   else if (data.error && !data.data)
-    body = <StateView kind="error" compact message={t("wish.detail.powerError")} onAction={data.reload} />;
+    body = <StateView kind="error" compact message={t("wish.detail.powerError")} onAction={data.reload} offline={data.offline} />;
   else
     body = (
       <>

@@ -359,3 +359,22 @@ export function meanNorthNodeAt(ms: number): number {
   const T = (jd - 2451545.0) / 36525;
   return norm360(125.0445479 - 1934.1362891 * T + 0.0020754 * T * T + (T * T * T) / 467441 - (T * T * T * T) / 60616000);
 }
+
+/**
+ * The real birth instant (UTC ms), recovered from the natal Moon: the Moon
+ * moves ~0.5° an hour, so within ±16 hours of the local clock time read as UTC
+ * (any time zone) there is exactly one instant it stands on the chart's
+ * degree. Returns the guess when no crossing is found.
+ */
+export function birthInstantFromMoon(natalMoonLongitude: number, localAsUtcMs: number): number {
+  const f = (ms: number) => signedDiff(longitudeAt('Moon', ms) - natalMoonLongitude);
+  let lo = localAsUtcMs - 16 * 3_600_000;
+  let hi = localAsUtcMs + 16 * 3_600_000;
+  if (!(f(lo) < 0 && f(hi) > 0)) return localAsUtcMs;
+  while (hi - lo > 30_000) {
+    const mid = (lo + hi) / 2;
+    if (f(mid) < 0) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}

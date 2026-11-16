@@ -15,7 +15,7 @@ import { useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
 import type { MascotCatalogItem } from "../../services/types";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { colors, palette, spacing } from "../../lib/design-system";
-import { stageName } from "./asterCopy";
+import { stageName, stageXp } from "./asterCopy";
 import { useMascot } from "./useMascot";
 
 const SLOT_ORDER = ["pass", "head", "neck", "hand", "aura", "shield"] as const;
@@ -167,7 +167,7 @@ export function AsterShopScreen() {
                       <View style={styles.price}>
                         <Ionicons name="lock-closed" size={13} color={colors.text.tertiary} />
                         <AppText variant="bodySmall" numberOfLines={2} center>
-                          {t("aster.shop.locked", { stage: stageName(t, item.minStage) })}
+                          {t("aster.shop.locked", { stage: stageName(t, item.minStage), xp: stageXp(item.minStage) })}
                         </AppText>
                       </View>
                     ) : owned && item.kind === "accessory" ? (

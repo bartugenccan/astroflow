@@ -75,7 +75,7 @@ export function PracticeScreen() {
   if (wishes.error && !wishes.data) {
     return (
       <Frame onClose={close}>
-        <StateView kind="error" message={t("practice.error")} onAction={wishes.reload} />
+        <StateView kind="error" message={t("practice.error")} onAction={wishes.reload} offline={wishes.offline} />
       </Frame>
     );
   }

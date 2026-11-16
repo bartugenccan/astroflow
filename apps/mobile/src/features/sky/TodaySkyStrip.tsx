@@ -6,6 +6,7 @@ import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { ShimmerLines } from "../../components/ui/Shimmer";
 import { usePlanStore } from "../../store/usePlanStore";
+import { useAppStore } from "../../store/useAppStore";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useTranslation, type TranslationKey } from "../../i18n";
 import { colors, palette, radii, spacing } from "../../lib/design-system";
@@ -21,6 +22,7 @@ export function TodaySkyStrip() {
   const router = useRouter();
   const dto = useBirthDto();
   const plan = usePlanStore((s) => s.plan);
+  const unknownTime = useAppStore((s) => !!s.birthProfile?.unknownTime);
   const loading = usePlanStore((s) => s.loading);
   const refresh = usePlanStore((s) => s.refresh);
 
@@ -31,7 +33,7 @@ export function TodaySkyStrip() {
   const tone = plan?.focusWhy ? (NATURE_TONE[plan.focusWhy.nature] ?? "sky") : "sky";
   const focus = plan ? t("plan.focus", { area: areaName(t, plan.focusArea) }) : null;
   const why = plan?.focusWhy ? whyPhrase(t, plan.focusWhy) : null;
-  const moon = plan ? moonLine(t, locale, plan.moon) : null;
+  const moon = plan ? moonLine(t, locale, plan.moon, unknownTime) : null;
   const moonSign = plan?.moon?.sign ? t(`signs.${plan.moon.sign}` as TranslationKey) : null;
   const headline = why ?? focus ?? t("skypath.sky.todayFallback");
 

@@ -222,7 +222,7 @@ export function ManifestScreen() {
             </ChunkyCard>
           ) : wishes.error && !wishes.data ? (
             <ChunkyCard style={styles.stateCard}>
-              <StateView kind="error" compact message={t("wish.sky.error")} onAction={wishes.reload} />
+              <StateView kind="error" compact message={t("wish.sky.error")} onAction={wishes.reload} offline={wishes.offline} />
             </ChunkyCard>
           ) : (
             <WishSky wishes={active} powerIntentionId={plan?.powerIntentionId ?? null} onPlant={onNew} />

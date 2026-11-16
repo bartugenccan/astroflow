@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { EphemerisService, RawHoroscope, RawPoint } from './ephemeris.service';
-import { ASPECT_NATURE, AspectType, PLANETS, Planet, absToSign } from './astrology.constants';
-import { addDays, norm, sep, signed } from './sky-scan';
+import { ASPECT_NATURE, AspectType, Planet, absToSign } from './astrology.constants';
+import * as Eph from './sky/sky-ephemeris';
 
 export type TimelineEventKind = 'aspect' | 'house_ingress' | 'sign_ingress' | 'station' | 'eclipse';
 
@@ -35,15 +35,9 @@ export interface TransitTimeline {
   events: TimelineEvent[];
 }
 
-interface DaySky {
-  date: string;
-  lon: Record<Planet, number>;
-  retro: Record<Planet, boolean>;
-  node: number;
-}
-
-const SLOW: Planet[] = ['Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'];
-const STATIONING: Planet[] = ['Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'];
+const DAY_MS = 86_400_000;
+const SLOW: Eph.SkyBody[] = ['Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'];
+const STATIONING: Eph.SkyBody[] = ['Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Uranus', 'Neptune', 'Pluto'];
 const ASPECTS: [number, string][] = [
   [0, 'Conjunction'],
   [60, 'Sextile'],
@@ -55,7 +49,10 @@ const ASPECTS: [number, string][] = [
 const ORB = 1;
 /** Passes of the same transit closer than this (retrograde loops) are one event. */
 const MERGE_GAP_DAYS = 150;
-const ECLIPSE_NODE_ORB = 17;
+/** Slow-planet context sampled on both sides of the range, so a transit already under way keeps its passes together. */
+const CONTEXT_DAYS = 400;
+/** A turn-around this close to the exact degree is listed as an exact day too. */
+const NEAR_EXACT = 0.35;
 
 const PLANET_WEIGHT: Record<string, number> = {
   Pluto: 5, Neptune: 4, Uranus: 4, Saturn: 4, Jupiter: 3, Mars: 1.5, Venus: 1, Mercury: 1,
@@ -67,12 +64,21 @@ const ASPECT_WEIGHT: Record<string, number> = {
   Conjunction: 1.25, Opposition: 1.1, Square: 1.1, Trine: 0.9, Sextile: 0.75,
 };
 
+const dayOf = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+type Cusp = { house: number; start: number };
+
 /**
  * The long view of someone's transits: every slow-planet aspect to their key
  * natal points (with each exact pass), slow planets changing natal house or
  * sign, retrograde stations, and eclipses — for a date range of up to a few
- * years. Pure ephemeris; the sky is cast once a day at 12:00 UTC (~2.5 ms each,
- * so 24 months ≈ 2 s).
+ * years.
+ *
+ * Runs on the key-moments sky engine (astronomy-engine, sky/sky-ephemeris.ts):
+ * exact passes and stations are refined to the minute and eclipses are real
+ * eclipses, not a node-distance guess. The natal chart (points and house
+ * cusps) still comes from the chart library. Slow planets are sampled once a
+ * day (~5 × 3.5 years of samples ≈ 0.3 s).
  */
 @Injectable()
 export class TransitTimelineService {
@@ -98,17 +104,22 @@ export class TransitTimelineService {
       targets.Ascendant = natal.Ascendant.ChartPosition.Ecliptic.DecimalDegrees;
       targets.Midheaven = natal.Midheaven.ChartPosition.Ecliptic.DecimalDegrees;
     }
-    const cusps = natal.Houses.map((h) => ({ house: h.id, start: h.ChartPosition.StartPosition.Ecliptic.DecimalDegrees }));
+    const cusps: Cusp[] = natal.Houses.map((h) => ({ house: h.id, start: h.ChartPosition.StartPosition.Ecliptic.DecimalDegrees }));
 
-    const days: DaySky[] = [];
-    for (let d = from; d <= to; d = addDays(d, 1)) days.push(this.sky(d, birth.latitude, birth.longitude));
+    const fromMs = Date.parse(`${from}T00:00:00Z`);
+    const toMs = Date.parse(`${to}T23:59:59Z`);
+    const series = new Map<Eph.SkyBody, Eph.LongitudeSeries>();
+    for (const planet of SLOW) {
+      series.set(planet, Eph.sampleLongitudes(planet, fromMs - CONTEXT_DAYS * DAY_MS, toMs + CONTEXT_DAYS * DAY_MS));
+    }
+    const range = { fromMs, toMs };
 
     const events = [
-      ...this.aspects(days, targets),
-      ...(birth.unknownTime ? [] : this.houseIngresses(days, cusps)),
-      ...this.signIngresses(days),
-      ...this.stations(days, birth.unknownTime ? null : cusps),
-      ...this.eclipses(days, targets, birth.unknownTime ? null : cusps),
+      ...this.aspects(series, targets, range),
+      ...(birth.unknownTime ? [] : this.houseIngresses(series, cusps, range)),
+      ...this.signIngresses(series, range),
+      ...this.stations(range, birth.unknownTime ? null : cusps),
+      ...this.eclipses(range, targets, birth.unknownTime ? null : cusps),
     ].sort((a, b) => a.start.localeCompare(b.start) || b.weight - a.weight);
 
     return { from, to, events };
@@ -116,51 +127,31 @@ export class TransitTimelineService {
 
   // ── Event finders ───────────────────────────────────────────────────────────
 
-  private aspects(days: DaySky[], targets: Record<string, number>): TimelineEvent[] {
+  private aspects(
+    series: Map<Eph.SkyBody, Eph.LongitudeSeries>,
+    targets: Record<string, number>,
+    r: { fromMs: number; toMs: number },
+  ): TimelineEvent[] {
     const out: TimelineEvent[] = [];
     for (const planet of SLOW) {
+      const s = series.get(planet)!;
       for (const [target, natalLon] of Object.entries(targets)) {
         for (const [angle, name] of ASPECTS) {
-          const orbs = days.map((d) => Math.abs(sep(d.lon[planet], natalLon) - angle));
-          const passes: { start: number; end: number }[] = [];
-          let i = 0;
-          while (i < orbs.length) {
-            if (orbs[i] > ORB) {
-              i++;
-              continue;
-            }
-            const start = i;
-            while (i < orbs.length && orbs[i] <= ORB) i++;
-            passes.push({ start, end: i - 1 });
-          }
-          if (!passes.length) continue;
-
-          // Retrograde loops make one transit touch exact up to three times — merge them.
-          const merged: { start: number; end: number }[] = [];
-          for (const p of passes) {
-            const last = merged[merged.length - 1];
-            if (last && p.start - last.end <= MERGE_GAP_DAYS) last.end = p.end;
-            else merged.push({ ...p });
-          }
-
-          for (const m of merged) {
-            const exact: string[] = [];
-            for (let k = m.start; k <= m.end; k++) {
-              const prev = orbs[k - 1] ?? Infinity;
-              const next = orbs[k + 1] ?? Infinity;
-              if (orbs[k] <= 0.35 && orbs[k] <= prev && orbs[k] <= next) exact.push(days[k].date);
-            }
-            const duration = m.end - m.start + 1;
+          for (const w of Eph.aspectWindows(s, natalLon, angle, ORB, MERGE_GAP_DAYS * DAY_MS)) {
+            if (w.endMs < r.fromMs || w.startMs > r.toMs) continue;
+            const startMs = Math.max(w.startMs, r.fromMs);
+            const endMs = Math.min(w.endMs, r.toMs);
+            const duration = Math.round((endMs - startMs) / DAY_MS) + 1;
             out.push({
-              id: `aspect:${planet}:${name}:${target}:${days[m.start].date}`,
+              id: `aspect:${planet}:${name}:${target}:${dayOf(startMs)}:${Math.round(w.target)}`,
               kind: 'aspect',
               planet,
               target,
               aspect: name,
               nature: ASPECT_NATURE[name] ?? 'neutral',
-              start: days[m.start].date,
-              end: days[m.end].date,
-              exact,
+              start: dayOf(startMs),
+              end: dayOf(endMs),
+              exact: this.exactDays(s, w, r),
               weight: round(
                 PLANET_WEIGHT[planet] * (TARGET_WEIGHT[target] ?? 2) * ASPECT_WEIGHT[name] * (1 + Math.min(duration, 365) / 120),
               ),
@@ -172,139 +163,151 @@ export class TransitTimelineService {
     return out;
   }
 
-  private houseIngresses(days: DaySky[], cusps: { house: number; start: number }[]): TimelineEvent[] {
+  /**
+   * The exact days of a transit inside the range. A slow planet that turns
+   * around within NEAR_EXACT of the point without crossing it (a station on
+   * the degree) still counts: its closest day is listed.
+   */
+  private exactDays(s: Eph.LongitudeSeries, w: Eph.AspectWindow, r: { fromMs: number; toMs: number }): string[] {
+    const inRange = w.passes.filter((ms) => ms >= r.fromMs && ms <= r.toMs);
+    if (inRange.length || w.passes.length || w.minOrb > NEAR_EXACT) return inRange.map(dayOf);
+    let bestMs = NaN;
+    let best = Infinity;
+    const first = Math.max(0, Math.floor((Math.max(w.startMs, r.fromMs) - s.startMs) / s.stepMs));
+    const last = Math.min(s.lon.length - 1, Math.ceil((Math.min(w.endMs, r.toMs) - s.startMs) / s.stepMs));
+    for (let i = first; i <= last; i++) {
+      const d = Math.abs(Eph.signedDiff(s.lon[i] - w.target));
+      if (d < best) {
+        best = d;
+        bestMs = s.startMs + i * s.stepMs;
+      }
+    }
+    return best <= NEAR_EXACT ? [dayOf(bestMs)] : [];
+  }
+
+  /** Day-by-day changes of a discrete function of longitude (house, sign), each refined to its day. */
+  private changes(
+    s: Eph.LongitudeSeries,
+    r: { fromMs: number; toMs: number },
+    classify: (lon: number) => number,
+  ): { ms: number; value: number }[] {
+    const out: { ms: number; value: number }[] = [];
+    const first = Math.max(0, Math.floor((r.fromMs - s.startMs) / s.stepMs));
+    const last = Math.min(s.lon.length - 1, Math.ceil((r.toMs - s.startMs) / s.stepMs));
+    let prev = classify(s.lon[first]);
+    for (let i = first + 1; i <= last; i++) {
+      const value = classify(s.lon[i]);
+      if (value === prev) continue;
+      // Bisect between the two samples for the day of the change.
+      let lo = s.startMs + (i - 1) * s.stepMs;
+      let hi = s.startMs + i * s.stepMs;
+      while (hi - lo > 60 * 60_000) {
+        const mid = (lo + hi) / 2;
+        if (classify(s.fn(mid)) === prev) lo = mid;
+        else hi = mid;
+      }
+      if (hi >= r.fromMs && hi <= r.toMs) out.push({ ms: hi, value });
+      prev = value;
+    }
+    return out;
+  }
+
+  private houseIngresses(
+    series: Map<Eph.SkyBody, Eph.LongitudeSeries>,
+    cusps: Cusp[],
+    r: { fromMs: number; toMs: number },
+  ): TimelineEvent[] {
     const out: TimelineEvent[] = [];
     for (const planet of SLOW) {
-      let prev = this.houseOf(days[0].lon[planet], cusps);
-      for (let i = 1; i < days.length; i++) {
-        const house = this.houseOf(days[i].lon[planet], cusps);
-        if (house === prev) continue;
-        const reentry = out.some((e) => e.planet === planet && e.house === house);
+      const s = series.get(planet)!;
+      for (const c of this.changes(s, r, (lon) => this.houseOf(lon, cusps))) {
+        const reentry = out.some((e) => e.planet === planet && e.house === c.value);
+        const date = dayOf(c.ms);
         out.push({
-          id: `house:${planet}:${house}:${days[i].date}`,
+          id: `house:${planet}:${c.value}:${date}`,
           kind: 'house_ingress',
           planet,
-          house,
-          sign: absToSign(days[i].lon[planet]).sign,
-          start: days[i].date,
-          end: days[i].date,
-          exact: [days[i].date],
+          house: c.value,
+          sign: absToSign(s.fn(c.ms)).sign,
+          start: date,
+          end: date,
+          exact: [date],
           weight: round(PLANET_WEIGHT[planet] * (reentry ? 1.5 : 4)),
         });
-        prev = house;
       }
     }
     return out;
   }
 
-  private signIngresses(days: DaySky[]): TimelineEvent[] {
+  private signIngresses(series: Map<Eph.SkyBody, Eph.LongitudeSeries>, r: { fromMs: number; toMs: number }): TimelineEvent[] {
     const out: TimelineEvent[] = [];
     for (const planet of SLOW) {
-      let prev = absToSign(days[0].lon[planet]).sign;
-      for (let i = 1; i < days.length; i++) {
-        const sign = absToSign(days[i].lon[planet]).sign;
-        if (sign === prev) continue;
+      const s = series.get(planet)!;
+      for (const c of this.changes(s, r, (lon) => Math.floor(Eph.norm360(lon) / 30))) {
+        const sign = absToSign(c.value * 30 + 0.5).sign;
+        const date = dayOf(c.ms);
         out.push({
-          id: `sign:${planet}:${sign}:${days[i].date}`,
+          id: `sign:${planet}:${sign}:${date}`,
           kind: 'sign_ingress',
           planet,
           sign,
-          start: days[i].date,
-          end: days[i].date,
-          exact: [days[i].date],
+          start: date,
+          end: date,
+          exact: [date],
           weight: round(PLANET_WEIGHT[planet] * 2.5),
         });
-        prev = sign;
       }
     }
     return out;
   }
 
-  private stations(days: DaySky[], cusps: { house: number; start: number }[] | null): TimelineEvent[] {
-    const out: TimelineEvent[] = [];
-    for (const planet of STATIONING) {
-      for (let i = 1; i < days.length; i++) {
-        if (days[i].retro[planet] === days[i - 1].retro[planet]) continue;
-        const direction = days[i].retro[planet] ? 'retrograde' : 'direct';
-        const lon = days[i].lon[planet];
-        out.push({
-          id: `station:${planet}:${direction}:${days[i].date}`,
-          kind: 'station',
-          planet,
-          direction,
-          sign: absToSign(lon).sign,
-          house: cusps ? this.houseOf(lon, cusps) : undefined,
-          start: days[i].date,
-          end: days[i].date,
-          exact: [days[i].date],
-          weight: round((PLANET_WEIGHT[planet] ?? 1) * (planet === 'Mercury' ? 2 : 1.5)),
-        });
-      }
-    }
-    return out;
+  private stations(r: { fromMs: number; toMs: number }, cusps: Cusp[] | null): TimelineEvent[] {
+    return Eph.findStations(r.fromMs, r.toMs, STATIONING).map((st) => {
+      const date = dayOf(st.ms);
+      return {
+        id: `station:${st.body}:${st.kind}:${date}`,
+        kind: 'station' as const,
+        planet: st.body,
+        direction: st.kind,
+        sign: absToSign(st.longitude).sign,
+        house: cusps ? this.houseOf(st.longitude, cusps) : undefined,
+        start: date,
+        end: date,
+        exact: [date],
+        weight: round((PLANET_WEIGHT[st.body] ?? 1) * (st.body === 'Mercury' ? 2 : 1.5)),
+      };
+    });
   }
 
-  private eclipses(
-    days: DaySky[],
-    targets: Record<string, number>,
-    cusps: { house: number; start: number }[] | null,
-  ): TimelineEvent[] {
-    const out: TimelineEvent[] = [];
-    for (let i = 1; i < days.length; i++) {
-      const a = days[i - 1];
-      const b = days[i];
-      const e0 = norm(a.lon.Moon - a.lon.Sun);
-      const e1 = norm(b.lon.Moon - b.lon.Sun);
-      const solar = e1 < e0; // elongation wrapped past 0° → new Moon
-      const lunar = e0 < 180 && e1 >= 180; // → full Moon
-      if (!solar && !lunar) continue;
-      const span = solar ? e1 + 360 - e0 : e1 - e0;
-      const f = ((solar ? 360 : 180) - e0) / span;
-      const moon = norm(a.lon.Moon + f * signed(b.lon.Moon - a.lon.Moon));
-      const node = norm(a.node + f * signed(b.node - a.node));
-      if (Math.min(sep(moon, node), sep(moon, node + 180)) > ECLIPSE_NODE_ORB) continue;
-      // The Moon marks the eclipse degree: on the Sun at a solar eclipse, opposite it at a lunar one.
-      const point = moon;
-      const touches = Object.values(targets).some((t) => sep(point, t) <= 5);
-      const date = f < 0.5 ? a.date : b.date;
-      out.push({
-        id: `eclipse:${solar ? 'solar' : 'lunar'}:${date}`,
-        kind: 'eclipse',
-        planet: solar ? 'Sun' : 'Moon',
-        eclipse: solar ? 'solar' : 'lunar',
-        sign: absToSign(point).sign,
-        house: cusps ? this.houseOf(point, cusps) : undefined,
+  private eclipses(r: { fromMs: number; toMs: number }, targets: Record<string, number>, cusps: Cusp[] | null): TimelineEvent[] {
+    return Eph.findEclipses(r.fromMs, r.toMs).map((e) => {
+      const date = dayOf(e.ms);
+      // The eclipse degree (the Sun/Moon conjunction, or the Moon at a lunar eclipse) on a key natal point.
+      const touches = Object.values(targets).some((t) => Math.abs(Eph.signedDiff(e.longitude - t)) <= 5);
+      return {
+        id: `eclipse:${e.kind}:${date}`,
+        kind: 'eclipse' as const,
+        planet: e.kind === 'solar' ? 'Sun' : 'Moon',
+        eclipse: e.kind,
+        sign: absToSign(e.longitude).sign,
+        house: cusps ? this.houseOf(e.longitude, cusps) : undefined,
         start: date,
         end: date,
         exact: [date],
         weight: touches ? 12 : 8,
-      });
-    }
-    return out;
+      };
+    });
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
-  private sky(date: string, latitude: number, longitude: number): DaySky {
-    const [y, m, d] = date.split('-').map(Number);
-    const h = this.ephemeris.bodiesAtUtc(new Date(Date.UTC(y, m - 1, d, 12)), latitude, longitude);
-    const lon = {} as Record<Planet, number>;
-    const retro = {} as Record<Planet, boolean>;
-    for (const p of PLANETS) {
-      const b = this.body(h, p);
-      lon[p] = b.ChartPosition.Ecliptic.DecimalDegrees;
-      retro[p] = !!b.isRetrograde;
-    }
-    return { date, lon, retro, node: h.CelestialPoints.northnode.ChartPosition.Ecliptic.DecimalDegrees };
-  }
-
   /** Natal house a longitude falls in, from the house cusps. */
-  private houseOf(lon: number, cusps: { house: number; start: number }[]): number {
+  private houseOf(lon: number, cusps: Cusp[]): number {
     for (let i = 0; i < cusps.length; i++) {
       const start = cusps[i].start;
       const end = cusps[(i + 1) % cusps.length].start;
-      const width = norm(end - start);
-      if (norm(lon - start) < width) return cusps[i].house;
+      const width = Eph.norm360(end - start);
+      if (Eph.norm360(lon - start) < width) return cusps[i].house;
     }
     return 1;
   }

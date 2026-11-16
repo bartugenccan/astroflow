@@ -21,6 +21,7 @@ import { Caveat_500Medium, Caveat_700Bold } from "@expo-google-fonts/caveat";
 import { AI_CONSENT_VERSION, useAppStore } from "../src/store/useAppStore";
 import { colors, surface } from "../src/lib/design-system";
 import { TermSheet } from "../src/features/glossary/TermSheet";
+import { useUiStore } from "../src/store/useUiStore";
 import { ConfigErrorScreen } from "../src/components/ConfigErrorScreen";
 import { API_CONFIG_ERROR } from "../src/services/config";
 import { initSentry, navigationIntegration, Sentry } from "../src/services/sentry";
@@ -65,6 +66,11 @@ function RootLayout() {
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
+
+  // Entering or leaving the app proper never carries a glossary sheet across.
+  useEffect(() => {
+    useUiStore.getState().closeTerm();
+  }, [hasOnboarded]);
 
   if (!ready) return null;
   if (API_CONFIG_ERROR) return <ConfigErrorScreen />;
@@ -134,8 +140,10 @@ function RootLayout() {
             />
           </Stack.Protected>
         </Stack>
-        {/* App-wide glossary sheet, opened from any ⓘ. */}
-        {hasOnboarded ? <TermSheet /> : null}
+        {/* App-wide glossary sheet, opened from any ⓘ — onboarding too: the reveal
+            and the tour lessons have ⓘ, and with the sheet unmounted a tap did
+            nothing, then popped up later on Today (F10). */}
+        <TermSheet />
         {/* Local reminders: schedule from settings, route taps. */}
         {hasOnboarded ? <ReminderBridge /> : null}
         {hasOnboarded ? <VaultBridge /> : null}

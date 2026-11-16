@@ -23,9 +23,13 @@ import { colors, spacing, radii, palette } from "../../lib/design-system";
 import { StatPill, StatRow } from "../../components/ui/StatPill";
 import { useMascot } from "../aster/useMascot";
 import { JourneySheet } from "../aster/JourneyDiscovery";
+import { asterLine } from "../aster/asterCopy";
 import { AsterHero } from "./AsterHero";
 import { SkyCheckInCard } from "./SkyCheckInCard";
 import { TodayQuests } from "./TodayQuests";
+import { AsterPointsSheet } from "../aster/AsterPointsSheet";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { Ionicons } from "@expo/vector-icons";
 import { SkyMomentCard } from "./SkyMomentCard";
 import { visibleMoments } from "./momentCopy";
 import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
@@ -100,6 +104,7 @@ export function TodayScreen() {
 
   const resting = !!mascot?.eclipse?.active;
   const [sheet, setSheet] = useState<null | "checkin">(null);
+  const [pointsOpen, setPointsOpen] = useState(false);
   const closeSheet = useCallback(() => setSheet(null), []);
 
   // Three days in orbit: a good moment to offer protecting Aster with an account.
@@ -149,33 +154,60 @@ export function TodayScreen() {
   const orbit = mascot?.orbit;
   const atRisk = !!orbit?.atRisk && !resting;
 
-  const greeting = t(greetingKey(), { name: displayName });
-  const speech = insight ? `${greeting}! ${insight.title}` : greeting;
+  const longing = mascot?.longing?.level ?? "content";
+  // Back after a few days: Aster's "I missed you" replaces the plain greeting.
+  const missedYou = longing !== "content" && !!mascot?.hatched && !resting;
+  const hello = t(greetingKey(), { name: displayName });
+  const speech = missedYou
+    ? [asterLine(locale, mascot?.mood ?? "happy", true, 0, longing), insight?.title].filter(Boolean).join(" ")
+    : insight
+      ? `${hello}! ${insight.title}`
+      : hello;
 
   return (
     <ScreenWrapper>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <EnterView style={styles.statBar}>
-          <StatRow>
-            <StatPill
-              icon={atRisk ? "flame-outline" : "flame"}
-              tone="candy"
-              value={orbitStreak}
-              muted={orbitStreak === 0}
-              style={atRisk ? styles.atRisk : undefined}
-              accessibilityLabel={
-                atRisk
-                  ? t("aster.orbit.atRiskA11y", { n: orbitStreak })
-                  : t("aster.orbit.a11y", { n: orbitStreak })
-              }
-            />
-            <StatPill
-              icon="sparkles"
-              tone="star"
-              value={mascot?.stardust ?? 0}
-              accessibilityLabel={`${mascot?.stardust ?? 0} ${t("aster.stardust")}`}
-            />
-          </StatRow>
+          <PressableScale
+            onPress={() => setPointsOpen(true)}
+            scaleTo={0.97}
+            haptic="none"
+            accessibilityRole="button"
+            accessibilityLabel={t("aster.points.openA11y")}
+          >
+            <StatRow>
+              <StatPill
+                icon={atRisk ? "flame-outline" : "flame"}
+                tone="candy"
+                value={orbitStreak}
+                muted={orbitStreak === 0}
+                style={atRisk ? styles.atRisk : undefined}
+                accessibilityLabel={
+                  atRisk
+                    ? t("aster.orbit.atRiskA11y", { n: orbitStreak })
+                    : t("aster.orbit.a11y", { n: orbitStreak })
+                }
+              />
+              <StatPill
+                icon="sparkles"
+                tone="star"
+                value={mascot?.stardust ?? 0}
+                accessibilityLabel={`${mascot?.stardust ?? 0} ${t("aster.stardust")}`}
+              />
+            </StatRow>
+          </PressableScale>
+          {/* F14: what the counters mean, one tap away. */}
+          <PressableScale
+            onPress={() => setPointsOpen(true)}
+            style={styles.pointsHelp}
+            accessibilityRole="button"
+            accessibilityLabel={t("aster.points.openA11y")}
+          >
+            <Ionicons name="help-circle-outline" size={18} color={colors.text.tertiary} />
+            <AppText variant="labelLong" color={colors.text.tertiary}>
+              {t("aster.points.open")}
+            </AppText>
+          </PressableScale>
         </EnterView>
 
         {/* 1 — Aster, the heart of Today. */}
@@ -262,6 +294,8 @@ export function TodayScreen() {
         ) : null}
       </SpringBottomSheet>
 
+      <AsterPointsSheet visible={pointsOpen} onClose={() => setPointsOpen(false)} state={mascot} />
+
       <JourneySheet
         visible={discoveryOpen}
         onClose={() => setDiscoveryOpen(false)}
@@ -285,6 +319,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-start",
     alignItems: "center",
+    gap: spacing.md,
+  },
+  pointsHelp: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.xs,
   },
   atRisk: {
     borderRadius: radii.pill,

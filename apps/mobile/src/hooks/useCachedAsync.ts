@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cachedCall, peekCache } from "../services/interpretationCache";
+import { isConnectionError } from "../services/httpAstrologyApi";
 
 interface AsyncState<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
+  /** The last failure was the phone not reaching the server (no connection), not a server error. */
+  offline: boolean;
   reload: () => void;
 }
 
@@ -26,6 +29,7 @@ export function useCachedAsync<T>(
   const [data, setData] = useState<T | null>(warm ?? null);
   const [loading, setLoading] = useState(key !== null && warm === undefined);
   const [error, setError] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
   const [nonce, setNonce] = useState(0);
 
   // Keep the latest factory without making it a dependency — the key already
@@ -62,6 +66,7 @@ export function useCachedAsync<T>(
       .catch((err: unknown) => {
         if (active) {
           setError(err instanceof Error ? err.message : "Something went wrong");
+          setOffline(isConnectionError(err));
           setLoading(false);
         }
       });
@@ -71,5 +76,5 @@ export function useCachedAsync<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, nonce]);
 
-  return { data, loading, error, reload };
+  return { data, loading, error, offline, reload };
 }

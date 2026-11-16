@@ -181,6 +181,7 @@ export const wishEn = {
     affirmError: "I couldn't write one just now. Write your own, or skip and I'll write it when you plant.",
     affirmA11y: "Your affirmation",
     regenerate: "Write another",
+    affirmSame: "I couldn't find a different version. You can edit the sentence yourself so it sounds like you.",
     plantTitle: "When should it be planted?",
     plantNow: "Now",
     plantNowBody: "It starts shining from today.",

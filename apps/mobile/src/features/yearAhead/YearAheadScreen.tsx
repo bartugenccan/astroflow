@@ -108,7 +108,7 @@ export function YearAheadScreen() {
           />
         ) : (
           <ChunkyCard style={styles.errorCard}>
-            <StateView kind="error" compact message={t("yearAhead.error")} onAction={year.reload} />
+            <StateView kind="error" compact message={t("yearAhead.error")} onAction={year.reload} offline={year.offline} />
           </ChunkyCard>
         )}
       </ScrollView>

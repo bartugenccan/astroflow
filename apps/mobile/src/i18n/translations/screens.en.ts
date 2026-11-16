@@ -23,6 +23,10 @@ export const screensEn = {
     asterLineNoRising: "Your Sun is in {{sun}} and your Moon in {{moon}}… I'm starting to know you, {{name}}.",
     friend: "friend",
     error: "The sky got a little cloudy and I couldn't cast your chart. Shall we try again?",
+    errorOffline: "I couldn't reach the internet, and casting your chart needs a connection.",
+    errorOfflineDetail: "Check Wi-Fi or mobile data and try again. Your answers are safe.",
+    errorServerDetail: "The problem is on our side, not yours. Try again in a moment; your answers are safe.",
+    back: "Go back",
   },
   tour: {
     progress: "{{n}} / {{total}}",

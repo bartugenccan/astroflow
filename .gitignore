@@ -28,3 +28,5 @@ coverage/
 # Store/signing credentials — never commit
 google-play-service-account.json
 *.keystore
+
+.vercel

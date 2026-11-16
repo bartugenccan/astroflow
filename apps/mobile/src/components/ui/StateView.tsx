@@ -18,8 +18,16 @@ interface StateViewProps {
   /** The way forward: "Create your first…", "Try again". Errors default to retry when given `onAction`. */
   actionLabel?: string;
   onAction?: () => void;
+  /** A quieter second way out, e.g. "Go back" beside "Try again". */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
   /** Smaller, for a state inside a card instead of a whole screen. */
   compact?: boolean;
+  /**
+   * An error because the phone couldn't reach the server (`isConnectionError`):
+   * Aster says to check the connection instead of the screen's own message.
+   */
+  offline?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -28,7 +36,18 @@ interface StateViewProps {
  * something went wrong — always with Aster and always with a way forward,
  * never a blank area.
  */
-export function StateView({ kind, message, detail, actionLabel, onAction, compact, style }: StateViewProps) {
+export function StateView({
+  kind,
+  message,
+  detail,
+  actionLabel,
+  onAction,
+  secondaryLabel,
+  onSecondary,
+  compact,
+  offline,
+  style,
+}: StateViewProps) {
   const { t } = useTranslation();
 
   if (kind === "loading") {
@@ -39,7 +58,11 @@ export function StateView({ kind, message, detail, actionLabel, onAction, compac
     );
   }
 
-  const text = message ?? (kind === "error" ? t("common.stateError") : t("common.stateEmpty"));
+  const noConnection = kind === "error" && !!offline;
+  const text = noConnection
+    ? t("common.offlineError")
+    : (message ?? (kind === "error" ? t("common.stateError") : t("common.stateEmpty")));
+  const subline = noConnection ? t("common.offlineDetail") : detail;
   const label = actionLabel ?? (kind === "error" ? t("common.retry") : undefined);
 
   return (
@@ -51,9 +74,9 @@ export function StateView({ kind, message, detail, actionLabel, onAction, compac
         mood={kind === "error" ? "sleepy" : undefined}
         layout={compact ? "row" : "column"}
       />
-      {detail ? (
+      {subline ? (
         <AppText variant="body" center>
-          {detail}
+          {subline}
         </AppText>
       ) : null}
       {onAction && label ? (
@@ -62,6 +85,16 @@ export function StateView({ kind, message, detail, actionLabel, onAction, compac
           onPress={onAction}
           variant={kind === "error" ? "night" : "primary"}
           size={compact ? "md" : "lg"}
+          style={styles.action}
+        />
+      ) : null}
+      {onSecondary && secondaryLabel ? (
+        <ChunkyButton
+          label={secondaryLabel}
+          onPress={onSecondary}
+          variant="ghost"
+          size="md"
+          uppercase={false}
           style={styles.action}
         />
       ) : null}

@@ -334,6 +334,7 @@ export const tr: Dict = {
         {
           h: 'Abonelikler ve satın almalar',
           p: [
+            'Beta döneminde (TestFlight ve erken erişim) Premium özellikleri herkese ücretsizdir: hiçbir şey satın alınmaz, fatura kesilmez. Ücretli abonelik başlamadan önce uygulamada haber veririz; beta sırasında açılan hiçbir şey kendiliğinden ücretli aboneliğe dönüşmez.',
             'Premium, App Store ya da Google Play üzerinden otomatik yenilenen bir abonelik olarak sunulur ve onlar tarafından faturalandırılır. Dönem bitmeden en az 24 saat önce iptal edilmezse yenilenir; mağaza hesabı ayarlarından yönetebilir ya da iptal edebilirsin. İadeler mağazanın politikalarına tabidir.',
           ],
         },
@@ -378,6 +379,7 @@ export const tr: Dict = {
         {
           h: 'Abonelikler',
           p: [
+            'Beta döneminde Premium herkese ücretsiz; şu an satın alınacak bir şey yok.',
             'Satın almalar App Store ya da Google Play tarafından yürütülür. Aboneliğini mağaza hesabı ayarlarından yönetebilir ya da iptal edebilirsin.',
           ],
         },

@@ -39,7 +39,7 @@ export default function TabsLayout() {
     <View style={styles.root}>
       <TabsSky />
       <BackgroundProvided.Provider value={true}>
-        <Tabs tabBar={renderTabBar} screenOptions={SCREEN_OPTIONS}>
+        <Tabs tabBar={renderTabBar} screenOptions={SCREEN_OPTIONS} backBehavior="initialRoute">
           <Tabs.Screen name="index" options={{ title: "Today" }} />
           <Tabs.Screen name="manifest" options={{ title: "Manifest" }} />
           <Tabs.Screen name="sky" options={{ title: "Sky" }} />

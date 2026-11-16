@@ -21,6 +21,11 @@ interface BigThreeProps {
   showInfo?: boolean;
   /** Pop the three rings in one after another on mount. */
   animate?: boolean;
+  /**
+   * No birth time: the rising sign was computed for noon and is only a guess,
+   * so the ring says it needs the time instead of naming a sign (F22).
+   */
+  risingUnknown?: boolean;
 }
 
 type ItemKey = "sun" | "moon" | "rising";
@@ -32,6 +37,7 @@ export function BigThree({
   risingSign,
   showInfo = true,
   animate = true,
+  risingUnknown = false,
 }: BigThreeProps) {
   const { t } = useTranslation();
 
@@ -46,7 +52,11 @@ export function BigThree({
       {items.map((item, i) => (
         <View key={item.key} style={styles.item}>
           <PopRing index={i} animate={animate}>
-            <Glyph name={item.sign} size={28} color={colors.star[300]} />
+            {item.key === "rising" && risingUnknown ? (
+              <Glyph name="Ascendant" size={28} color={colors.text.tertiary} />
+            ) : (
+              <Glyph name={item.sign} size={28} color={colors.star[300]} />
+            )}
           </PopRing>
           <View style={styles.labelRow}>
             <AppText variant="label" color={colors.text.tertiary} style={styles.label}>
@@ -54,8 +64,14 @@ export function BigThree({
             </AppText>
             {showInfo ? <TermInfo term={item.key} size={13} /> : null}
           </View>
-          <AppText variant="bodySmall" color={colors.text.primary} center>
-            {t(`signs.${item.sign}` as "signs.Aries")}
+          <AppText
+            variant="bodySmall"
+            color={item.key === "rising" && risingUnknown ? colors.text.tertiary : colors.text.primary}
+            center
+          >
+            {item.key === "rising" && risingUnknown
+              ? t("bigThree.risingUnknown")
+              : t(`signs.${item.sign}` as "signs.Aries")}
           </AppText>
         </View>
       ))}

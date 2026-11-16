@@ -14,8 +14,10 @@ export const APP_STORE_KEY = "astroflow-app";
  * grows, so everyone who accepted an older notice sees the new one once.
  * v2: wish texts and check-in notes, tarot/election questions, sky check-in
  * labels and today's transits for Aster's journeys are listed explicitly.
+ * v3: affirmation text, including one the user edited (sent as `avoid` when
+ * asking for another affirmation).
  */
-export const AI_CONSENT_VERSION = 2;
+export const AI_CONSENT_VERSION = 3;
 
 interface AppState {
   locale: Locale;

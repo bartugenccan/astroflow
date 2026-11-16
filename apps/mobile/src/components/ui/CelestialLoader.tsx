@@ -11,6 +11,7 @@ import {
   cancelAnimation,
 } from "react-native-reanimated";
 import { AppText } from "./AppText";
+import { useScreenActive } from "../ScreenActive";
 import { colors, spacing } from "../../lib/design-system";
 
 interface Props {
@@ -22,6 +23,7 @@ interface Props {
  * A looping celestial loader: a faint ring with a rotating gold arc (a comet
  * trail), two planets orbiting in opposite directions, and a softly pulsing
  * star at the centre. Pure Skia + Reanimated, so it spins on the UI thread.
+ * Off view (another tab, or a screen on top) the loops stop.
  */
 export function CelestialLoader({ size = "lg", label }: Props) {
   const dim = size === "lg" ? 120 : 56;
@@ -32,9 +34,10 @@ export function CelestialLoader({ size = "lg", label }: Props) {
   const spin = useSharedValue(0);
   const pulse = useSharedValue(0);
   const reduced = useReducedMotion();
+  const active = useScreenActive();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !active) {
       pulse.value = 0.5;
       return;
     }
@@ -53,7 +56,7 @@ export function CelestialLoader({ size = "lg", label }: Props) {
       cancelAnimation(spin);
       cancelAnimation(pulse);
     };
-  }, [spin, pulse, reduced]);
+  }, [spin, pulse, reduced, active]);
 
   const arcPath = useMemo(() => {
     const p = Skia.Path.Circle(center, center, ringR);

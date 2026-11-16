@@ -223,10 +223,23 @@ export function guidanceStub(locale: Locale, topic: string): GuidanceAnswer {
   return { topic, takeaway: c.takeaway, why: c.why, actions: c.actions };
 }
 
-export function affirmationStub(locale: Locale, goalText: string): string {
-  return locale === 'tr'
-    ? `Her gün "${goalText}" hedefime doğru küçük, kararlı bir adım atıyorum.`
-    : `Each day I take one small, steady step toward "${goalText}".`;
+const AFFIRMATION_STUBS: Record<Locale, ((goal: string) => string)[]> = {
+  tr: [
+    (g) => `Her gün "${g}" hedefime doğru küçük, kararlı bir adım atıyorum.`,
+    (g) => `"${g}" için gereken sabır ve cesaret bende var.`,
+    (g) => `"${g}" hedefime her gün biraz daha yaklaşıyorum ve bunu hissediyorum.`,
+  ],
+  en: [
+    (g) => `Each day I take one small, steady step toward "${g}".`,
+    (g) => `I have the patience and courage that "${g}" asks of me.`,
+    (g) => `I move a little closer to "${g}" every day, and I can feel it.`,
+  ],
+};
+
+/** Fallback affirmation; `variant` rotates the wording so "write another" still changes it. */
+export function affirmationStub(locale: Locale, goalText: string, variant = 0): string {
+  const list = AFFIRMATION_STUBS[locale];
+  return list[variant % list.length](goalText);
 }
 
 export function checkInStub(
@@ -237,7 +250,7 @@ export function checkInStub(
     ? {
         response: 'Bugün göründüğün için teşekkürler — devam etmek, mükemmel olmaktan daha önemli.',
         conviction,
-        followUp: 'Bu niyeti bugün gerçek kılan tek küçük şey ne olabilir?',
+        followUp: 'Bu manifesti bugün gerçek kılan tek küçük şey ne olabilir?',
       }
     : {
         response: "Thanks for showing up today — consistency matters more than being perfect.",

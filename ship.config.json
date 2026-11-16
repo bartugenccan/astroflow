@@ -37,7 +37,7 @@
     "Sifreli not yedegi (yansima, olumlama, tarot ve eleksiyon notlari) - AI'ya hic gonderilmez"
    ],
    "declaredInAppPrivacy": true,
-   "inAppDisclosure": "Onboarding'de dogum verisi girilmeden once tek seferlik AI bildirimi + onay (features/consent/AiConsentScreen; hesapla girenler ve eski kurulumlar icin root layout'ta). Profil > Yardim ve yasal > AI yorumlari hakkinda; Aster ekraninda 'AI ile yazildi' dipnotu. Bildirim surumlu: AI_CONSENT_VERSION=2 (dilek/check-in notlari, tarot/eleksiyon sorulari, mood etiketi ve transitler acikca sayilir); eski onaylilar bir kez yeniden gorur."
+   "inAppDisclosure": "Onboarding'de dogum verisi girilmeden once tek seferlik AI bildirimi + onay (features/consent/AiConsentScreen; hesapla girenler ve eski kurulumlar icin root layout'ta). Profil > Yardim ve yasal > AI yorumlari hakkinda; Aster ekraninda 'AI ile yazildi' dipnotu. Bildirim surumlu: AI_CONSENT_VERSION=3 (dilek/check-in notlari, olumlama metni (kullanicinin duzenledigi dahil), tarot/eleksiyon sorulari, mood etiketi ve transitler acikca sayilir); eski onaylilar bir kez yeniden gorur."
   },
   "thirdPartySdks": [
    {
@@ -190,7 +190,7 @@
      "purposes": [
       "App Functionality"
      ],
-     "source": "Dogum tarihi/saati/yeri ve harita (device_charts), companion sohbeti ve hafiza, dilek metni ve check-in notlari, tarot/eleksiyon sorulari, kayitli kisilerin dogum verisi, hesapli kullanicida sifreli not yedegi (user_vaults)"
+     "source": "Dogum tarihi/saati/yeri ve harita (device_charts), companion sohbeti ve hafiza, dilek metni, olumlama metni ve check-in notlari, tarot/eleksiyon sorulari, kayitli kisilerin dogum verisi, hesapli kullanicida sifreli not yedegi (user_vaults)"
     },
     {
      "category": "Usage Data > Product Interaction",
@@ -291,7 +291,7 @@
      "purposes": [
       "App functionality"
      ],
-     "note": "Dilekler, check-in notlari, tarot/eleksiyon sorulari (AI'ya gider); not yedegi (AI'ya gitmez)"
+     "note": "Dilekler, olumlama metinleri, check-in notlari, tarot/eleksiyon sorulari (AI'ya gider); not yedegi (AI'ya gitmez)"
     },
     {
      "category": "App activity > App interactions",

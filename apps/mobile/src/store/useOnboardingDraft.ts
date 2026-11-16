@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { BirthProfileResponse, City } from "../services/types";
 
-/** In-memory only — the onboarding draft is discarded once the chart is cast. */
+/**
+ * The onboarding draft. Held in memory and mirrored to a small secure
+ * checkpoint while onboarding is open (features/onboarding/draftCheckpoint.ts),
+ * so a restarted app resumes at the furthest step; cleared once onboarding ends.
+ */
 interface OnboardingDraft {
   name: string;
   birthDate: string | null; // "YYYY-MM-DD"
@@ -20,6 +24,8 @@ interface OnboardingDraft {
   setCity: (city: City) => void;
   setManualCoords: (lat: number, lon: number) => void;
   setProfile: (profile: BirthProfileResponse) => void;
+  /** Restore the answers from a checkpoint after the app was restarted. */
+  hydrate: (d: Pick<OnboardingDraft, "name" | "birthDate" | "birthTime" | "unknownTime" | "city" | "manualLat" | "manualLon">) => void;
   clear: () => void;
 }
 
@@ -42,6 +48,7 @@ export const useOnboardingDraft = create<OnboardingDraft>((set) => ({
   setManualCoords: (manualLat, manualLon) =>
     set({ manualLat, manualLon, city: null }),
   setProfile: (profile) => set({ profile }),
+  hydrate: (d) => set({ ...d }),
   clear: () =>
     set({
       name: "",

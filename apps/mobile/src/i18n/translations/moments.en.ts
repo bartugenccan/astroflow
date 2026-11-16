@@ -80,6 +80,12 @@ export const momentsEn = {
     lunation_full: "Full Moon on your {{target}}",
     retrograde_period: "{{planet}} retrograde",
     double_retrograde: "{{planet}} retrograde again",
+    chiron_return: "Your Chiron return",
+    progressed_moon_return: "Your progressed Moon return",
+    progressed_moon_sign: "Progressed Moon enters {{sign}}",
+    progressed_sun_sign: "Progressed Sun enters {{sign}}",
+    progressed_lunation_new: "Your progressed New Moon",
+    progressed_lunation_full: "Your progressed Full Moon",
   },
   body: {
     saturn_return:
@@ -106,6 +112,18 @@ export const momentsEn = {
       "{{planet}} appears to move backwards from {{start}} to {{end}}. A time to review and rethink; nothing to fear.",
     double_retrograde:
       "{{planet}} was retrograde when you were born, too. This slower rhythm may feel familiar: a time to look back without rushing.",
+    chiron_return:
+      "Chiron returns to where it was when you were born (age {{age}}, about every 50 years). A mature time to make peace with an old hurt and pass on what you learned from it.",
+    progressed_moon_return:
+      "In your progressed chart the Moon comes back to its birth degree (age {{age}}, about every 27 years). One emotional cycle closes and the next one opens.",
+    progressed_moon_sign:
+      "Your progressed Moon moves into {{sign}}: a new emotional tone for about two and a half years. What you need to feel at home may shift a little.",
+    progressed_sun_sign:
+      "Your progressed Sun moves into {{sign}}. This happens about once every 30 years and slowly adds a new colour to how you show up.",
+    progressed_lunation_new:
+      "Your progressed Sun and Moon meet (age {{age}}). The seed of a roughly 30-year cycle: a good time to start something that matters to you.",
+    progressed_lunation_full:
+      "Your progressed Sun and Moon face each other (age {{age}}). The midpoint of a roughly 30-year cycle: what you started becomes visible.",
   },
   lunationName: {
     new: "New Moon",

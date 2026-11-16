@@ -12,6 +12,7 @@ import { useTranslation } from "../../i18n";
 import { colors, palette, radii, spacing } from "../../lib/design-system";
 import { runAfterTransition } from "../../lib/afterInteractions";
 import { useAppStore } from "../../store/useAppStore";
+import { useMascotStore } from "../../store/useMascotStore";
 import { useReminderToggle } from "../reminders/useReminderToggle";
 import type { SkyMoment } from "../../services/types";
 import {
@@ -40,6 +41,7 @@ export function SkyMomentCard({ moments }: SkyMomentCardProps) {
   const { t, locale } = useTranslation();
   const visible = useMemo(() => visibleMoments(moments), [moments]);
   const [openId, setOpenId] = useState<string | null>(null);
+  const report = useMascotStore((s) => s.report);
 
   const top = visible[0];
   if (!top) return null;
@@ -54,7 +56,11 @@ export function SkyMomentCard({ moments }: SkyMomentCardProps) {
         tone={tone}
         tinted
         style={styles.card}
-        onPress={() => setOpenId(top.id)}
+        onPress={() => {
+          setOpenId(top.id);
+          // Reading a key moment feeds Aster (once a day; the server caps it).
+          if (!useMascotStore.getState().state?.today?.SKY_MOMENT) report("SKY_MOMENT");
+        }}
         accessibilityLabel={`${t("moments.cardLabel")}. ${title}. ${when}`}
         accessibilityHint={t("moments.open")}
       >

@@ -941,7 +941,10 @@ export type MascotEventKind =
   | "MANIFESTED"
   | "ACCOUNT_LINKED"
   | "SKY_LESSON"
-  | "SIGN_LOG";
+  | "SIGN_LOG"
+  | "VOICE_RECORD"
+  | "SKY_MOMENT"
+  | "WELCOME_BACK";
 
 export type MascotMood = "sleepy" | "happy" | "glowing";
 export type AccessorySlot = "head" | "neck" | "hand" | "aura";
@@ -957,6 +960,20 @@ export interface MascotDelta {
   leveledUp: boolean;
   hatched: boolean;
   energy: number;
+  /** First award after time away: Aster's welcome and its stardust gift (already in `stardust`). */
+  welcomeBack?: WelcomeBack | null;
+}
+
+export type Longing = "content" | "misses" | "longs";
+
+export interface WelcomeBack {
+  daysAway: number;
+  longing: Exclude<Longing, "content">;
+  /** The sky figure Aster found while missing you (from the journey pool). */
+  constellationKey: string;
+  /** Already in the album: it turned into `stardust` instead. */
+  duplicate: boolean;
+  stardust: number;
 }
 
 export interface MascotCatalogItem {
@@ -1062,6 +1079,10 @@ export interface MascotState {
   nextUnlocks: NextUnlocks | null;
   /** Nova look switched on (stage 5 only). */
   novaLook: boolean;
+  /** How much Aster has missed you (days since the orbit last counted, rest days excluded). */
+  longing?: { level: Longing; daysAway: number };
+  /** Today's return after days away, if today was one (shown once as Aster's welcome). */
+  welcomeBack?: WelcomeBack | null;
 }
 
 export interface OrbitView {
@@ -1195,7 +1216,12 @@ export type SkyMomentKind =
   | "eclipse_on_natal"
   | "lunation_on_natal"
   | "retrograde_period"
-  | "double_retrograde";
+  | "double_retrograde"
+  | "chiron_return"
+  | "progressed_moon_return"
+  | "progressed_moon_sign"
+  | "progressed_sun_sign"
+  | "progressed_lunation";
 
 export type SkyMomentTarget =
   | "Sun"

@@ -4,3 +4,7 @@
 
 expo-env.d.ts
 # @end expo-cli
+# Native projects are generated from app.json / app.config.js (Expo prebuild, CNG).
+# EAS and `expo run:*` recreate them; keep config in plugins, not in these folders.
+/android
+/ios

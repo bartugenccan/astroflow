@@ -20,6 +20,7 @@ import { PressableScale } from "../../components/ui/PressableScale";
 import { StatPill } from "../../components/ui/StatPill";
 import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { AffirmationCard } from "./AffirmationCard";
+import { TechniqueHints } from "../manifest/TechniqueHints";
 import { useAffirmationAudio } from "./useAffirmationAudio";
 import {
   AFFIRMATION_CATEGORIES,
@@ -66,6 +67,11 @@ interface AffirmationsCarouselProps {
   suggested: AffirmationCategory | null;
   /** Open the "add your own" sheet (rendered at the screen root). */
   onAdd: (category: AffirmationCategory) => void;
+  /**
+   * Practice mode ("Sesli oku"): each card gets a "Read this one" button that
+   * hands the affirmation (id + text in the reader's language) to the practice.
+   */
+  onUse?: (affirmation: { id: string; text: string }) => void;
 }
 
 /**
@@ -74,7 +80,7 @@ interface AffirmationsCarouselProps {
  * own voice, tick for today — ticking one feeds Aster. Prev/next buttons and
  * page dots give a non-swipe way through.
  */
-export function AffirmationsCarousel({ category, onCategoryChange, suggested, onAdd }: AffirmationsCarouselProps) {
+export function AffirmationsCarousel({ category, onCategoryChange, suggested, onAdd, onUse }: AffirmationsCarouselProps) {
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -240,6 +246,19 @@ export function AffirmationsCarousel({ category, onCategoryChange, suggested, on
                 }
                 style={styles.cardFill}
               />
+              {onUse ? (
+                <ChunkyButton
+                  label={t("practice.methods.read.use")}
+                  accessibilityLabel={t("practice.methods.read.useA11y")}
+                  variant="candy"
+                  size="sm"
+                  onPress={() => {
+                    if (audio.recordingId) audio.stopRecording();
+                    onUse({ id: a.id, text: textOf(a) });
+                  }}
+                  style={styles.useBtn}
+                />
+              ) : null}
             </View>
           ))}
           <View style={{ width: cardW }}>
@@ -355,6 +374,7 @@ export function AddAffirmationSheet({
           autoFocus
           accessibilityLabel={t("affirmations.ui.addTitle")}
         />
+        <TechniqueHints text={draft} />
         <ChunkyButton label={t("affirmations.ui.save")} onPress={save} disabled={!draft.trim()} />
       </View>
     </SpringBottomSheet>
@@ -378,6 +398,7 @@ const styles = StyleSheet.create({
     backgroundColor: palette.star.face,
   },
   track: { gap: spacing.md, paddingBottom: spacing.sm },
+  useBtn: { marginTop: spacing.sm },
   pick: { height: 22 },
   pickSpacer: { height: 22 },
   cardFill: { minHeight: CARD_MIN_H, flexGrow: 1 },

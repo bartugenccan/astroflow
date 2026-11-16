@@ -68,6 +68,16 @@ export class ApiError extends Error {
 }
 
 /**
+ * The phone couldn't reach the server at all (no connection, airplane mode,
+ * a timeout) as opposed to the server answering with an error. Screens use it
+ * to say "check your connection" instead of a vague failure (F3).
+ */
+export function isConnectionError(err: unknown): boolean {
+  if (err instanceof ApiError) return err.status === 0;
+  return err instanceof TypeError && /network request failed|failed to fetch/i.test(err.message);
+}
+
+/**
  * The server caps one AI generation (retries included) at ~50s and then falls
  * back to templated text, so anything past this is a dead connection — e.g. a
  * stale LAN IP in EXPO_PUBLIC_API_URL. Without a limit, fetch on a phone can
@@ -278,11 +288,11 @@ export const httpAstrologyApi: AstrologyApi = {
     return res?.areas ?? [];
   },
 
-  async previewAffirmation(dto, goalText, lifeArea, locale) {
+  async previewAffirmation(dto, goalText, lifeArea, locale, avoid = []) {
     const res = await request<{ affirmation: string }>(
       "POST",
       "intentions/affirmation-preview",
-      { ...dto, goalText, lifeArea },
+      { ...dto, goalText, lifeArea, ...(avoid.length ? { avoid: avoid.slice(-5) } : {}) },
       { locale },
     );
     return res.affirmation;

@@ -187,7 +187,9 @@ export function CompanionScreen() {
 
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // Android runs edge-to-edge (gradle edgeToEdgeEnabled), where adjustResize
+        // no longer shrinks the window: the view has to make room itself (F1).
+        behavior="padding"
         keyboardVerticalOffset={0}
       >
         <ScrollView

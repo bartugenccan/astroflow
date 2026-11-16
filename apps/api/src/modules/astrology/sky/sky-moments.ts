@@ -43,6 +43,14 @@ export interface NatalInput {
   chartRuler: SkyBody | null;
   /** House cusp longitudes 1–12 (index 0 = 1st house); null without a birth time. */
   cusps: number[] | null;
+  /**
+   * The exact birth instant (UTC ms), recovered from the natal Moon. Secondary
+   * progressions need it: the progressed Moon moves ~0.5° per hour of birth time.
+   * Absent = no progressions.
+   */
+  birthUtcMs?: number;
+  /** Natal Chiron longitude (JPL table); absent outside 1900–2100. */
+  chiron?: number;
 }
 
 /** The subset of NatalChartData this module reads (kept structural to avoid a runtime import). */
@@ -129,7 +137,12 @@ export type SkyMomentKind =
   | 'eclipse_on_natal'
   | 'lunation_on_natal'
   | 'retrograde_period'
-  | 'double_retrograde';
+  | 'double_retrograde'
+  | 'chiron_return'
+  | 'progressed_moon_return'
+  | 'progressed_moon_sign'
+  | 'progressed_sun_sign'
+  | 'progressed_lunation';
 
 export type AspectName = 'conjunction' | 'square' | 'opposition';
 
@@ -138,7 +151,7 @@ export interface SkyMoment {
   id: string;
   kind: SkyMomentKind;
   /** The moving body ('Sun' for a solar eclipse, 'Moon' for a lunar one / lunation). */
-  planet: SkyBody | 'NorthNode';
+  planet: SkyBody | 'NorthNode' | 'Chiron';
   target: NatalTarget | null;
   aspect: AspectName | null;
   /** ISO instants. `peak` is the first exact pass, the station, the eclipse or the lunation. */
@@ -202,6 +215,11 @@ export const WEIGHTS = {
   mercuryRetroInHouse: 30,
   collectiveRetro: 15,
   doubleRetro: 15,
+  chironReturn: 65,
+  progressedMoonReturn: 60,
+  progressedSunSign: 50,
+  progressedLunation: 45,
+  progressedMoonSign: 40,
 } as const;
 
 /** Bonuses (synthesis): a station or ≥3 exact passes; another big moment at the same time. */
@@ -220,6 +238,11 @@ const POSSIBLE_FACTOR = 0.7;
 
 /** Tie-break when salience is equal: the research's headline moments first. */
 const KIND_PRIORITY: Record<SkyMomentKind, number> = {
+  chiron_return: 6.5,
+  progressed_moon_return: 5.5,
+  progressed_sun_sign: 4.5,
+  progressed_lunation: 3.5,
+  progressed_moon_sign: 2.5,
   saturn_return: 12,
   eclipse_on_natal: 11,
   station_on_natal: 10,
@@ -242,6 +265,8 @@ export interface SkyData {
   series: Partial<Record<SkyBody, LongitudeSeries>>;
   /** Mean north node, daily. */
   node: LongitudeSeries;
+  /** Chiron, daily, from the JPL table (absent outside 1900–2100). */
+  chiron?: LongitudeSeries;
   stations: Station[];
   eclipses: Eclipse[];
   lunations: Lunation[];
@@ -249,6 +274,8 @@ export interface SkyData {
 
 /** The pure helpers from sky-ephemeris.ts, injected so this file stays type-only. */
 export interface SkyOps {
+  /** Apparent geocentric longitude of a body at an instant (progressions). */
+  longitudeAt: (body: SkyBody, ms: number) => number;
   aspectWindows: (series: LongitudeSeries, point: number, angle: number, orb: number, mergeGapMs?: number) => AspectWindow[];
   signSeasons: (series: LongitudeSeries, signIndex: number, mergeGapMs?: number) => SignSeason[];
 }
@@ -635,6 +662,144 @@ function retrogrades(natal: NatalInput, sky: SkyData, q: MomentQuery): SkyMoment
   return out;
 }
 
+/** Chiron back on its birth degree (~age 49–51), often over a year with three passes. */
+function chironReturn(natal: NatalInput, sky: SkyData, ops: SkyOps, q: MomentQuery): SkyMoment[] {
+  if (natal.chiron === undefined || !sky.chiron) return [];
+  const out: SkyMoment[] = [];
+  for (const w of ops.aspectWindows(sky.chiron, natal.chiron, 0, 1.5, 2 * 365 * DAY)) {
+    const f = fromWindow(w);
+    if (!overlaps(f.startMs, f.endMs, q) || ageAt(natal.birthMs, f.peakMs) < 40) continue;
+    out.push(
+      make({
+        kind: 'chiron_return', planet: 'Chiron', target: null, aspect: 'conjunction', ...f,
+        salience: multiPass(WEIGHTS.chironReturn, f.passMs.length),
+        personal: true, needsBirthTime: false, certainty: 'exact',
+        detail: { age: ageAt(natal.birthMs, f.peakMs), sign: signOf(natal.chiron) },
+      }),
+    );
+  }
+  return out;
+}
+
+/** One tropical year of life per day after birth (secondary progressions). */
+const PROGRESSION_YEAR_DAYS = 365.24219;
+
+/** Real instants where a forward-moving angle `g` (signed, degrees) crosses 0, linearly refined. */
+function forwardCrossings(times: number[], g: number[]): number[] {
+  const out: number[] = [];
+  for (let i = 1; i < g.length; i++) {
+    const a = g[i - 1];
+    const b = g[i];
+    // Forward crossing only, and not the 180° wrap of a signed difference.
+    if (a < 0 && b >= 0 && b - a < 90) out.push(times[i - 1] + ((times[i] - times[i - 1]) * -a) / (b - a));
+  }
+  return out;
+}
+
+const PROGRESSION_STEP = 7 * DAY;
+
+const wrap180 = (d: number) => {
+  const x = norm360(d + 180) - 180;
+  return x === -180 ? 180 : x;
+};
+
+/**
+ * Secondary progressions (a day after birth for each year of life): the
+ * progressed Moon coming back to its birth degree (~27, ~55), changing sign
+ * (~every 2.5 years), the progressed Sun changing sign (~every 30 years) and
+ * the progressed New/Full Moon. Without a birth time the progressed Moon can be
+ * ~6 months off, so those moments are only "possible".
+ */
+function progressions(natal: NatalInput, ops: SkyOps, q: MomentQuery): SkyMoment[] {
+  const birth = natal.birthUtcMs;
+  if (birth === undefined || !Number.isFinite(birth)) return [];
+  const natalMoon = natal.points.find((p) => p.id === 'Moon');
+  const fromMs = q.fromMs - 120 * DAY;
+  const toMs = q.toMs + 120 * DAY;
+  if (toMs <= birth) return [];
+  const progressed = (ms: number) => birth + (ms - birth) / PROGRESSION_YEAR_DAYS;
+
+  const times: number[] = [];
+  const moon: number[] = [];
+  const sun: number[] = [];
+  // The progressed Moon moves ~0.25° a real week (the Sun far less), so weekly
+  // samples with linear crossings are exact enough and ~7× cheaper than daily.
+  for (let t = Math.max(fromMs, birth); t <= toMs; t += PROGRESSION_STEP) {
+    const p = progressed(t);
+    times.push(t);
+    moon.push(ops.longitudeAt('Moon', p));
+    sun.push(ops.longitudeAt('Sun', p));
+  }
+  if (times.length < 2) return [];
+  const certainty = natal.unknownTime ? 'possible' : 'exact';
+  const out: SkyMoment[] = [];
+  const push = (
+    kind: SkyMomentKind,
+    planet: SkyBody,
+    target: NatalTarget | null,
+    aspect: AspectName | null,
+    peakMs: number,
+    before: number,
+    after: number,
+    salience: number,
+    detail: SkyMoment['detail'],
+  ) => {
+    const startMs = peakMs - before;
+    const endMs = peakMs + after;
+    if (!overlaps(startMs, endMs, q)) return;
+    out.push(
+      make({
+        kind, planet, target, aspect, startMs, peakMs, endMs, passMs: [peakMs], orb: 0,
+        salience, personal: true, needsBirthTime: false, certainty, openEnded: false,
+        detail: { age: ageAt(natal.birthMs, peakMs), ...detail },
+      }),
+    );
+  };
+  const valueAt = (series: number[], ms: number) => {
+    const i = Math.min(series.length - 1, Math.max(0, Math.round((ms - times[0]) / PROGRESSION_STEP)));
+    return series[i];
+  };
+
+  // The progressed Moon back on its birth degree: within 1° for about a month either side.
+  if (natalMoon) {
+    for (const ms of forwardCrossings(times, moon.map((m) => wrap180(m - natalMoon.longitude)))) {
+      if (ageAt(natal.birthMs, ms) < 20) continue;
+      push('progressed_moon_return', 'Moon', 'Moon', 'conjunction', ms, 28 * DAY, 28 * DAY, WEIGHTS.progressedMoonReturn, {
+        sign: signOf(natalMoon.longitude),
+      });
+    }
+  }
+
+  // Sign changes of the progressed Moon and Sun.
+  for (const [body, series, kind, weight, before, after] of [
+    ['Moon', moon, 'progressed_moon_sign', WEIGHTS.progressedMoonSign, 14 * DAY, 60 * DAY],
+    ['Sun', sun, 'progressed_sun_sign', WEIGHTS.progressedSunSign, 30 * DAY, 90 * DAY],
+  ] as const) {
+    for (let k = 0; k < 12; k++) {
+      for (const ms of forwardCrossings(times, series.map((v) => wrap180(v - k * 30)))) {
+        if (ms - birth < 30 * DAY) continue;
+        push(kind, body, null, null, ms, before, after, weight, { sign: SIGN_NAMES[k] });
+      }
+    }
+  }
+
+  // Progressed New Moon (elongation 0°) and Full Moon (180°).
+  const elongation = moon.map((m, i) => norm360(m - sun[i]));
+  for (const [lunationKind, angle] of [
+    ['new', 0],
+    ['full', 180],
+  ] as const) {
+    for (const ms of forwardCrossings(times, elongation.map((e) => wrap180(e - angle)))) {
+      if (ms - birth < 365 * DAY) continue;
+      push('progressed_lunation', 'Moon', null, null, ms, 30 * DAY, 60 * DAY, WEIGHTS.progressedLunation, {
+        lunationKind,
+        sign: signOf(valueAt(moon, ms)),
+      });
+    }
+  }
+  return out;
+}
+
 /**
  * All moments for one person whose active window overlaps the query, ranked:
  * highest salience first, then the soonest peak. Birth-time-only moments are
@@ -648,6 +813,8 @@ export function detectMoments(natal: NatalInput, sky: SkyData, ops: SkyOps, q: M
     ...eclipses(natal, sky, q),
     ...lunations(natal, sky, q),
     ...retrogrades(natal, sky, q),
+    ...chironReturn(natal, sky, ops, q),
+    ...progressions(natal, ops, q),
   ].filter((m) => !(natal.unknownTime && m.needsBirthTime));
 
   // One moment per id (two detectors can meet on the same event).
@@ -717,6 +884,16 @@ export function momentPromptLine(m: SkyMoment, nowMs: number): string {
       return `${m.planet} retrograde ${d(m.start)} to ${d(m.end)}${m.detail.house ? ` in the natal ${m.detail.house}th house` : ''}`;
     case 'double_retrograde':
       return `${m.planet} is retrograde now and was retrograde at birth (a soft, reflective note, not a classic technique)`;
+    case 'chiron_return':
+      return `Chiron return${exact ? `, ${exact}` : ''} (~50-year healing and mentoring cycle)`;
+    case 'progressed_moon_return':
+      return `Progressed Moon returns to its birth degree (${d(m.peak)}; a ~27-year emotional cycle)`;
+    case 'progressed_moon_sign':
+      return `Progressed Moon enters ${m.detail.sign ?? ''} (${d(m.peak)}; a ~2.5-year emotional chapter)`;
+    case 'progressed_sun_sign':
+      return `Progressed Sun enters ${m.detail.sign ?? ''} (${d(m.peak)}; a ~30-year shift in tone)`;
+    case 'progressed_lunation':
+      return `Progressed ${m.detail.lunationKind === 'full' ? 'Full' : 'New'} Moon (${d(m.peak)}; a turning point in a ~30-year cycle)`;
   }
 }
 

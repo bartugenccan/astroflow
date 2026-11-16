@@ -1,7 +1,10 @@
 import { Stack } from "expo-router";
 import { colors, surface } from "../../src/lib/design-system";
+import { usePersistOnboardingDraft } from "../../src/features/onboarding/draftCheckpoint";
 
 export default function OnboardingLayout() {
+  // Answers survive the app being killed mid-onboarding (F20).
+  usePersistOnboardingDraft();
   return (
     <Stack
       screenOptions={{

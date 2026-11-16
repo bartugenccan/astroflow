@@ -17,6 +17,7 @@ import { syncProfileMeta } from "../../services/auth/account";
 import { colors, layout, palette, radii, spacing, type Tone } from "../../lib/design-system";
 import { LessonFlow } from "../skypath/LessonFlow";
 import { clearTourCheckpoint, readTourCheckpoint, writeTourCheckpoint } from "./tourCheckpoint";
+import { clearDraftCheckpoint } from "./draftCheckpoint";
 
 /** Checkpointed pages: the first lesson, then "you're ready". */
 const LESSON = 0;
@@ -107,6 +108,7 @@ function ReadyPage() {
     completeOnboarding(name.trim() || "Traveler", profile);
     clearDraft();
     clearTourCheckpoint();
+    clearDraftCheckpoint();
     // Name + birth place label go next to the server chart, so a later sign-in restores them.
     syncProfileMeta();
     if (then) setTimeout(() => router.push(then), 400);

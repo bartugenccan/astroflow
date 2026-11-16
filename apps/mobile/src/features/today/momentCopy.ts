@@ -4,7 +4,7 @@ import { formatDayMonthYear, todayISO } from "../../lib/dates";
 import { ordinal } from "../../lib/astroLanguage";
 import type { Tone } from "../../lib/design-system";
 import type { SkyMoment, SkyMomentKind } from "../../services/types";
-import { planetName } from "./planCopy";
+import { planetName, signName } from "./planCopy";
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -41,8 +41,17 @@ export function momentTitle(t: TFunction, m: SkyMoment): string {
       return t(m.detail.lunationKind === "full" ? "moments.title.lunation_full" : "moments.title.lunation_new", {
         target,
       });
+    case "progressed_lunation":
+      return t(
+        m.detail.lunationKind === "full" ? "moments.title.progressed_lunation_full" : "moments.title.progressed_lunation_new",
+      );
     default:
-      return t(`moments.title.${m.kind}` as TranslationKey, { planet, target, aspect });
+      return t(`moments.title.${m.kind}` as TranslationKey, {
+        planet,
+        target,
+        aspect,
+        sign: m.detail.sign ? signName(t, m.detail.sign) : "",
+      });
   }
 }
 
@@ -61,6 +70,11 @@ export function momentBody(t: TFunction, locale: Locale, m: SkyMoment): string {
         target,
         lunation: t(m.detail.lunationKind === "full" ? "moments.lunationName.full" : "moments.lunationName.new"),
       });
+    case "progressed_lunation":
+      return t(
+        m.detail.lunationKind === "full" ? "moments.body.progressed_lunation_full" : "moments.body.progressed_lunation_new",
+        { age: m.detail.age ?? "" },
+      );
     case "retrograde_period":
       return t("moments.body.retrograde_period", {
         planet,
@@ -75,6 +89,7 @@ export function momentBody(t: TFunction, locale: Locale, m: SkyMoment): string {
         theme,
         station,
         age: m.detail.age ?? "",
+        sign: m.detail.sign ? signName(t, m.detail.sign) : "",
       });
   }
 }
@@ -108,6 +123,11 @@ const TONE: Record<SkyMomentKind, Tone> = {
   lunation_on_natal: "mint",
   retrograde_period: "cloud",
   double_retrograde: "cloud",
+  chiron_return: "mint",
+  progressed_moon_return: "primary",
+  progressed_moon_sign: "primary",
+  progressed_sun_sign: "star",
+  progressed_lunation: "primary",
 };
 
 const ICON: Record<SkyMomentKind, IconName> = {
@@ -123,6 +143,11 @@ const ICON: Record<SkyMomentKind, IconName> = {
   lunation_on_natal: "moon-outline",
   retrograde_period: "refresh-outline",
   double_retrograde: "repeat-outline",
+  chiron_return: "bandage-outline",
+  progressed_moon_return: "hourglass-outline",
+  progressed_moon_sign: "hourglass-outline",
+  progressed_sun_sign: "sunny-outline",
+  progressed_lunation: "moon-outline",
 };
 
 export const momentTone = (m: SkyMoment): Tone => TONE[m.kind];

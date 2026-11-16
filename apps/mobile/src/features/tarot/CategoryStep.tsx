@@ -8,7 +8,7 @@ import { SpotlightCard } from "../../components/ui/SpotlightCard";
 import { useMascotStore } from "../../store/useMascotStore";
 import { PASSES, TAROT_SPREAD_STAGE, spreadUnlocked } from "../../lib/mascotRules";
 import type { TarotSpreadKey } from "../../services/types";
-import { stageName } from "../aster/asterCopy";
+import { stageName, stageXp } from "../aster/asterCopy";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { AsterCameo } from "../../components/ui/AsterCameo";
 import { EnterView } from "../../lib/motion";
@@ -195,6 +195,7 @@ export function CategoryStep({
                     ? t(`tarot.spreadPick.${k}` as TranslationKey)
                     : `${t(`tarot.spreadPick.${k}` as TranslationKey)} · ${t("tarot.spreadPick.lockedAt", {
                         stage: stageName(t, TAROT_SPREAD_STAGE[k]),
+                        xp: stageXp(TAROT_SPREAD_STAGE[k]),
                       })}`
                 }
                 icon={open ? (k === "three" ? "albums" : "git-branch") : "lock-closed"}

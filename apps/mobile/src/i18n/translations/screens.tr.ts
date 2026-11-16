@@ -1,6 +1,6 @@
 import type { screensEn } from "./screens.en";
 
-/** Aster'ın onboarding, harita ve Gökyüzü ekranlarındaki sesi — bkz. screens.en.ts. */
+/** Aster'in onboarding, harita ve Gökyüzü ekranlarındaki sesi — bkz. screens.en.ts. */
 export const screensTr: typeof screensEn = {
   welcome: {
     asterAsk: "Merhaba, ben Aster — hâlâ yumurtamın içinde kıvrılmış duruyorum. Sana ne diye seslenelim?",
@@ -22,6 +22,10 @@ export const screensTr: typeof screensEn = {
     asterLineNoRising: "Güneşin {{sun}} burcunda, Ayın {{moon}} burcunda… Seni tanımaya başlıyorum, {{name}}.",
     friend: "dostum",
     error: "Gökyüzü biraz bulutlandı, haritanı çıkaramadım. Bir daha deneyelim mi?",
+    errorOffline: "İnternete bağlanamadım, haritanı çıkarmak için bağlantı gerekiyor.",
+    errorOfflineDetail: "Wi-Fi'yi ya da mobil veriyi kontrol edip tekrar dene. Cevapların kaybolmadı.",
+    errorServerDetail: "Sorun bizde, sende değil. Birazdan tekrar dene; cevapların kaybolmadı.",
+    back: "Geri dön",
   },
   tour: {
     progress: "{{n}} / {{total}}",

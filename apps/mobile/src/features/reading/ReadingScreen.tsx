@@ -106,6 +106,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
       sunSign: profile.sunSign,
       moonSign: profile.moonSign,
       risingSign: profile.risingSign,
+      risingUnknown: !!profile.unknownTime,
       name: displayName,
     });
   };
@@ -139,6 +140,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
                 sunSign={profile.sunSign}
                 moonSign={profile.moonSign}
                 risingSign={profile.risingSign}
+                risingUnknown={!!profile.unknownTime}
               />
             ) : null}
             <View style={styles.divider}>

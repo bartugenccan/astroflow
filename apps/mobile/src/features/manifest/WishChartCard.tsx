@@ -52,7 +52,7 @@ export function WishChartCard({ dto, area, natalHouse }: WishChartCardProps) {
   if (!ctx) {
     return (
       <ChunkyCard>
-        <StateView kind="error" compact message={t("wish.detail.chartError")} onAction={areas.reload} />
+        <StateView kind="error" compact message={t("wish.detail.chartError")} onAction={areas.reload} offline={areas.offline} />
       </ChunkyCard>
     );
   }

@@ -25,7 +25,7 @@ import { useMotion } from "../../lib/motion";
 import { colors, depth, motion, palette, radii, spacing, surface, Tone } from "../../lib/design-system";
 import { milestoneLabel, stageName } from "./asterCopy";
 import { unlockLines } from "./unlockCopy";
-import { DiscoveryContent } from "./JourneyDiscovery";
+import { DiscoveryContent, constellationName } from "./JourneyDiscovery";
 import { ProtectAsterSheet } from "./ProtectAsterSheet";
 
 /**
@@ -118,6 +118,23 @@ function pillCopy(item: Celebration, t: ReturnType<typeof useTranslation>["t"]):
         body: item.wishText ? `“${item.wishText}”` : t("aster.celebrate.manifestedBody"),
         long: true,
       };
+    case "welcomeBack": {
+      const wb = item.welcome;
+      return {
+        tone: "candy",
+        icon: "heart",
+        title: t(wb?.longing === "longs" ? "aster.celebrate.welcomeLongTitle" : "aster.celebrate.welcomeTitle"),
+        body: !wb
+          ? ""
+          : wb.duplicate
+            ? t("aster.celebrate.welcomeDuplicate", {
+                name: constellationName(t, wb.constellationKey),
+                n: wb.stardust,
+              })
+            : t("aster.celebrate.welcomeFound", { name: constellationName(t, wb.constellationKey) }),
+        long: true,
+      };
+    }
     case "accountLinked":
       return {
         tone: "mint",

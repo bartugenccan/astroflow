@@ -89,6 +89,8 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp, foc
   const ownDto = useBirthDto();
   const dto = dtoProp ?? ownDto;
   const profile = useAppStore((s) => s.birthProfile);
+  // Own chart without a birth time: rising and houses are noon estimates (F22).
+  const approx = !dtoProp && !!profile?.unknownTime;
 
   const [selected, setSelected] = useState<PlanetPlacement | null>(null);
 
@@ -181,6 +183,21 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp, foc
           ) : null}
         </EnterView>
 
+        {approx ? (
+          <ChunkyCard tone="cloud" tinted style={styles.approx}>
+            <AppText variant="bodySmall" color={colors.text.secondary}>
+              {t("chart.approxNote")}
+            </AppText>
+            <ChunkyButton
+              label={t("chart.approxCta")}
+              onPress={() => router.push("/(tabs)/profile" as Href)}
+              variant="night"
+              size="sm"
+              uppercase={false}
+            />
+          </ChunkyCard>
+        ) : null}
+
         {chart && !bannerHidden && focusPlanet && focusTransit ? (
           <FocusBanner
             tone="sky"
@@ -214,7 +231,7 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp, foc
 
         {!chart ? (
           chartQ.error ? (
-            <StateView kind="error" message={t("screens.chart.error")} onAction={chartQ.reload} />
+            <StateView kind="error" message={t("screens.chart.error")} onAction={chartQ.reload} offline={chartQ.offline} />
           ) : (
             <StateView kind="loading" />
           )
@@ -255,7 +272,7 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp, foc
               <ChunkyCard style={styles.placementsCard}>
                 {chart.planets.slice(0, 3).map((planet, i) => (
                   <EnterView key={planet.name} index={i} delay={motion.stagger * 2} distance={10}>
-                    <PlacementRow planet={planet} onPress={setSelected} highlighted={isHighlighted(planet)} />
+                    <PlacementRow planet={planet} onPress={setSelected} highlighted={isHighlighted(planet)} approxHouse={approx} />
                     {i < 2 ? <View style={styles.sep} /> : null}
                   </EnterView>
                 ))}
@@ -274,7 +291,7 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp, foc
                 >
                   {chart.planets.slice(3).map((planet, i, rest) => (
                     <View key={planet.name}>
-                      <PlacementRow planet={planet} onPress={setSelected} highlighted={isHighlighted(planet)} />
+                      <PlacementRow planet={planet} onPress={setSelected} highlighted={isHighlighted(planet)} approxHouse={approx} />
                       {i < rest.length - 1 ? <View style={styles.sep} /> : null}
                     </View>
                   ))}
@@ -402,6 +419,7 @@ function formatDate(iso: string, locale: string): string {
 }
 
 const styles = StyleSheet.create({
+  approx: { gap: spacing.sm, marginBottom: spacing.lg },
   content: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,

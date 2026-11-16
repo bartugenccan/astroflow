@@ -25,6 +25,11 @@ import {
   unlocksAt,
   passesToday,
   STAGES,
+  daysAway,
+  longingFor,
+  welcomeGift,
+  WELCOME_GIFTS,
+  welcomeRolls,
 } from '../src/modules/mascot/mascot-rules.ts';
 import { intentionStats } from '../src/modules/intentions/intention-rules.ts';
 
@@ -392,4 +397,62 @@ test('manifest stats count days, practice days and the conviction trend oldest f
 
 test('a manifest planted today is one day old', () => {
   assert.equal(intentionStats([], '2026-11-10', '2026-11-10', 0).daysActive, 1);
+});
+
+test('a new user, today and a clock that went backwards are never "away"', () => {
+  assert.equal(daysAway(null, '2026-11-17'), 0);
+  assert.equal(daysAway('2026-11-17', '2026-11-17'), 0);
+  assert.equal(daysAway('2026-11-18', '2026-11-17'), 0);
+});
+
+test('longing: content for a day, misses at 2–3, longs from 4', () => {
+  assert.equal(longingFor(daysAway('2026-11-16', '2026-11-17')), 'content');
+  assert.equal(longingFor(daysAway('2026-11-15', '2026-11-17')), 'misses');
+  assert.equal(longingFor(daysAway('2026-11-14', '2026-11-17')), 'misses');
+  assert.equal(longingFor(daysAway('2026-11-13', '2026-11-17')), 'longs');
+  assert.equal(longingFor(30), 'longs');
+});
+
+test('eclipse days are a chosen rest, not time away', () => {
+  const rest = eclipseDays({ start: '2026-11-11', end: '2026-11-15' });
+  // Last seen the 10th, rested 11–15, back the 17th: only the 16th was missed.
+  assert.equal(daysAway('2026-11-10', '2026-11-17', rest), 2);
+  // Resting today: asleep, not missing you.
+  assert.equal(daysAway('2026-11-10', '2026-11-13', rest), 0);
+});
+
+test('the welcome gift is small, stable for one return and not bigger for staying away longer', () => {
+  assert.equal(welcomeGift(1, 'dev-a', '2026-11-17'), 0);
+  const g = welcomeGift(3, 'dev-a', '2026-11-17');
+  assert.ok(WELCOME_GIFTS.includes(g));
+  assert.equal(welcomeGift(3, 'dev-a', '2026-11-17'), g);
+  assert.equal(welcomeGift(40, 'dev-a', '2026-11-17'), g);
+  assert.ok(Math.max(...WELCOME_GIFTS) <= 30);
+  // It varies across people / days.
+  const picks = new Set(Array.from({ length: 40 }, (_, i) => welcomeGift(5, `dev-${i}`, '2026-11-17')));
+  assert.ok(picks.size > 1);
+});
+
+test('recording and reading a sky moment are client kinds that feed Aster once a day', () => {
+  for (const k of ['VOICE_RECORD', 'SKY_MOMENT']) {
+    assert.ok(CLIENT_EVENT_KINDS.includes(k));
+    assert.equal(EVENT_RULES[k].dailyCap, 1);
+    assert.ok(EVENT_RULES[k].xp > 0);
+  }
+});
+
+test('a return brings a sky constellation you have not found yet, stable for that return', async () => {
+  const { welcomeConstellation, SKY_CONSTELLATIONS } = await import('../src/modules/mascot/constellations.ts');
+  const rolls = welcomeRolls('dev-a', '2026-11-17');
+  assert.deepEqual(rolls, welcomeRolls('dev-a', '2026-11-17'));
+  assert.ok(rolls.every((r) => r >= 0 && r < 1));
+  const fresh = welcomeConstellation([], rolls);
+  assert.ok(SKY_CONSTELLATIONS.includes(fresh.key));
+  assert.equal(fresh.duplicate, false);
+  // With all but one found, the missing one comes home.
+  const missing = SKY_CONSTELLATIONS[3];
+  const owned = SKY_CONSTELLATIONS.filter((k) => k !== missing);
+  assert.deepEqual(welcomeConstellation(owned, rolls), { key: missing, duplicate: false });
+  // Everything found: a duplicate (the service turns it into stardust).
+  assert.equal(welcomeConstellation([...SKY_CONSTELLATIONS], rolls).duplicate, true);
 });

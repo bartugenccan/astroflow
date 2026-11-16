@@ -154,7 +154,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
                 ) : null}
               </>
             ) : (
-              <StateView kind="error" compact message={t("forecast.error")} onAction={bestDays.reload} />
+              <StateView kind="error" compact message={t("forecast.error")} onAction={bestDays.reload} offline={bestDays.offline} />
             )}
           </ChunkyCard>
         </EnterView>
@@ -230,7 +230,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
             </>
           ) : (
             <ChunkyCard>
-              <StateView kind="error" compact message={t("forecast.error")} onAction={forecast.reload} />
+              <StateView kind="error" compact message={t("forecast.error")} onAction={forecast.reload} offline={forecast.offline} />
             </ChunkyCard>
           )}
         </EnterView>

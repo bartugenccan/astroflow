@@ -9,6 +9,7 @@ import type {
   JourneyClaim,
   JourneyDiscovery,
   MascotDelta,
+  WelcomeBack,
   MascotEventKind,
   MascotEventResult,
   MascotState,
@@ -39,6 +40,10 @@ import {
   STAGES,
   advanceOrbit,
   catalogItem,
+  daysAway,
+  longingFor,
+  welcomeGift,
+  welcomeRolls,
   eclipseActive,
   eclipseDays,
   energyFor,
@@ -53,7 +58,7 @@ import {
   stardustFor,
   viewOrbit,
 } from "../lib/mascotRules";
-import { ALL_CONSTELLATIONS, pickConstellation } from "../lib/constellations";
+import { ALL_CONSTELLATIONS, pickConstellation, welcomeConstellation } from "../lib/constellations";
 import { useAppStore } from "../store/useAppStore";
 
 /** Aster's growth API: the server is authoritative, the mock mirrors its rules offline. */
@@ -250,12 +255,23 @@ function mockView(): MascotState {
             xpNeeded: Math.max(0, (next ?? 0) - mock.xp),
           },
     novaLook: mock.novaLook && mock.stage >= MAX_STAGE,
+    ...(() => {
+      if (mockWelcome && mockWelcome.day === today) {
+        const wb = mockWelcome.wb;
+        return { longing: { level: wb.longing, daysAway: wb.daysAway }, welcomeBack: wb };
+      }
+      const away = daysAway(mock.orbit.lastDate, today, eclipseDays(mock.eclipse));
+      return { longing: { level: longingFor(away), daysAway: away }, welcomeBack: null };
+    })(),
   };
 }
 
 function mockProgress() {
   return { stage: mock.stage, done: mock.lessonsDone, early: mock.lessonsEarly };
 }
+
+/** Today's mock return (the server keeps it in the WELCOME_BACK ledger row). */
+let mockWelcome: { day: string; wb: WelcomeBack } | null = null;
 
 /** Mirror of MascotService.award, used by the mock intentions API too. */
 export function mockAward(kind: MascotEventKind, refKey = "", opts: { hatch?: boolean } = {}): MascotDelta {
@@ -273,12 +289,29 @@ export function mockAward(kind: MascotEventKind, refKey = "", opts: { hatch?: bo
     }
   }
   const awarded = key !== null;
+  let welcomeBack: WelcomeBack | null = null;
   if (awarded) {
     mock.events.push({ kind, day: today, refKey: key as string });
     if (kind !== "ACCOUNT_LINKED" && mock.orbit.lastDate !== today) {
-      const next = advanceOrbit(mock.orbit, today, mock.shields, eclipseDays(mock.eclipse));
+      const paused = eclipseDays(mock.eclipse);
+      const away = daysAway(mock.orbit.lastDate, today, paused);
+      const next = advanceOrbit(mock.orbit, today, mock.shields, paused);
       mock.orbit = { streak: next.streak, best: next.best, lastDate: next.lastDate };
       mock.shields -= Math.min(next.shieldsUsed, mock.shields);
+      const longing = longingFor(away);
+      if (longing !== "content" && mock.hatched) {
+        const find = welcomeConstellation([...mock.constellations.keys()], welcomeRolls("mock", today));
+        const gift = find.duplicate ? welcomeGift(away, "mock", today) : 0;
+        mock.stardust += gift;
+        const prev = mock.constellations.get(find.key);
+        mock.constellations.set(find.key, {
+          count: (prev?.count ?? 0) + 1,
+          firstFoundAt: prev?.firstFoundAt ?? new Date().toISOString(),
+        });
+        welcomeBack = { daysAway: away, longing, constellationKey: find.key, duplicate: find.duplicate, stardust: gift };
+        mockWelcome = { day: today, wb: welcomeBack };
+        mock.events.push({ kind: "WELCOME_BACK", day: today, refKey: String(away) });
+      }
     }
   }
   const xpGained = awarded ? rule.xp : 0;
@@ -300,6 +333,7 @@ export function mockAward(kind: MascotEventKind, refKey = "", opts: { hatch?: bo
     leveledUp: mock.stage > previousStage,
     hatched: hatchNow,
     energy,
+    welcomeBack,
   };
 }
 
@@ -314,6 +348,7 @@ export function mockTodayMood(): MoodSky | null {
 }
 
 export function mockResetMascot(): void {
+  mockWelcome = null;
   Object.assign(mock, {
     xp: 0,
     stardust: 0,

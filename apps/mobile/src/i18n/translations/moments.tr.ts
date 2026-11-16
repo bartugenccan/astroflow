@@ -79,6 +79,12 @@ export const momentsTr: typeof momentsEn = {
     lunation_full: "Dolunay: natal {{target}} noktanda",
     retrograde_period: "{{planet}} retrosu",
     double_retrograde: "{{planet}} yine retroda",
+    chiron_return: "Chiron dönüşün",
+    progressed_moon_return: "İlerletilmiş Ay dönüşün",
+    progressed_moon_sign: "İlerletilmiş Ay {{sign}} burcuna geçiyor",
+    progressed_sun_sign: "İlerletilmiş Güneş {{sign}} burcuna geçiyor",
+    progressed_lunation_new: "İlerletilmiş Yeni Ay",
+    progressed_lunation_full: "İlerletilmiş Dolunay",
   },
   body: {
     saturn_return:
@@ -105,6 +111,18 @@ export const momentsTr: typeof momentsEn = {
       "{{planet}}, {{start}} – {{end}} arasında geri gidiyormuş gibi görünüyor. Gözden geçirme ve yeniden düşünme zamanı; korkulacak bir şey yok.",
     double_retrograde:
       "Doğduğunda da {{planet}} retrodaydı. Bu yavaş ritim sana tanıdık gelebilir: acele etmeden geriye bakma zamanı.",
+    chiron_return:
+      "Chiron, doğduğun gündeki yerine dönüyor ({{age}} yaş, yaklaşık 50 yılda bir). Eski bir yarayla barışmak ve ondan öğrendiklerini başkalarına aktarmak için olgun bir dönem.",
+    progressed_moon_return:
+      "İlerletilmiş haritanda Ay, doğumdaki derecesine geri geliyor ({{age}} yaş, yaklaşık 27 yılda bir). Bir duygusal döngü kapanıyor, yenisi açılıyor.",
+    progressed_moon_sign:
+      "İlerletilmiş Ay {{sign}} burcuna geçiyor: yaklaşık iki buçuk yıl sürecek yeni bir duygusal ton. Kendini evinde hissetmek için neye ihtiyaç duyduğun biraz değişebilir.",
+    progressed_sun_sign:
+      "İlerletilmiş Güneş {{sign}} burcuna geçiyor. Bu yaklaşık 30 yılda bir olur ve kendini ortaya koyma biçimine yavaş yavaş yeni bir renk katar.",
+    progressed_lunation_new:
+      "İlerletilmiş Güneş ve Ay buluşuyor ({{age}} yaş). Yaklaşık 30 yıllık bir döngünün tohumu: senin için önemli bir şeye başlamak için iyi bir zaman.",
+    progressed_lunation_full:
+      "İlerletilmiş Güneş ve Ay karşı karşıya ({{age}} yaş). Yaklaşık 30 yıllık döngünün ortası: başlattığın şey görünür hale geliyor.",
   },
   lunationName: {
     new: "Yeni Ay",

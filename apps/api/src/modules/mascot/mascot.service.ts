@@ -28,7 +28,12 @@ import {
   SHIELD_EVERY_JOURNEYS,
   SHIELD_MIN_STAGE,
   STAGES,
+  Longing,
   advanceOrbit,
+  daysAway,
+  longingFor,
+  welcomeGift,
+  welcomeRolls,
   eclipseActive,
   eclipseDays,
   energyFor,
@@ -41,7 +46,7 @@ import {
   stardustFor,
   viewOrbit,
 } from './mascot-rules';
-import { ALL_CONSTELLATIONS } from './constellations';
+import { ALL_CONSTELLATIONS, welcomeConstellation } from './constellations';
 import { CATALOG, CatalogItem, catalogItem } from './mascot-catalog';
 
 /** What one award did — the app turns this into a celebration. */
@@ -57,6 +62,28 @@ export interface MascotDelta {
   /** The egg cracked open on this award. */
   hatched: boolean;
   energy: number;
+  /** First award after time away: Aster's welcome and its small stardust gift (already in `stardust`). */
+  welcomeBack: WelcomeBack | null;
+}
+
+export interface WelcomeBack {
+  daysAway: number;
+  longing: Exclude<Longing, 'content'>;
+  /** The sky figure Aster found while missing you (from the journey pool). */
+  constellationKey: string;
+  /** Already in the album: it turned into `stardust` instead. */
+  duplicate: boolean;
+  stardust: number;
+}
+
+/** WELCOME_BACK ledger refKey: "<daysAway>|<constellation>|<1 = duplicate>". */
+function welcomeRef(w: WelcomeBack): string {
+  return `${w.daysAway}|${w.constellationKey}|${w.duplicate ? 1 : 0}`;
+}
+
+function parseWelcomeRef(ref: string): { away: number; key: string | null; duplicate: boolean } {
+  const [away, key, dup] = ref.split('|');
+  return { away: Number(away), key: key || null, duplicate: dup === '1' };
 }
 
 export interface MascotView {
@@ -102,6 +129,10 @@ export interface MascotView {
   nextUnlocks: (StageUnlocks & { items: string[]; xpNeeded: number }) | null;
   /** Nova look switched on (stage 5 only). */
   novaLook: boolean;
+  /** How much Aster has missed you (days since the orbit last counted, rest days excluded). */
+  longing: { level: Longing; daysAway: number };
+  /** Today's return after days away, if today was one (the app shows Aster's welcome once). */
+  welcomeBack: WelcomeBack | null;
 }
 
 /** A finished lesson: the growth it earned and the fresh state. */
@@ -223,7 +254,8 @@ export class MascotService {
 
     const hatchNow = !!opts.hatch && !before.hatchedAt;
     let after: StateRow = before;
-    if (awarded) after = await this.advanceOrbitFor(before, kind, today);
+    let welcomeBack: WelcomeBack | null = null;
+    if (awarded) ({ state: after, welcomeBack } = await this.advanceOrbitFor(before, kind, today));
     if (awarded || hatchNow) {
       after = await this.prisma.mascotState.update({
         where: { deviceId },
@@ -251,6 +283,7 @@ export class MascotService {
       leveledUp: after.stage > previousStage,
       hatched: hatchNow,
       energy,
+      welcomeBack,
     };
   }
 
@@ -274,26 +307,66 @@ export class MascotService {
    * with shields, skipping eclipse days). Linking an account is not "showing
    * up", so it never counts.
    */
-  private async advanceOrbitFor(state: StateRow, kind: MascotEventKind, today: string): Promise<StateRow> {
-    if (kind === 'ACCOUNT_LINKED' || state.orbitLastDate === today) return state;
+  private async advanceOrbitFor(
+    state: StateRow,
+    kind: MascotEventKind,
+    today: string,
+  ): Promise<{ state: StateRow; welcomeBack: WelcomeBack | null }> {
+    if (kind === 'ACCOUNT_LINKED' || state.orbitLastDate === today) return { state, welcomeBack: null };
+    const paused = eclipseDays({ start: state.eclipseStart, end: state.eclipseEnd });
     const next = advanceOrbit(
       { streak: state.orbitStreak, best: state.orbitBest, lastDate: state.orbitLastDate },
       today,
       state.shields,
-      eclipseDays({ start: state.eclipseStart, end: state.eclipseEnd }),
+      paused,
     );
-    if (!next.changed) return state;
-    // Guarded on the day we read, so two awards racing can't both advance it.
-    await this.prisma.mascotState.updateMany({
+    if (!next.changed) return { state, welcomeBack: null };
+    // The gap is read before the orbit moves on, so the welcome fires once per return.
+    const away = daysAway(state.orbitLastDate, today, paused);
+    const longing = longingFor(away);
+    // Back after days away: Aster brings a constellation from the journey pool
+    // (a new one when there is one); one you already have becomes a little stardust.
+    // An egg can't miss you yet (Today/Nest show no longing before the hatch), so no welcome either.
+    let find: { key: string; duplicate: boolean } | null = null;
+    if (longing !== 'content' && state.hatchedAt) {
+      const owned = (
+        await this.prisma.mascotConstellation.findMany({ where: { deviceId: state.deviceId }, select: { key: true } })
+      ).map((c) => c.key);
+      find = welcomeConstellation(owned, welcomeRolls(state.deviceId, today));
+    }
+    const gift = find?.duplicate ? welcomeGift(away, state.deviceId, today) : 0;
+    // Guarded on the day we read, so two awards racing can't both advance it (or both gift).
+    const res = await this.prisma.mascotState.updateMany({
       where: { deviceId: state.deviceId, orbitLastDate: state.orbitLastDate },
       data: {
         orbitStreak: next.streak,
         orbitBest: next.best,
         orbitLastDate: next.lastDate,
         ...(next.shieldsUsed > 0 ? { shields: { decrement: Math.min(next.shieldsUsed, state.shields) } } : {}),
+        ...(gift > 0 ? { stardust: { increment: gift } } : {}),
       },
     });
-    return this.ensure(state.deviceId);
+    const welcomeBack: WelcomeBack | null =
+      res.count > 0 && longing !== 'content' && find
+        ? { daysAway: away, longing, constellationKey: find.key, duplicate: find.duplicate, stardust: gift }
+        : null;
+    if (welcomeBack) {
+      await this.prisma.mascotConstellation.upsert({
+        where: { deviceId_key: { deviceId: state.deviceId, key: welcomeBack.constellationKey } },
+        create: { deviceId: state.deviceId, key: welcomeBack.constellationKey },
+        update: { count: { increment: 1 } },
+      });
+      // Noted in the ledger so the read can show today's welcome even when the
+      // award that carried it (e.g. the daily reading's SKY_READ) never reached the app.
+      await this.prisma.mascotEvent
+        .create({
+          data: { deviceId: state.deviceId, kind: 'WELCOME_BACK', localDate: today, refKey: welcomeRef(welcomeBack), xp: 0 },
+        })
+        .catch((err) => {
+          if (!isUniqueViolation(err)) throw err;
+        });
+    }
+    return { state: await this.ensure(state.deviceId), welcomeBack };
   }
 
   async getState(deviceId: string): Promise<MascotView> {
@@ -310,8 +383,9 @@ export class MascotService {
 
     const events = await this.prisma.mascotEvent.findMany({
       where: { deviceId, localDate: today },
-      select: { kind: true },
+      select: { kind: true, refKey: true },
     });
+    const welcome = events.find((e) => e.kind === 'WELCOME_BACK');
     const kinds = events.map((e) => e.kind as MascotEventKind);
     const counts: Partial<Record<MascotEventKind, number>> = {};
     for (const k of kinds) counts[k] = (counts[k] ?? 0) + 1;
@@ -369,7 +443,36 @@ export class MascotService {
       passesToday: passesToday(state.passes, today),
       nextUnlocks: this.nextUnlocks(state),
       novaLook: state.novaLook && state.stage >= MAX_STAGE,
+      ...this.longingView(state, today, welcome ? parseWelcomeRef(welcome.refKey) : null),
     };
+  }
+
+  /**
+   * Before today's first action: how long Aster has been missing you. After a
+   * return today: that return (Aster's welcome, its gift) for the rest of the day.
+   */
+  private longingView(
+    state: StateRow,
+    today: string,
+    returned: { away: number; key: string | null; duplicate: boolean } | null,
+  ): Pick<MascotView, 'longing' | 'welcomeBack'> {
+    if (returned && returned.key && Number.isFinite(returned.away)) {
+      const level = longingFor(returned.away);
+      if (level !== 'content') {
+        return {
+          longing: { level, daysAway: returned.away },
+          welcomeBack: {
+            daysAway: returned.away,
+            longing: level,
+            constellationKey: returned.key,
+            duplicate: returned.duplicate,
+            stardust: returned.duplicate ? welcomeGift(returned.away, state.deviceId, today) : 0,
+          },
+        };
+      }
+    }
+    const away = daysAway(state.orbitLastDate, today, eclipseDays({ start: state.eclipseStart, end: state.eclipseEnd }));
+    return { longing: { level: longingFor(away), daysAway: away }, welcomeBack: null };
   }
 
   private progress(state: StateRow) {

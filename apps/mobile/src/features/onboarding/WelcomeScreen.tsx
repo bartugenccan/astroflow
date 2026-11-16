@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { StyleSheet, View, TextInput, KeyboardAvoidingView } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import Animated, {
   useAnimatedStyle,
@@ -21,14 +21,16 @@ import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
 import { colors, motion, radii, spacing, surface, typography } from "../../lib/design-system";
 import { readTourCheckpoint } from "./tourCheckpoint";
+import { readDraftCheckpoint, resumeStepFor } from "./draftCheckpoint";
 
 /** Before onboarding ends Aster is still an egg. */
 const EGG_STAGE = 0;
 
 /**
  * First screen: the wordmark, then the egg Aster asks your name in its own
- * bubble. If a previous run already cast the chart and stopped mid-tour (app
- * reload), it picks the tour back up instead of starting over.
+ * bubble. If a previous run stopped part-way (the app was killed or reloaded),
+ * it picks up where it was: the tour if the chart was cast, otherwise the
+ * furthest birth-data step with the answers already filled in.
  */
 export function WelcomeScreen() {
   const router = useRouter();
@@ -38,6 +40,7 @@ export function WelcomeScreen() {
   const setName = useOnboardingDraft((s) => s.setName);
   const setProfile = useOnboardingDraft((s) => s.setProfile);
   const draftProfile = useOnboardingDraft((s) => s.profile);
+  const hydrateDraft = useOnboardingDraft((s) => s.hydrate);
   const aiConsentCurrent = useAppStore((s) => !!s.aiConsentAt && s.aiConsentVersion >= AI_CONSENT_VERSION);
   // Returning users (new phone, reinstall) sign in instead of re-onboarding.
   const [signInOpen, setSignInOpen] = useState(false);
@@ -50,7 +53,8 @@ export function WelcomeScreen() {
       setResumeChecked(true);
       return;
     }
-    readTourCheckpoint().then((checkpoint) => {
+    (async () => {
+      const checkpoint = await readTourCheckpoint();
       if (!active) return;
       if (checkpoint) {
         setName(checkpoint.name);
@@ -58,8 +62,17 @@ export function WelcomeScreen() {
         router.replace("/(onboarding)/tour" as Href);
         return;
       }
+      // Before the reveal: put the answers back and pick up at the furthest
+      // step (F20). Back from there returns here with the name filled in.
+      const draft = await readDraftCheckpoint();
+      if (!active) return;
+      if (draft && !useOnboardingDraft.getState().name) {
+        hydrateDraft(draft);
+        const step = resumeStepFor(draft);
+        if (step) router.push((aiConsentCurrent ? step : "/consent") as Href);
+      }
       setResumeChecked(true);
-    });
+    })();
     return () => {
       active = false;
     };
@@ -90,7 +103,9 @@ export function WelcomeScreen() {
     <ScreenWrapper variant="dense" edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        // Android runs edge-to-edge (gradle edgeToEdgeEnabled), where adjustResize
+        // no longer shrinks the window: the view has to make room itself (F1).
+        behavior="padding"
       >
         <View style={styles.container}>
           <View style={styles.hero}>

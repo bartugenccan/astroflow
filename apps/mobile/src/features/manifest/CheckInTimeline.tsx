@@ -28,7 +28,7 @@ export function CheckInTimeline({ intentionId, reloadKey }: { intentionId: strin
   let body: React.ReactNode;
   if (history.loading && !history.data) body = <StateView kind="loading" compact />;
   else if (history.error && !history.data)
-    body = <StateView kind="error" compact message={t("wish.detail.historyError")} onAction={history.reload} />;
+    body = <StateView kind="error" compact message={t("wish.detail.historyError")} onAction={history.reload} offline={history.offline} />;
   else if (rows.length === 0) body = <StateView kind="empty" compact message={t("wish.detail.historyEmpty")} />;
   else
     body = (

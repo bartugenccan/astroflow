@@ -4,6 +4,25 @@ import type { practiceEn } from "./practice.en";
 export const practiceTr: typeof practiceEn = {
   today: "Bugünün pratiği",
   start: "Başla",
+  /**
+   * Olumlama yazılırken canlı teknik ipuçları (cihaz içi, yalnızca öneri).
+   * 1. tekil + şimdiki zaman: manifest pratiğinin geleneği, araştırma bulgusu değil.
+   * İnanılır: Wood, Perunovic & Lee (2009, Psychological Science) — kendinden
+   * şüphe eden kişilerde aşırı iddialı olumlamalar ters tepebilir; bu yüzden köprü cümle önerilir.
+   */
+  technique: {
+    firstPerson: "Ben dili",
+    present: "Şimdiki zaman",
+    positive: "Olumlu",
+    believable: "İnanılır",
+    allGood: "Güzel: kişisel, şimdiki zamanda, olumlu ve inanılır.",
+    tip: {
+      firstPerson: "İpucu: kendinden söz et, \"Ben…\" ya da \"…yorum\" gibi.",
+      present: "İpucu: olmuş gibi söyle; \"olacağım\" ya da \"istiyorum\" yerine \"oluyorum\", \"yaşıyorum\".",
+      positive: "İpucu: kaçınmak istediğini değil, istediğini yaz.",
+      believable: "İpucu: çok büyük geliyorsa köprü kur: \"…mayı öğreniyorum\", \"her gün biraz daha…\".",
+    },
+  },
   continue: "Devam",
   next: "İleri",
   done: "Bitti",
@@ -53,6 +72,17 @@ export const practiceTr: typeof practiceEn = {
       count: "{{n}}/{{total}}",
       other: "Başka bir olumlama seç",
       otherTitle: "Olumlamalar",
+      use: "Bunu oku",
+      useA11y: "Bu olumlamayı pratikte oku",
+      record: "Kendini kaydet",
+      stop: "Durdur",
+      recording: "Kaydediliyor… {{s}} sn",
+      listen: "Kendi sesini dinle",
+      pause: "Duraklat",
+      rerecord: "Yeniden kaydet",
+      recordedNote: "Kayıt yalnızca bu telefonda kalır. Asıl mesele kendi sesini duymak.",
+      micDenied: "Mikrofon izni yok. Yine de sesli okuyup \"Okudum\"a dokunabilirsin.",
+      recordFailed: "Bu kayıt kaydedilemedi. Bir kez daha dene.",
     },
     "369": {
       name: "3-6-9",

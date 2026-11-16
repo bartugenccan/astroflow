@@ -25,6 +25,9 @@ const SECURE_STORE_KEYS = [
   "astroflow-affirmations",
   "astroflow-mascot",
   "astroflow-reflections",
+  // Onboarding checkpoints (birth data mid-onboarding; see features/onboarding).
+  "astroflow.onboarding.draft",
+  "astroflow.onboarding.tour",
 ];
 
 /**

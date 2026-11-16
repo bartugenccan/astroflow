@@ -1,4 +1,6 @@
 import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { DailyQuotaService } from '../../common/quota/daily-quota.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AI_TEXT_PROVIDER, AiTextProvider } from '../ai/ai-text-provider';
 import { AstrologyAdapterService } from '../astrology/astrology-adapter.service';
@@ -37,6 +39,8 @@ const CATEGORY_AREA: Record<string, LifeArea> = {
 @Injectable()
 export class IntentionsService {
   private readonly logger = new Logger(IntentionsService.name);
+  /** Fresh (uncached) affirmation previews a device may generate per UTC day. */
+  private readonly previewDailyLimit: number;
 
   constructor(
     @Inject(AI_TEXT_PROVIDER) private readonly ai: AiTextProvider,
@@ -47,7 +51,11 @@ export class IntentionsService {
     private readonly streaks: IntentionStreakService,
     private readonly mascot: MascotService,
     private readonly sky: DeviceSkyService,
-  ) {}
+    private readonly quota: DailyQuotaService,
+    config: ConfigService,
+  ) {
+    this.previewDailyLimit = config.get<number>('AFFIRMATION_PREVIEW_DAILY_PER_DEVICE') ?? 30;
+  }
 
   private area(category: string, provided?: LifeArea): LifeArea {
     return provided ?? CATEGORY_AREA[category?.toLowerCase()] ?? 'energy';
@@ -90,8 +98,16 @@ export class IntentionsService {
   }
 
   /** The chart-framed affirmation for a wish, before it is planted (wizard step). */
-  async previewAffirmation(dto: AffirmationPreviewDto, locale: Locale) {
-    return { affirmation: await this.affirmationFor(dto, dto.goalText, dto.lifeArea, locale) };
+  /**
+   * Each new goal text or "write another" misses the cache, so fresh generations
+   * are capped per device per day; past the cap the templated sentence comes back
+   * (the wish can still be planted) and a repeat of an earlier preview stays free.
+   */
+  async previewAffirmation(deviceId: string, dto: AffirmationPreviewDto, locale: Locale) {
+    const allowGeneration = () => this.quota.take(deviceId, 'affirmation_preview', this.previewDailyLimit);
+    return {
+      affirmation: await this.affirmationFor(dto, dto.goalText, dto.lifeArea, locale, dto.avoid ?? [], allowGeneration),
+    };
   }
 
   /**
@@ -386,11 +402,13 @@ export class IntentionsService {
     goalText: string,
     lifeArea: LifeArea,
     locale: Locale,
+    avoid: string[] = [],
+    allowGeneration?: () => Promise<boolean>,
   ): Promise<string> {
     const time = birth.unknownTime ? '12:00' : birth.birthTime;
     const chart = this.adapter.getNatalChart(birth.birthDate, time, birth.latitude, birth.longitude);
     return this.interpretation.getAffirmation(
-      { goalText, lifeArea, moonSign: chart.summary.moonSign, sunSign: chart.summary.sunSign },
+      { goalText, lifeArea, moonSign: chart.summary.moonSign, sunSign: chart.summary.sunSign, avoid, allowGeneration },
       locale,
     );
   }
@@ -457,6 +475,8 @@ function mergeDeltas(deltas: (MascotDelta | null)[]): MascotDelta | null {
     previousStage: real[0].previousStage,
     leveledUp: last.stage > real[0].previousStage,
     hatched: real.some((d) => d.hatched),
+    // Only the first award of the day advances the orbit, so the welcome rides on an earlier delta.
+    welcomeBack: real.find((d) => d.welcomeBack)?.welcomeBack ?? null,
   };
 }
 

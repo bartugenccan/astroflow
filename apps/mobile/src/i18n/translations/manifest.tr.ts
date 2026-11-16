@@ -179,6 +179,7 @@ export const wishTr: typeof wishEn = {
     affirmError: "Şu an yazamadım. Kendin yaz ya da atla, ekerken ben yazarım.",
     affirmA11y: "Olumlaman",
     regenerate: "Başka yaz",
+    affirmSame: "Bundan farklı bir hâlini bulamadım. İstersen cümleyi kendin düzenleyebilirsin; senin sesin gibi duyulsun.",
     plantTitle: "Ne zaman başlasın?",
     plantNow: "Şimdi",
     plantNowBody: "Bugünden itibaren parlamaya başlar.",

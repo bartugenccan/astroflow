@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsOptional, IsString, Max, Min, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, Max, Min, MaxLength } from 'class-validator';
 import { BirthInputDto } from '../../astrology/dto/birth-input.dto';
 
 const AREAS = ['love', 'career', 'money', 'energy'] as const;
@@ -42,4 +42,15 @@ export class AffirmationPreviewDto extends BirthInputDto {
 
   @IsIn(AREAS)
   lifeArea: (typeof AREAS)[number];
+
+  /**
+   * "Write another": the sentences already shown for this goal, so the new one
+   * is different (F11). Omitted on the first request.
+   */
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5)
+  @IsString({ each: true })
+  @MaxLength(300, { each: true })
+  avoid?: string[];
 }

@@ -30,7 +30,7 @@ export function LetterScreen() {
         </ChunkyCard>
       ) : letter.error || !letter.data ? (
         <ChunkyCard>
-          <StateView kind="error" compact message={t("letter.error")} onAction={letter.reload} />
+          <StateView kind="error" compact message={t("letter.error")} onAction={letter.reload} offline={letter.offline} />
         </ChunkyCard>
       ) : (
         <>

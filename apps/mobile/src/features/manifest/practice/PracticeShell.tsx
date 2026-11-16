@@ -1,5 +1,5 @@
 import React from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated from "react-native-reanimated";
 import { ScreenWrapper } from "../../../components/ScreenWrapper";
@@ -46,7 +46,8 @@ export function PracticeShell({
 
   return (
     <ScreenWrapper variant="still" edges={["top"]}>
-      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      {/* Android is edge-to-edge: adjustResize no longer makes room for the keyboard (F1). */}
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <View style={styles.top}>
           <IconButton
             icon={onBack ? "chevron-back" : "close"}

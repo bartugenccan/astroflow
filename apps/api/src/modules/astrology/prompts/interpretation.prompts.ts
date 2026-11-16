@@ -520,17 +520,42 @@ export function guidancePrompt(
   };
 }
 
+const AFFIRMATION_AREA: Record<Locale, Record<string, string>> = {
+  tr: { love: 'aşk ve ilişkiler', career: 'kariyer ve iş', money: 'para ve bolluk', energy: 'enerji, sağlık ve beden' },
+  en: { love: 'love and relationships', career: 'career and work', money: 'money and abundance', energy: 'energy, health and body' },
+};
+
 export function affirmationPrompt(
   locale: Locale,
-  args: { goalText: string; lifeArea: string; moonSign: string },
+  args: {
+    goalText: string;
+    lifeArea: string;
+    moonSign: string;
+    /** "Write another": sentences already shown; the new one must differ (F11). */
+    avoid?: string[];
+  },
 ): { user: string; schemaHint: string } {
+  const area = AFFIRMATION_AREA[locale][args.lifeArea] ?? args.lifeArea;
+  const avoid = (args.avoid ?? []).filter((s) => s.trim()).slice(-5);
+  const avoidLine = !avoid.length
+    ? ''
+    : locale === 'tr'
+      ? ` Kullanıcı şu olumlamaları zaten gördü ve başka bir tane istedi: ${avoid.map((s) => userData(s)).join(' ')}. Anlamı ve hedefi koru ama bunlardan belirgin biçimde farklı kelimeler ve yapı kullan; aynı cümleyi tekrar etme.`
+      : ` The user has already seen these affirmations and asked for another: ${avoid.map((s) => userData(s)).join(' ')}. Keep the meaning and the goal, but use clearly different words and structure; never repeat one of them.`;
   const user =
     locale === 'tr'
-      ? `Kullanıcının hedefi: ${userData(args.goalText)}. ${USER_DATA_RULE.tr} Duygusal tonu Ay burcu ${args.moonSign} ile uyumlu olsun (ama burç adını YAZMA). ` +
-        `Bu hedefi destekleyen, birinci tekil şahıs, şimdiki zaman, KISA ve İNANILIR bir olumlama (affirmation) yaz — kişinin gerçekten inanabileceği, abartısız, jargonsuz tek cümle. ` +
+      ? `Kullanıcının hedefi: ${userData(args.goalText)}. Seçtiği hayat alanı: ${area}. ${USER_DATA_RULE.tr} ` +
+        // F12: Turkish typed without diacritics changes meaning ("isimde" for "işimde").
+        `Hedef Türkçe karakterler (ı, ş, ğ, ü, ö, ç) olmadan yazılmış olabilir: her kelimeyi seçilen alana göre TEK bir anlamla oku ve yalnızca o anlamı kullan; aynı kelimenin ikinci bir okumasını cümleye ekleme. ` +
+        `Örnek: kariyer alanında "yeni isimde" = "yeni işimde" (yeni bir iş), "yeni ismimle" DEĞİL; "basariliyim" = "başarılıyım". Olumlamayı doğru Türkçe karakterlerle yaz. ` +
+        `Hedefte olmayan yeni bir konu, isim ya da olay ekleme; olumlama seçilen alanın içinde kalsın. ` +
+        `Duygusal tonu Ay burcu ${args.moonSign} ile uyumlu olsun (ama burç adını YAZMA). ` +
+        `Bu hedefi destekleyen, birinci tekil şahıs, şimdiki zaman, KISA ve İNANILIR bir olumlama (affirmation) yaz — kişinin gerçekten inanabileceği, abartısız, jargonsuz tek cümle.${avoidLine} ` +
         `JSON üret: { "affirmation": string }.`
-      : `The user's goal: ${userData(args.goalText)}. ${USER_DATA_RULE.en} Match the emotional tone to their Moon sign ${args.moonSign} (but do NOT name the sign). ` +
-        `Write a SHORT, BELIEVABLE affirmation supporting this goal — first person, present tense, one sentence the person can actually believe (no hype, no jargon). ` +
+      : `The user's goal: ${userData(args.goalText)}. Chosen life area: ${area}. ${USER_DATA_RULE.en} ` +
+        `Read the goal in the light of that area; do not add topics, names or events that are not in it, and keep the affirmation within the chosen area. ` +
+        `Match the emotional tone to their Moon sign ${args.moonSign} (but do NOT name the sign). ` +
+        `Write a SHORT, BELIEVABLE affirmation supporting this goal — first person, present tense, one sentence the person can actually believe (no hype, no jargon).${avoidLine} ` +
         `Produce JSON: { "affirmation": string }.`;
   return { user, schemaHint: '{ "affirmation": string }' };
 }

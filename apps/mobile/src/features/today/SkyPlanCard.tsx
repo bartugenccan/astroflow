@@ -20,6 +20,7 @@ import { areaTone, colors, motion, palette, radii, spacing, surface } from "../.
 import type { DailyPlan, LifeArea, MascotState, PlanStep } from "../../services/types";
 import { Collapse } from "./Collapse";
 import { AREA_ICON, STEP_VISUAL, areaName, moonLine, stepHref, stepWhy } from "./planCopy";
+import { useAppStore } from "../../store/useAppStore";
 
 interface SkyPlanCardProps {
   plan: DailyPlan | null;
@@ -42,6 +43,7 @@ export function SkyPlanCard({ plan, loading, error, onRetry, state, initiallyOpe
   const router = useRouter();
   const reduced = useReducedMotion();
   const [open, setOpen] = useState(initiallyOpen);
+  const unknownTime = useAppStore((s) => !!s.birthProfile?.unknownTime);
   const chevron = useSharedValue(initiallyOpen ? 1 : 0);
   const [burst, setBurst] = useState(0);
   const wasDone = useRef<boolean | null>(null);
@@ -79,7 +81,7 @@ export function SkyPlanCard({ plan, loading, error, onRetry, state, initiallyOpe
   }
 
   const focus = t("plan.focus", { area: areaName(t, plan.focusArea) });
-  const moon = moonLine(t, locale, plan.moon);
+  const moon = moonLine(t, locale, plan.moon, unknownTime);
   const focusLine = moon ? `${focus} · ${moon}` : focus;
   const tone = areaTone[plan.focusArea] ?? "primary";
 

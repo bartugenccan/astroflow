@@ -332,6 +332,7 @@ export const en = {
         {
           h: 'Subscriptions and purchases',
           p: [
+            'During the beta (TestFlight and early access) Premium features are free for everyone: nothing is sold and nothing is billed. We will tell you in the app before paid subscriptions start; nothing you use during the beta turns into a paid subscription on its own.',
             'Premium is offered as an auto-renewing subscription through the App Store or Google Play and is billed by them. It renews unless cancelled at least 24 hours before the period ends; manage or cancel it in your store account settings. Refunds follow the store’s policies.',
           ],
         },
@@ -376,6 +377,7 @@ export const en = {
         {
           h: 'Subscriptions',
           p: [
+            'During the beta Premium is free for everyone; there is nothing to buy right now.',
             'Purchases are handled by the App Store or Google Play. Manage or cancel your subscription from your store account settings.',
           ],
         },

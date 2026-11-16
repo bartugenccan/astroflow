@@ -24,9 +24,17 @@ export function areaName(t: TFunction, area: LifeArea): string {
   return t(`lifeAreas.${area}` as TranslationKey);
 }
 
-/** "Moon in your 10th house" / "Ay 10. evinde". */
-export function moonLine(t: TFunction, locale: Locale, moon: { natalHouse: number } | null): string | null {
-  if (!moon || !moon.natalHouse) return null;
+/**
+ * "Moon in your 10th house" / "Ay 10. evinde". Without a birth time the
+ * houses are a noon guess, so the line isn't stated (F22).
+ */
+export function moonLine(
+  t: TFunction,
+  locale: Locale,
+  moon: { natalHouse: number } | null,
+  unknownTime = false,
+): string | null {
+  if (unknownTime || !moon || !moon.natalHouse) return null;
   return t("plan.moonLine", { n: ordinal(locale, moon.natalHouse) });
 }
 
@@ -83,6 +91,9 @@ export const STEP_VISUAL: Record<MascotEventKind, { icon: IconName; tone: Tone }
   ACCOUNT_LINKED: { icon: "shield-checkmark", tone: "mint" },
   SKY_LESSON: { icon: "map", tone: "sky" },
   SIGN_LOG: { icon: "eye", tone: "candy" },
+  VOICE_RECORD: { icon: "mic", tone: "primary" },
+  SKY_MOMENT: { icon: "telescope", tone: "sky" },
+  WELCOME_BACK: { icon: "heart", tone: "candy" },
 };
 
 /** The tarot question a plan step carries, rendered in the reader's language. */

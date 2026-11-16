@@ -76,12 +76,31 @@ Urunun tum guveni bu hesabin dogrulugana dayaniyor. Yayindan once bilinen bir
 dogum haritasi **astro.com ile karsilastirilmali**; en az bir sira disi durum
 (yaz saati gecisi, gece yarisi dogum, yuksek enlem) test edilmeli.
 
+## Preflight (2026-11-17) — submit EDILMEDI
+
+`ship-kit preflight`: 27 gecti / 3 kaldi / 2 uyari. Kalanlar: hesap silme (bilinen yanlis negatif, yukarida),
+odeme SDK (beta: herkes Premium, bilincli), analytics (faz 2). `JOURNEY_MINUTES` .env.example'a eklendi.
+
+Elle dogrulama:
+- [x] Destek URL'si tarayicida aciliyor (en/tr 200, astroflowhq@gmail.com)
+- [x] Gizlilik politikasi aciliyor ve toplanan veriyi anlatiyor (AI saglayicilari, olumlama metni, Sentry, veri silme)
+- [ ] App Store Connect App Privacy beyani binary ile tutarli — henuz yapilmadi
+- [x] Uygulama icinde hesap silme calisiyor (cihazda denendi)
+- [ ] AI kullanimi ve AI'a giden veri App Privacy'de beyan edildi (5.1.2(i)) — ASC beyaniyla birlikte bekliyor
+- [x] Privacy manifest: app.json `ios.privacyManifests` + SDK'larin kendi manifestleri (ship.config.json envanteri)
+- [ ] Sandbox satin alma/yenileme/iptal — beta'da odeme yok (PREMIUM_BETA), odeme fazinda
+- [ ] Google Play Data Safety formu — gonderilmedi
+- [ ] Ekran goruntuleri — hazir degil (TestFlight icin sart degil, App Store icin sart)
+
+Submit edilmeme sebebi: production API (Railway) ayakta degil, `eas.json` iOS submit alanlari bos,
+ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
+
 ## Yayin kontrol tablosu
 
 | Asama | Durum |
 |---|---|
 | Apple Developer / Google Play hesaplari | ☐ |
-| Gizlilik + destek URL yayinda | ☐ |
+| Gizlilik + destek URL yayinda | ✅ (2026-11-17, astroflowhq@gmail.com) |
 | `ship.config.json` URL alanlari dolduruldu | ✅ (astroflow-web.vercel.app, yayinda) |
 | Mock katmani release build disinda, gercek API bagli | ✅ (API URL EAS env ile verilecek) |
 | Odeme SDK entegre, sandbox'ta satin alma calisti | ☐ |

@@ -18,9 +18,14 @@ export function BirthTimeScreen() {
   const setBirthTime = useOnboardingDraft((s) => s.setBirthTime);
   const setUnknownTime = useOnboardingDraft((s) => s.setUnknownTime);
 
-  const [hour, setHour] = useState(12);
-  const [minute, setMinute] = useState(0);
-  const [unknown, setUnknown] = useState(false);
+  // Start from the saved answer (back navigation, or resumed after a restart).
+  const saved = useOnboardingDraft.getState();
+  const savedTime = !saved.unknownTime && saved.birthTime && /^\d{2}:\d{2}$/.test(saved.birthTime)
+    ? saved.birthTime.split(":").map(Number)
+    : null;
+  const [hour, setHour] = useState(savedTime?.[0] ?? 12);
+  const [minute, setMinute] = useState(savedTime?.[1] ?? 0);
+  const [unknown, setUnknown] = useState(saved.unknownTime);
 
   const hours: WheelItem[] = useMemo(
     () => Array.from({ length: 24 }, (_, i) => ({ label: String(i).padStart(2, "0"), value: i })),

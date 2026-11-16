@@ -129,13 +129,13 @@ export function CompatibilityResultScreen() {
             <StateView
               kind="error"
               message={t("profileUi.compat.resultError")}
-              onAction={score.reload}
+              onAction={score.reload} offline={score.offline}
             />
           ) : people.error && !people.data ? (
             <StateView
               kind="error"
               message={t("profileUi.compat.loadError")}
-              onAction={people.reload}
+              onAction={people.reload} offline={people.offline}
             />
           ) : people.data && !person ? (
             <StateView
@@ -244,7 +244,7 @@ export function CompatibilityResultScreen() {
                 </ChunkyCard>
               ) : reading.error && !reading.loading ? (
                 <ChunkyCard>
-                  <StateView kind="error" compact onAction={reading.reload} />
+                  <StateView kind="error" compact onAction={reading.reload} offline={reading.offline} />
                 </ChunkyCard>
               ) : (
                 <ChunkyCard>

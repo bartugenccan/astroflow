@@ -67,7 +67,7 @@ export const tarotEn = {
     label: "Spread",
     three: "Three cards",
     decision: "Crossroads · 5 cards",
-    lockedAt: "opens at {{stage}}",
+    lockedAt: "opens at {{stage}} ({{xp}} Light)",
   },
   limitNote: "Your free reading for today is used. Premium opens unlimited readings.",
   soundOn: "Sound on",

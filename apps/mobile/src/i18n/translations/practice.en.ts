@@ -8,6 +8,26 @@
 export const practiceEn = {
   today: "Today's practice",
   start: "Start",
+  /**
+   * Live technique hints while writing an affirmation (on-device, advisory).
+   * First person + present tense: the convention of manifestation practice,
+   * not a research finding. Believable: Wood, Perunovic & Lee (2009,
+   * Psychological Science) found sweeping positive self-statements can
+   * backfire for people who doubt them, hence the "bridge" tip.
+   */
+  technique: {
+    firstPerson: "I / me",
+    present: "Present tense",
+    positive: "Positive",
+    believable: "Believable",
+    allGood: "Nicely put: personal, present, positive and believable.",
+    tip: {
+      firstPerson: "Tip: say it about yourself — \"I am…\", \"I…\".",
+      present: "Tip: say it as if it's already true — \"I am\" instead of \"I will\" or \"I want\".",
+      positive: "Tip: name what you want rather than what you want to avoid.",
+      believable: "Tip: if it feels too big, bridge it — \"I'm learning to…\", \"a little more each day\".",
+    },
+  },
   continue: "Continue",
   next: "Next",
   done: "Done",
@@ -57,6 +77,17 @@ export const practiceEn = {
       count: "{{n}} of {{total}}",
       other: "Choose another affirmation",
       otherTitle: "Affirmations",
+      use: "Read this one",
+      useA11y: "Read this affirmation in the practice",
+      record: "Record yourself",
+      stop: "Stop",
+      recording: "Recording… {{s}}s",
+      listen: "Listen to yourself",
+      pause: "Pause",
+      rerecord: "Record again",
+      recordedNote: "Saved on this phone only. Hearing your own voice is the point.",
+      micDenied: "No microphone access. You can still read aloud and tap \"I read it\".",
+      recordFailed: "That take didn't save. Try once more.",
     },
     "369": {
       name: "3-6-9",

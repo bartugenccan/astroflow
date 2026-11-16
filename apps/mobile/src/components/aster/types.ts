@@ -1,5 +1,5 @@
 import type { StyleProp, ViewStyle } from "react-native";
-import type { MascotMood } from "../../services/types";
+import type { Longing, MascotMood } from "../../services/types";
 
 /** What Aster is doing right now. */
 export type AsterAction = "idle" | "cheer" | "talk" | "hatch" | "breathe" | "sleep";
@@ -13,6 +13,11 @@ export interface MascotRendererProps {
   /** 0 egg · 1 Kıvılcım · 2 Yıldızcık · 3 Parıltı · 4 Takımyıldız · 5 Nova */
   stage: number;
   mood?: MascotMood;
+  /**
+   * Gentle longing after days away, until the user is back: a wistful face,
+   * never a sad or punished one. "content" (the default) keeps the mood face.
+   */
+  longing?: Longing;
   /** Accessory ids from the catalog (one per slot). */
   accessories?: string[];
   /** Rendered width/height in px (Aster is drawn on a square). */

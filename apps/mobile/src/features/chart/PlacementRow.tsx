@@ -13,11 +13,14 @@ interface Props {
   onPress: (planet: PlanetPlacement) => void;
   /** Marked by a deep link (a transit touching it, or its sign being explored). */
   highlighted?: boolean;
+  /** No birth time: the house is a noon estimate, marked "≈" (F22). */
+  approxHouse?: boolean;
 }
 
 /** A single "☉ Sun — Aries · 1st House — 14°32′" row. */
-export function PlacementRow({ planet, onPress, highlighted = false }: Props) {
+export function PlacementRow({ planet, onPress, highlighted = false, approxHouse = false }: Props) {
   const { t, locale } = useTranslation();
+  const house = `${approxHouse ? "≈ " : ""}${houseLabel(t, locale, planet.house)}`;
   const signName = t(`signs.${planet.sign}` as "signs.Aries");
   const planetName = t(`planets.${planet.name}` as "planets.Sun");
 
@@ -28,7 +31,7 @@ export function PlacementRow({ planet, onPress, highlighted = false }: Props) {
       style={[styles.row, highlighted && styles.rowHighlighted]}
       accessibilityRole="button"
       accessibilityState={{ selected: highlighted }}
-      accessibilityLabel={`${planetName}, ${signName}, ${houseLabel(t, locale, planet.house)}${
+      accessibilityLabel={`${planetName}, ${signName}, ${house}${
         planet.retrograde ? `, ${t("chart.retrograde")}` : ""
       }`}
     >
@@ -46,7 +49,7 @@ export function PlacementRow({ planet, onPress, highlighted = false }: Props) {
             ) : null}
           </View>
           <AppText variant="bodySmall">
-            {signName} · {houseLabel(t, locale, planet.house)}
+            {signName} · {house}
           </AppText>
           {planet.retrograde ? (
             <AppText variant="bodySmall" color={colors.semantic.challenging}>

@@ -42,6 +42,8 @@ import * as Joi from "joi";
         AI_DAILY_GLOBAL: Joi.number().integer().min(1).default(20000),
         DEEPSEEK_MIN_BALANCE: Joi.number().min(0).default(0.2),
         REPORTS_DAILY_PER_DEVICE: Joi.number().integer().min(1).default(3),
+        // Fresh affirmation previews (cache misses) per device per UTC day; over it, the template.
+        AFFIRMATION_PREVIEW_DAILY_PER_DEVICE: Joi.number().integer().min(1).default(30),
         // Beta switch: true = everyone Premium. Defaults to false so a production
         // deploy that forgets the variable never gives Premium away.
         PREMIUM_BETA: Joi.boolean().default(false),

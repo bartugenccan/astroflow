@@ -123,9 +123,15 @@ export function personalLine(
   if (!chart) return null;
 
   const planet = (name: string) => chart.planets.find((p) => p.name === name);
+  // No birth time: the chart was cast for noon, so anything tied to the
+  // rising sign or the houses is a guess and isn't stated as the reader's (F22).
+  const noTime = !!profile?.unknownTime;
 
   switch (id) {
     case "bigThree":
+      if (noTime) {
+        return y("bigThreeNoTime", { sun: signName(t, chart.summary.sunSign), moon: signName(t, chart.summary.moonSign) });
+      }
       return y("bigThree", {
         sun: signName(t, chart.summary.sunSign),
         moon: signName(t, chart.summary.moonSign),
@@ -135,6 +141,7 @@ export function personalLine(
     case "moon": {
       const p = planet(id === "sun" ? "Sun" : "Moon");
       if (!p) return null;
+      if (noTime) return y(`${id}NoTime`, { sign: signName(t, p.sign), deg: degrees(p.degree, p.minute) });
       return y(id, {
         sign: signName(t, p.sign),
         house: houseLabel(t, locale, p.house),
@@ -142,15 +149,18 @@ export function personalLine(
       });
     }
     case "rising":
+      if (noTime) return null;
       return y("rising", {
         sign: signName(t, chart.angles.ascendant.sign),
         deg: degrees(chart.angles.ascendant.degree),
       });
     case "midheaven":
+      if (noTime) return null;
       return y("midheaven", { sign: signName(t, chart.angles.midheaven.sign) });
     case "planet":
       return y("planet", { planet: planetName(t, chart.summary.dominantPlanet) });
     case "house": {
+      if (noTime) return null;
       const counts = new Map<number, number>();
       chart.planets.forEach((p) => counts.set(p.house, (counts.get(p.house) ?? 0) + 1));
       const [house, n] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
@@ -178,6 +188,7 @@ export function personalLine(
       return rx.length ? y("retrograde", { list: rx.join(", ") }) : y("retrogradeNone");
     }
     case "northNode":
+      if (noTime) return null;
       return y("northNode", {
         sign: signName(t, chart.nodes.north.sign),
         house: houseLabel(t, locale, chart.nodes.north.house),
@@ -185,6 +196,7 @@ export function personalLine(
     case "saturnReturn":
       return y("saturnReturn", { age: chart.saturn.returnAge });
     case "dayNightChart":
+      if (noTime) return null;
       return y(chart.sect === "day" ? "day" : "night");
     default:
       return null;

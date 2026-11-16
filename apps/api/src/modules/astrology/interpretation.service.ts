@@ -67,6 +67,7 @@ import {
 } from './prompts/interpretation.stubs';
 import { safeError } from '../../common/logging/safe-error';
 import { ownedReading } from '../../common/ai/owned-reading-cache';
+import { noteAiFailure } from '../../common/ai/ai-call-tracker';
 
 /** Bump when prompts/persona change so caches invalidate. */
 const CACHE_VERSION = 'v11';
@@ -707,35 +708,71 @@ export class InterpretationService {
     );
   }
 
-  /** A believable, chart-framed affirmation for an intention. Cached per chart+goal. */
+  /**
+   * A believable, chart-framed affirmation for an intention. Cached per
+   * chart+goal; "write another" sends the sentences already shown (`avoid`),
+   * which get their own cache entry and a prompt that must not repeat them (F11).
+   * `allowGeneration` is asked only on a cache miss, right before the model runs;
+   * when it says no, the template is served and (marked as a failure) never stored.
+   */
   async getAffirmation(
-    args: { goalText: string; lifeArea: string; moonSign: string; sunSign: string },
+    args: {
+      goalText: string;
+      lifeArea: string;
+      moonSign: string;
+      sunSign: string;
+      avoid?: string[];
+      allowGeneration?: () => Promise<boolean>;
+    },
     locale: Locale,
   ): Promise<string> {
+    const avoid = (args.avoid ?? []).map((s) => s.trim()).filter(Boolean).slice(-5);
+    const seen = new Set(avoid.map(normalizeSentence));
+    const variant = avoid.length;
+    const stub = () => {
+      // Rotate the fallback too, skipping any wording already shown.
+      for (let i = 0; i < 3; i++) {
+        const s = affirmationStub(locale, args.goalText, variant + i);
+        if (!seen.has(normalizeSentence(s))) return s;
+      }
+      return affirmationStub(locale, args.goalText, variant);
+    };
+    const avoidKey = variant ? `|avoid:${createHash('sha256').update(avoid.join('\n')).digest('hex').slice(0, 16)}` : '';
     return this.cached<{ text: string }>(
       'INTENTION_AFFIRMATION',
       locale,
-      `affirmation|${args.sunSign}|${args.moonSign}|${args.lifeArea}|${args.goalText}`,
+      // v3: the prompt now reads the life area and Turkish typed without
+      // diacritics (F12); older rows (e.g. "isimde" read as "ismimle") must not be reused.
+      `affirmation:v3|${args.sunSign}|${args.moonSign}|${args.lifeArea}|${args.goalText}${avoidKey}`,
       async () => {
-        if (!this.ai.available) return { text: affirmationStub(locale, args.goalText) };
+        if (!this.ai.available) return { text: stub() };
+        if (args.allowGeneration && !(await args.allowGeneration())) {
+          noteAiFailure();
+          return { text: stub() };
+        }
         try {
           const { user, schemaHint } = affirmationPrompt(locale, {
             goalText: args.goalText,
             lifeArea: args.lifeArea,
             moonSign: args.moonSign,
+            avoid,
           });
-          const parsed = await this.ai.generateJson<{ affirmation?: string }>({
-            system: systemPrompt(locale),
-            user,
-            schemaHint,
-            temperature: 0.85,
-            maxTokens: 400,
-          });
-          const text = (parsed.affirmation ?? '').trim();
-          return { text: text.length > 0 ? text.slice(0, 300) : affirmationStub(locale, args.goalText) };
+          // One retry, hotter, if the model hands back a sentence the user already saw.
+          for (const temperature of variant ? [0.95, 1.05] : [0.85]) {
+            const parsed = await this.ai.generateJson<{ affirmation?: string }>({
+              system: systemPrompt(locale),
+              user,
+              schemaHint,
+              temperature,
+              maxTokens: 400,
+            });
+            const text = (parsed.affirmation ?? '').trim().slice(0, 300);
+            if (text && !seen.has(normalizeSentence(text))) return { text };
+          }
+          return { text: stub() };
         } catch (err) {
           this.logger.warn(`affirmation AI failed: ${safeError(err)}`);
-          return { text: affirmationStub(locale, args.goalText) };
+          return { text: stub() };
         }
       },
     ).then((r) => r.text);
@@ -829,4 +866,12 @@ export class InterpretationService {
   private hash(input: string): string {
     return createHash('sha256').update(input).digest('hex');
   }
+}
+
+/** Case-, punctuation- and space-insensitive form, to tell "the same sentence again". */
+function normalizeSentence(s: string): string {
+  return s
+    .toLocaleLowerCase('tr')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
 }

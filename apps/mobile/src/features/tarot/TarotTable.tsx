@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LayoutChangeEvent, StyleSheet, View } from "react-native";
+import { Image, LayoutChangeEvent, StyleSheet, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, {
@@ -30,7 +30,6 @@ import type { TarotCategory, TarotDrawnCard, TarotSpreadKey } from "../../servic
 import { TAROT_CARD_RATIO } from "./cardImages";
 import { FAN_STEP_DEG, FAN_VISIBLE_DEG, TAROT_DECK, positionKey, spreadSize } from "./deck";
 import { DeckState, dealAll, freshDeck, shufflePass } from "./shuffle";
-import { TarotCardBack } from "./TarotCardBack";
 import type { TarotSounds } from "./useTarotSounds";
 
 type Mode = "stack" | "shuffle" | "fan" | "gone";
@@ -42,15 +41,34 @@ const MAX_SPIN = (CARD_COUNT - 1) * FAN_STEP_DEG;
 /** Riffle timings (ms). One cycle = split + merge + per-card stagger + settle. */
 const SPLIT_MS = 200;
 const MERGE_MS = 220;
-const STAGGER_MS = 3;
+const STAGGER_MS = 12;
 const SETTLE_MS = 120;
-const CYCLE_MS = SPLIT_MS + MERGE_MS + CARD_COUNT * STAGGER_MS + SETTLE_MS;
+/**
+ * Only the top of the deck riffles; the rest stays put as the pile beneath it.
+ * Animating all 78 (≈230 repeating animations) held the emulator near 10 fps;
+ * from above, a dozen moving cards on a still pile reads the same.
+ */
+const RIFFLE_CARDS = 12;
+const CYCLE_MS = SPLIT_MS + MERGE_MS + RIFFLE_CARDS * STAGGER_MS + SETTLE_MS;
 /** Pause while the shuffled deck squares up before the hand opens. */
 const GATHER_MS = 160;
 /** When the hand has finished opening, it sways once to show that it turns. */
 const NUDGE_DELAY_MS = 950;
 const NUDGE_DEG = 16;
 const RAD = 180 / Math.PI;
+/**
+ * In the open fan only the cards near the visible arc are mounted: the ones
+ * fading out between FAN_VISIBLE_DEG and 90°, plus a few more so a fast flick
+ * never shows a gap before the JS side catches up.
+ */
+const MOUNT_BUFFER = Math.ceil((90 - FAN_VISIBLE_DEG) / FAN_STEP_DEG) + 3;
+/**
+ * The card back as one shared bitmap (assets/tarot/back.png, rasterised from
+ * TarotCardBack): 78 cards decode it once and draw it as a plain image, instead
+ * of 78 gradients + SVG trees that took seconds to mount and each needed its
+ * own GPU layer.
+ */
+const CARD_BACK = require("../../../assets/tarot/back.png");
 
 interface Geometry {
   width: number;
@@ -126,11 +144,20 @@ const visibility = (angle: number) => {
   return Math.max(0, (90 - a) / (90 - FAN_VISIBLE_DEG));
 };
 
-/** Paint order in the open fan: the card at 12 o'clock on top, falling away to both sides. */
+/**
+ * Paint order in the open fan: the card at 12 o'clock on top, falling away to
+ * both sides. Half fan steps, not degrees, so a card's zIndex only changes
+ * when it passes a neighbour — not on every frame of a turn (78 zIndex writes
+ * per frame re-sorted the children each time).
+ */
 const fanZ = (angle: number) => {
   "worklet";
-  return 1000 - Math.round(Math.abs(angle) * 4);
+  // Half steps keep the exact |angle| rank (no left/right ties) yet still only change on a crossing.
+  return 1000 - Math.floor((Math.abs(angle) * 2) / FAN_STEP_DEG);
 };
+
+/** At most one "tick" haptic per this many ms while the fan spins fast. */
+const TICK_MIN_MS = 45;
 
 interface Props {
   category: TarotCategory;
@@ -193,6 +220,7 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme, spread
       if (shuffleTimer.current) clearInterval(shuffleTimer.current);
       timers.current.forEach(clearTimeout);
       sounds.stopShuffle();
+      cancelAnimation(spin);
     },
     // Unmount-only cleanup.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -273,12 +301,18 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme, spread
   const focusTick = useCallback(() => {
     Haptics.selectionAsync();
   }, []);
+  const lastTick = useSharedValue(0);
 
-  // A light tick each time a new card passes 12 o'clock while the fan turns.
+  // A light tick each time a new card passes 12 o'clock while the fan turns —
+  // throttled, so a fast flick doesn't queue dozens of haptics on the JS thread.
   useAnimatedReaction(
     () => focused.value,
     (cur, prev) => {
-      if (cur >= 0 && prev !== null && prev >= 0 && cur !== prev) runOnJS(focusTick)();
+      if (cur < 0 || prev === null || prev < 0 || cur === prev) return;
+      const now = Date.now();
+      if (now - lastTick.value < TICK_MIN_MS) return;
+      lastTick.value = now;
+      runOnJS(focusTick)();
     },
   );
 
@@ -371,10 +405,12 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme, spread
   // A paused shuffle lets the 78 cards settle into the pile instead of
   // riffling off screen (about 230 animated values every frame).
   const cardMode: Mode = mode === "shuffle" && !active ? "stack" : mode;
+  // The pile needs every card; the open fan only the ones near view (and the drawn ones).
+  const firstMounted = inHand ? hidden.left - MOUNT_BUFFER : 0;
+  const lastMounted = inHand ? CARD_COUNT - 1 - hidden.right + MOUNT_BUFFER : CARD_COUNT - 1;
+  const mounted = (i: number) => (i >= firstMounted && i <= lastMounted) || picks.includes(i);
   const choosing = mode === "fan" && picks.length < size;
-  const positions = Array.from({ length: size }, (_, i) =>
-    t(positionKey(category, spread, i)),
-  );
+  const positions = Array.from({ length: size }, (_, i) => t(positionKey(category, spread, i)));
 
   return (
     <View style={styles.root}>
@@ -396,18 +432,20 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme, spread
           {g ? (
             <>
               <Slots g={g} visible={inHand} labels={positions} picks={picks.length} />
-              {Array.from({ length: CARD_COUNT }).map((_, i) => (
-                <FanCard
-                  key={i}
-                  index={i}
-                  g={g}
-                  mode={cardMode}
-                  slot={picks.indexOf(i)}
-                  spin={spin}
-                  focused={focused}
-                  reduced={reduced}
-                />
-              ))}
+              {Array.from({ length: CARD_COUNT }).map((_, i) =>
+                mounted(i) ? (
+                  <FanCard
+                    key={i}
+                    index={i}
+                    g={g}
+                    mode={cardMode}
+                    slot={picks.indexOf(i)}
+                    spin={spin}
+                    focused={focused}
+                    reduced={reduced}
+                  />
+                ) : null,
+              )}
               <SpinHint g={g} visible={choosing && !hasSpun && active} reduced={reduced} label={t("tarot.spinHint")} />
               <SideCounter g={g} side="left" count={hidden.left} visible={choosing && active} reduced={reduced} />
               <SideCounter g={g} side="right" count={hidden.right} visible={choosing && active} reduced={reduced} />
@@ -436,20 +474,12 @@ export function TarotTable({ category, sounds, onComplete, onChangeTheme, spread
 
 // ── The three slots the drawn cards fly into ──────────────────────────────────
 
-function Slots({
-  g,
-  visible,
-  labels,
-  picks,
-}: {
-  g: Geometry;
-  visible: boolean;
-  labels: string[];
-  picks: number;
-}) {
+function Slots({ g, visible, labels, picks }: { g: Geometry; visible: boolean; labels: string[]; picks: number }) {
   const shown = useSharedValue(0);
   useEffect(() => {
-    shown.value = withTiming(visible ? 1 : 0, { duration: motion.duration.base });
+    shown.value = withTiming(visible ? 1 : 0, {
+      duration: motion.duration.base,
+    });
   }, [visible, shown]);
   const style = useAnimatedStyle(() => ({ opacity: shown.value }));
 
@@ -476,11 +506,24 @@ function Slots({
           style={[
             styles.slotLabel,
             g.slotCx.length > 3
-              ? { left: x - g.slotW / 2 - 4, top: g.slotH + 6, width: g.slotW + 8 }
-              : { left: x - g.slotW / 2 - 12, top: g.slotH + 6, width: g.slotW + 24 },
+              ? {
+                  left: x - g.slotW / 2 - 4,
+                  top: g.slotH + 6,
+                  width: g.slotW + 8,
+                }
+              : {
+                  left: x - g.slotW / 2 - 12,
+                  top: g.slotH + 6,
+                  width: g.slotW + 24,
+                },
           ]}
         >
-          <AppText variant="label" center numberOfLines={1} color={i < picks ? colors.text.accent : colors.text.tertiary}>
+          <AppText
+            variant="label"
+            center
+            numberOfLines={1}
+            color={i < picks ? colors.text.accent : colors.text.tertiary}
+          >
             {labels[i]}
           </AppText>
         </View>
@@ -492,17 +535,7 @@ function Slots({
 // ── "The deck turns" cues ─────────────────────────────────────────────────────
 
 /** A hand gliding along the fan until the reader turns it for the first time. */
-function SpinHint({
-  g,
-  visible,
-  reduced,
-  label,
-}: {
-  g: Geometry;
-  visible: boolean;
-  reduced: boolean;
-  label: string;
-}) {
+function SpinHint({ g, visible, reduced, label }: { g: Geometry; visible: boolean; reduced: boolean; label: string }) {
   const shown = useSharedValue(0);
   const glide = useSharedValue(0);
 
@@ -534,7 +567,11 @@ function SpinHint({
       pointerEvents="none"
       style={[
         styles.hint,
-        { left: g.cx - size / 2, top: g.pivotY - g.R - g.H * 0.15, width: size },
+        {
+          left: g.cx - size / 2,
+          top: g.pivotY - g.R - g.H * 0.15,
+          width: size,
+        },
         wrapStyle,
       ]}
     >
@@ -573,7 +610,9 @@ function SideCounter({
 
   useEffect(() => {
     // At the very start/end of the deck the side dims instead of vanishing.
-    shown.value = withTiming(active ? 1 : visible ? 0.25 : 0, { duration: motion.duration.base });
+    shown.value = withTiming(active ? 1 : visible ? 0.25 : 0, {
+      duration: motion.duration.base,
+    });
   }, [active, visible, shown]);
 
   useEffect(() => {
@@ -628,20 +667,41 @@ const FanCard = React.memo(function FanCard({ index, g, mode, slot, spin, focuse
   const pileX = index * 0.08;
   const pileY = g.stackY - index * 0.16;
 
-  const x = useSharedValue(pileX);
-  const y = useSharedValue(pileY);
+  /** Mounted while the fan is already open (turned into view): start at its place, no sweep. */
+  const bornInHand = useRef(mode === "fan" || mode === "gone");
+  const x = useSharedValue(bornInHand.current ? 0 : pileX);
+  const y = useSharedValue(bornInHand.current ? 0 : pileY);
   /** Extra rotation: the riffle tilt, or the angle a drawn card leaves the fan at. */
   const tilt = useSharedValue(0);
   /** 0 = in the pile, 1 = at its place in the open fan. */
-  const open = useSharedValue(0);
+  const open = useSharedValue(bornInHand.current ? 1 : 0);
   const lift = useSharedValue(0);
   const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
+  const opacity = useSharedValue(mode === "gone" ? 0 : 1);
 
   const drawn = slot >= 0;
 
+  // Leaving (turned out of view, or the table closing): stop whatever is running.
+  useEffect(
+    () => () => {
+      cancelAnimation(x);
+      cancelAnimation(y);
+      cancelAnimation(tilt);
+      cancelAnimation(open);
+      cancelAnimation(lift);
+      cancelAnimation(scale);
+      cancelAnimation(opacity);
+    },
+    [x, y, tilt, open, lift, scale, opacity],
+  );
+
   useEffect(() => {
     if (drawn) return;
+    if (bornInHand.current) {
+      // Already at its place in the open fan — nothing to sweep in.
+      bornInHand.current = false;
+      if (mode === "fan" || mode === "gone") return;
+    }
     // Cards travel across the table: the low-overshoot travel spring, not the
     // press spring (ζ 0.52 sent each card ~15% past the pile and back).
     const spring = motion.spring.mystic;
@@ -651,14 +711,17 @@ const FanCard = React.memo(function FanCard({ index, g, mode, slot, spin, focuse
       tilt.value = withSpring(0, spring);
     } else if (mode === "shuffle") {
       if (reduced) return;
+      // Only the top RIFFLE_CARDS move; the rest of the pile holds still under them.
+      const rank = index - (CARD_COUNT - RIFFLE_CARDS);
+      if (rank < 0) return;
       // Left and right halves split, then riffle back together card by card.
       const side = index % 2 === 0 ? -1 : 1;
-      const tail = (CARD_COUNT - index) * STAGGER_MS + SETTLE_MS;
+      const tail = (RIFFLE_CARDS - rank) * STAGGER_MS + SETTLE_MS;
       const riffle = (split: number, rest: number) =>
         withRepeat(
           withSequence(
             withTiming(split, { duration: SPLIT_MS }),
-            withDelay(index * STAGGER_MS, withTiming(rest, { duration: MERGE_MS })),
+            withDelay(rank * STAGGER_MS, withTiming(rest, { duration: MERGE_MS })),
             withDelay(tail, withTiming(rest, { duration: 1 })),
           ),
           -1,
@@ -690,8 +753,12 @@ const FanCard = React.memo(function FanCard({ index, g, mode, slot, spin, focuse
         ? withDelay(GATHER_MS + delay, withSpring(1, motion.spring.gentle))
         : withDelay(GATHER_MS, withTiming(1, { duration: 0 }));
     } else if (mode === "gone") {
-      y.value = withTiming(g.H * 1.2, { duration: reduced ? motion.duration.fast : motion.duration.slow });
-      opacity.value = withTiming(0, { duration: reduced ? motion.duration.fast : motion.duration.slow });
+      y.value = withTiming(g.H * 1.2, {
+        duration: reduced ? motion.duration.fast : motion.duration.slow,
+      });
+      opacity.value = withTiming(0, {
+        duration: reduced ? motion.duration.fast : motion.duration.slow,
+      });
     }
   }, [mode, drawn]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -759,14 +826,10 @@ const FanCard = React.memo(function FanCard({ index, g, mode, slot, spin, focuse
   return (
     <Animated.View
       pointerEvents="none"
-      // The face never changes while a card moves, only its transform: let the
-      // GPU keep it as a texture instead of redrawing gradient + SVG each frame.
-      renderToHardwareTextureAndroid
       style={[styles.card, { left: g.baseLeft, top: g.baseTop, width: g.W, height: g.H }, style]}
     >
-      {/* Kept inside the card's box: a hardware layer clips anything outside it. */}
       <View style={[styles.cardSlab, { borderRadius: cardRadius(g.W) }]} />
-      <TarotCardBack width={g.W} height={g.H - CARD_SLAB} />
+      <Image source={CARD_BACK} style={{ width: g.W, height: g.H - CARD_SLAB }} resizeMode="stretch" fadeDuration={0} />
     </Animated.View>
   );
 });
@@ -774,7 +837,7 @@ const FanCard = React.memo(function FanCard({ index, g, mode, slot, spin, focuse
 /** Depth of the hard slab under each card. */
 const CARD_SLAB = 3;
 
-/** Same corner as TarotCardBack draws, so the slab sits flush under it. */
+/** Same corner as the card back (TarotCardBack / back.png), so the slab sits flush under it. */
 function cardRadius(width: number): number {
   return Math.max(6, width * 0.09);
 }

@@ -24,7 +24,7 @@ import { ACCOUNTS_ENABLED } from "../../services/auth/account";
 import { useAppStore } from "../../store/useAppStore";
 import { useMascotStore } from "../../store/useMascotStore";
 import { formatDay } from "../today/AsterHero";
-import { asterA11y, asterLine, stageName } from "./asterCopy";
+import { asterA11y, asterLine, faceLonging, stageName, stageXp } from "./asterCopy";
 import { ProtectAsterSheet } from "./ProtectAsterSheet";
 import { unlockLines } from "./unlockCopy";
 import { useMascot } from "./useMascot";
@@ -114,7 +114,7 @@ export function AsterNestScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <EnterView style={styles.hero}>
           <SpeechBubble
-            text={resting ? t("aster.eclipse.restingBubble") : asterLine(locale, mood, hatched)}
+            text={resting ? t("aster.eclipse.restingBubble") : asterLine(locale, mood, hatched, 0, state.longing?.level)}
             tail="bottom"
             style={styles.bubble}
           />
@@ -129,6 +129,7 @@ export function AsterNestScreen() {
             <AsterMascot
               stage={stage}
               mood={mood}
+              longing={faceLonging(state)}
               accessories={state.equipped}
               action={resting ? "sleep" : playKey > 0 ? (hatched ? "cheer" : "hatch") : "idle"}
               playKey={playKey}
@@ -251,7 +252,7 @@ export function AsterNestScreen() {
                 const tone = ABILITY_TONE[a.key] ?? "primary";
                 const live = a.available || LIVE_ABILITIES.has(a.key);
                 const status = !a.unlocked
-                  ? t("aster.home.unlocksAt", { stage: stageName(t, a.minStage) })
+                  ? t("aster.home.unlocksAt", { stage: stageName(t, a.minStage), xp: stageXp(a.minStage) })
                   : a.key === "powerDays"
                     ? t("aster.nest.powerDaysLive")
                     : a.key === "weeklyLetter"

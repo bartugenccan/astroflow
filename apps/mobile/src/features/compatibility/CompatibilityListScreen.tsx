@@ -86,7 +86,7 @@ export function CompatibilityList() {
           kind="error"
           compact
           message={t("profileUi.compat.loadError")}
-          onAction={people.reload}
+          onAction={people.reload} offline={people.offline}
         />
       ) : people.data && people.data.length > 0 ? (
         <View style={styles.list}>

@@ -57,10 +57,23 @@ export function mockChatReply(message: string, locale: Locale): ChatReply {
       };
 }
 
-export function mockAffirmation(goalText: string, locale: Locale): string {
-  return locale === "tr"
-    ? `Her gün "${goalText}" hedefime doğru küçük, kararlı bir adım atıyorum.`
-    : `Each day I take one small, steady step toward "${goalText}".`;
+const MOCK_AFFIRMATIONS: Record<Locale, ((goal: string) => string)[]> = {
+  tr: [
+    (g) => `Her gün "${g}" hedefime doğru küçük, kararlı bir adım atıyorum.`,
+    (g) => `"${g}" için gereken sabır ve cesaret bende var.`,
+    (g) => `"${g}" hedefime her gün biraz daha yaklaşıyorum ve bunu hissediyorum.`,
+  ],
+  en: [
+    (g) => `Each day I take one small, steady step toward "${g}".`,
+    (g) => `I have the patience and courage that "${g}" asks of me.`,
+    (g) => `I move a little closer to "${g}" every day, and I can feel it.`,
+  ],
+};
+
+/** Offline affirmation; `variant` (how many were already shown) rotates the wording. */
+export function mockAffirmation(goalText: string, locale: Locale, variant = 0): string {
+  const list = MOCK_AFFIRMATIONS[locale];
+  return list[variant % list.length](goalText);
 }
 
 export function mockIntentionSuggestions(locale: Locale): IntentionSuggestion[] {

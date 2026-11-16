@@ -4,15 +4,18 @@ import { StyleSheet, View, DimensionValue } from "react-native";
 import { MotiView } from "moti";
 import { useReducedMotion } from "react-native-reanimated";
 import { colors, spacing } from "../../lib/design-system";
+import { useScreenActive } from "../ScreenActive";
 
 interface ShimmerLinesProps {
   lines?: number;
   widths?: DimensionValue[];
 }
 
-/** Gold shimmer placeholder lines used while AI content loads. */
+/** Gold shimmer placeholder lines used while AI content loads. They hold still off view. */
 export function ShimmerLines({ lines = 3, widths }: ShimmerLinesProps) {
   const reduced = useReducedMotion();
+  const active = useScreenActive();
+  const still = reduced || !active;
   return (
     <View style={styles.wrap}>
       {Array.from({ length: lines }).map((_, i) => (
@@ -21,7 +24,7 @@ export function ShimmerLines({ lines = 3, widths }: ShimmerLinesProps) {
           from={{ opacity: 0.08 }}
           animate={{ opacity: 0.2 }}
           transition={
-            reduced
+            still
               ? mt({ type: "timing", duration: 0 })
               : mt({ loop: true, type: "timing", duration: 900, delay: i * 120 })
           }

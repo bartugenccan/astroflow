@@ -20,6 +20,8 @@ const CHANNEL_ID = "reminders";
 const PREFIX = "astroflow.";
 /** Days ahead we keep reminders for (today + the next two). */
 const DAYS_AHEAD = 3;
+/** Days after the last visit when Aster says it missed you (once, in place of the daily nudge). */
+const MISSED_AFTER_DAYS = 2;
 /** Evening check-in time (local) — the intention / orbit reminder. */
 const EVENING_HOUR = 20;
 const EVENING_MINUTE = 30;
@@ -177,10 +179,29 @@ export function planReminders({
     }
   }
 
+  // Gentle longing: two days after the last day Aster saw you, the daily
+  // reminder becomes "Aster missed you" — warm, never about a lost streak.
+  const lastSeenOffset = mascot?.orbit.countedToday
+    ? 0
+    : (mascot?.longing?.daysAway ?? 0) > 0
+      ? -(mascot?.longing?.daysAway ?? 0)
+      : null;
+  const missedDay = lastSeenOffset === null ? null : lastSeenOffset + MISSED_AFTER_DAYS;
+
   if (settings.daily) {
     for (let d = 0; d < DAYS_AHEAD; d++) {
       const when = at(now, d, settings.hour, settings.minute);
       if (!future(when)) continue;
+      if (d >= 1 && d === missedDay) {
+        out.push({
+          id: `${PREFIX}daily.${d}`,
+          at: when,
+          titleKey: "reminders.missedTitle",
+          bodyKey: "reminders.missedBody",
+          route: "/",
+        });
+        continue;
+      }
       // Today's reading already read (or the day checked in): no need to ask.
       if (d === 0 && (doneToday("SKY_READ") || doneToday("SKY_CHECKIN"))) continue;
       const power = d === 0 && plan?.powerIntentionId && plan.focusWhy;

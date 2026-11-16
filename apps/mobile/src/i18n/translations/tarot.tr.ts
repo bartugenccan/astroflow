@@ -65,7 +65,7 @@ export const tarotTr: typeof tarotEn = {
     label: "Açılım",
     three: "Üç kart",
     decision: "Yol ayrımı · 5 kart",
-    lockedAt: "{{stage}} aşamasında açılır",
+    lockedAt: "{{stage}} aşamasında açılır ({{xp}} Işık)",
   },
   limitNote: "Bugünkü ücretsiz açılımını kullandın. Premium ile sınırsız açılım yapabilirsin.",
   soundOn: "Ses açık",

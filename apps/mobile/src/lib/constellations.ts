@@ -75,3 +75,16 @@ export function pickConstellation({ sunSign, discoverySign, owned, rolls }: Pick
   const pool: readonly ConstellationKey[] = missing.length ? missing : SKY_CONSTELLATIONS;
   return pool[Math.min(pool.length - 1, Math.floor(rolls[1] * pool.length))];
 }
+
+/**
+ * What Aster brings back after missing you: a sky figure from the journey
+ * pool, one you haven't found yet when there is one. `duplicate` = already in
+ * the album (the caller turns it into a little stardust instead).
+ */
+export function welcomeConstellation(
+  owned: readonly string[],
+  rolls: [number, number],
+): { key: ConstellationKey; duplicate: boolean } {
+  const key = pickConstellation({ sunSign: null, discoverySign: null, owned, rolls });
+  return { key, duplicate: owned.includes(key) };
+}

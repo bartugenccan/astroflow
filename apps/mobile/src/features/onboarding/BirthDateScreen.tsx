@@ -24,9 +24,12 @@ export function BirthDateScreen() {
   const { t, locale } = useTranslation();
   const setBirthDate = useOnboardingDraft((s) => s.setBirthDate);
 
-  const [year, setYear] = useState(2000);
-  const [month, setMonth] = useState(1); // 1-based
-  const [day, setDay] = useState(15);
+  // Start from the saved answer (back navigation, or resumed after a restart).
+  const saved = useOnboardingDraft.getState().birthDate;
+  const savedParts = saved && /^\d{4}-\d{2}-\d{2}$/.test(saved) ? saved.split("-").map(Number) : null;
+  const [year, setYear] = useState(savedParts?.[0] ?? 2000);
+  const [month, setMonth] = useState(savedParts?.[1] ?? 1); // 1-based
+  const [day, setDay] = useState(savedParts?.[2] ?? 15);
 
   const years: WheelItem[] = useMemo(
     () =>

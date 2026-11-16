@@ -15,6 +15,7 @@ import { areaTone, colors, depth, palette, radii, spacing, surface } from "../..
 import { WishStarGlyph } from "../WishStarGlyph";
 import { planetName, signName } from "../WishChartCard";
 import { AREA_ICON, LIFE_AREAS, shortDate, whenLabel } from "../wishModel";
+import { TechniqueHints } from "../TechniqueHints";
 
 export const GOAL_MAX = 140;
 export type Plant = "now" | "newMoon";
@@ -183,11 +184,14 @@ export function AffirmStep({
   state,
   onChange,
   onRegenerate,
+  same = false,
 }: {
   value: string;
   state: "idle" | "loading" | "error" | "ready";
   onChange: (v: string) => void;
   onRegenerate: () => void;
+  /** "Write another" could not find a different sentence (F11). */
+  same?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -219,6 +223,12 @@ export function AffirmStep({
               accessibilityLabel={t("wish.create.affirmA11y")}
             />
           </PaperCard>
+          <TechniqueHints text={value} />
+          {same ? (
+            <AppText variant="bodySmall" color={colors.text.secondary} accessibilityLiveRegion="polite">
+              {t("wish.create.affirmSame")}
+            </AppText>
+          ) : null}
           <ChunkyButton
             label={t("wish.create.regenerate")}
             variant="night"

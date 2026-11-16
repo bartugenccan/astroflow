@@ -26,6 +26,23 @@ import { AffirmStep, AreaStep, WhenStep, WriteStep, type Plant } from "./create/
 import { isLifeArea, lunarInfo } from "./wishModel";
 
 const TOTAL = 4;
+
+/** Case-, punctuation- and space-insensitive form of a sentence. */
+const normSentence = (s: string) =>
+  s
+    .toLocaleLowerCase("tr")
+    // A plain punctuation class (no \p{…}) so it parses on every JS engine.
+    .replace(/[\s.,;:!?'"“”‘’«»…()[\]\-–—]+/g, " ")
+    .trim();
+const sameSentence = (a: string, b: string) => normSentence(a) === normSentence(b);
+/** Non-empty, de-duplicated, last five (what the server accepts). */
+function uniqueSentences(list: string[]): string[] {
+  const out: string[] = [];
+  for (const s of list.map((x) => x.trim()).filter(Boolean)) {
+    if (!out.some((o) => sameSentence(o, s))) out.push(s);
+  }
+  return out.slice(-5);
+}
 /** The star's short rise runs alongside the request; it never holds the user back longer than this. */
 const PLANT_MIN_MS = 700;
 
@@ -56,6 +73,9 @@ export function CreateWishFlow() {
   const [affirmState, setAffirmState] = useState<"idle" | "loading" | "error" | "ready">("idle");
   const affirmFor = useRef<string | null>(null);
   const edited = useRef(false);
+  // Sentences already shown for this goal: "write another" must not repeat them (F11).
+  const shown = useRef<string[]>([]);
+  const [affirmSame, setAffirmSame] = useState(false);
   const [plant, setPlant] = useState<Plant>("now");
   const [target, setTarget] = useState(1);
   const [phase, setPhase] = useState<"form" | "planting">("form");
@@ -97,12 +117,20 @@ export function CreateWishFlow() {
     if (!dto || !area || !goal.trim()) return;
     const key = `${area}|${goal.trim()}`;
     if (!force && (edited.current || affirmFor.current === key)) return;
+    const another = force && affirmFor.current === key;
+    if (!another) shown.current = [];
+    // The one on screen counts as seen too, even if the user edited it.
+    const avoid = another ? uniqueSentences([...shown.current, affirmation]) : [];
     affirmFor.current = key;
     edited.current = false;
+    setAffirmSame(false);
     setAffirmState("loading");
     try {
-      const text = await astrologyApi.previewAffirmation(dto, goal.trim(), area, locale);
+      const text = await astrologyApi.previewAffirmation(dto, goal.trim(), area, locale, avoid);
       if (affirmFor.current !== key) return;
+      const repeated = avoid.some((s) => sameSentence(s, text));
+      setAffirmSame(repeated);
+      if (!repeated) shown.current = uniqueSentences([...shown.current, text]);
       setAffirmation(text);
       setAffirmState("ready");
     } catch {
@@ -234,6 +262,7 @@ export function CreateWishFlow() {
               if (affirmState !== "ready") setAffirmState("ready");
             }}
             onRegenerate={() => loadAffirmation(true)}
+            same={affirmSame}
           />
         ) : null}
         {step === 3 && area ? (

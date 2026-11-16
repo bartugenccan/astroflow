@@ -18,7 +18,7 @@ export const planTr: typeof planEn = {
   weekA11y: "Bu haftanın güçlü alanları. Öngörünü açar.",
   weekDay: "{{day}}: {{area}}",
   step: {
-    skyCheckin: "Gökyüzünün nasıl olduğunu Aster'a söyle",
+    skyCheckin: "Gökyüzünün nasıl olduğunu Aster'e söyle",
     skyRead: "Bugünün göğünü oku",
     checkin: "Güç manifestin için pratik yap",
     createWish: "Bir manifest yaz",
@@ -59,7 +59,7 @@ export const moodTr: typeof moodEn = {
   },
   energy: "Enerji",
   energyA11y: "Enerji 5 üzerinden {{n}}",
-  send: "Aster'a söyle",
+  send: "Aster'e söyle",
   error: "Bu bana ulaşmadı. Tekrar dener misin?",
   reply: {
     RADIANT: "Işıl ışılsın! Bu ışığı bugün en önemli şeye verelim.",

@@ -11,6 +11,7 @@ import type {
   MoodReply,
   MoodSky,
   SkyLessonKey,
+  WelcomeBack,
 } from "../services/types";
 import type { Locale } from "../i18n";
 
@@ -22,7 +23,8 @@ export type CelebrationType =
   | "shield"
   | "journeyReturn"
   | "manifested"
-  | "accountLinked";
+  | "accountLinked"
+  | "welcomeBack";
 
 /**
  * How loud a celebration is (Duolingo-style tiers):
@@ -57,6 +59,8 @@ export interface Celebration {
   journey?: JourneyClaim;
   /** manifested: the wish that came true. */
   wishText?: string;
+  /** welcomeBack: the return Aster is greeting. */
+  welcome?: WelcomeBack;
 }
 
 interface MascotStore {
@@ -68,6 +72,8 @@ interface MascotStore {
   pending: MascotEventKind[];
   /** When the state last came from the server (ms epoch; 0 = not this session). Not persisted. */
   fetchedAt: number;
+  /** Local day whose welcome-back was already shown (once a day, whichever award carried it). */
+  welcomeShown: string | null;
   /** Re-read Aster's state from the server. */
   refresh: () => Promise<void>;
   /**
@@ -152,7 +158,14 @@ function sameState(a: MascotState | null, b: MascotState | null): boolean {
 }
 
 /** Kinds worth retrying later: the app reports them itself and the server caps them per day. */
-const RETRYABLE: readonly MascotEventKind[] = ["AFFIRMATION", "TAROT", "EVENING_REFLECTION", "BREATH"];
+const RETRYABLE: readonly MascotEventKind[] = [
+  "AFFIRMATION",
+  "TAROT",
+  "EVENING_REFLECTION",
+  "BREATH",
+  "VOICE_RECORD",
+  "SKY_MOMENT",
+];
 
 export const useMascotStore = create<MascotStore>()(
   persist(
@@ -163,6 +176,7 @@ export const useMascotStore = create<MascotStore>()(
       queue: [],
       pending: [],
       fetchedAt: 0,
+      welcomeShown: null,
 
       refresh: async () => {
         // With a state on screen already, a background re-read stays quiet:
@@ -362,7 +376,7 @@ export const useMascotStore = create<MascotStore>()(
 
       celebrate: (c) => set((s) => ({ queue: enqueue(s.queue, [{ ...c, id: nextId++ }]) })),
       dismiss: () => set((s) => ({ queue: s.queue.slice(1) })),
-      reset: () => set({ state: null, queue: [], error: false, pending: [], fetchedAt: 0 }),
+      reset: () => set({ state: null, queue: [], error: false, pending: [], fetchedAt: 0, welcomeShown: null }),
     }),
     {
       name: "astroflow-mascot",
@@ -370,6 +384,7 @@ export const useMascotStore = create<MascotStore>()(
       // Only what's needed to draw Aster instantly on launch, plus unsent reports; the rest is refetched.
       partialize: (s) => ({
         pending: s.pending,
+        welcomeShown: s.welcomeShown,
         ...(s.state
           ? {
               state: {
@@ -377,6 +392,7 @@ export const useMascotStore = create<MascotStore>()(
                 catalog: [],
                 abilities: [],
                 today: {},
+                welcomeBack: null,
               },
             }
           : {}),
@@ -384,3 +400,27 @@ export const useMascotStore = create<MascotStore>()(
     },
   ),
 );
+
+function localDayKey(d = new Date()): string {
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/**
+ * Aster's welcome after days away, shown once on the day of the return.
+ * Watching the state (not the deltas) catches every way a return can land —
+ * including server-side awards the app never sees as a delta, such as the
+ * daily reading's SKY_READ. Only fresh server state counts (`fetchedAt`), so
+ * a persisted state from an earlier session never replays a welcome.
+ */
+useMascotStore.subscribe((s) => {
+  const wb = s.state?.welcomeBack;
+  if (!wb || s.fetchedAt === 0) return;
+  const day = localDayKey();
+  if (s.welcomeShown === day) return;
+  useMascotStore.setState((cur) => ({
+    welcomeShown: day,
+    queue: enqueue(cur.queue, [{ id: nextId++, type: "welcomeBack", delta: null, welcome: wb }]),
+  }));
+});

@@ -12,6 +12,7 @@ import { wipeAllLocalData } from "../dataWipe";
 import { startVaultSync, syncVaultNow } from "../vaultSync";
 import { useMascotStore } from "../../store/useMascotStore";
 import { usePlanStore } from "../../store/usePlanStore";
+import { clearDraftCheckpoint } from "../../features/onboarding/draftCheckpoint";
 import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
 import type { AccountInfo, AuthProviderId, BirthProfileResponse, LinkResult, SavedProfile } from "../types";
 
@@ -151,6 +152,8 @@ async function finish(result: LinkResult): Promise<LinkResult> {
       const name = profile.displayName || result.account.displayName || store.displayName;
       store.completeOnboarding(name, toBirthProfile(profile));
       useOnboardingDraft.getState().clear();
+      // The restored account replaces any half-finished onboarding on this phone.
+      await clearDraftCheckpoint();
     }
   } else {
     // Linked this install's own data: make sure the server can restore it later.

@@ -27,7 +27,7 @@ function upper(text: string, locale: string): string {
 
 export type ShareCardData =
   | { variant: "daily"; insight: DailyInsight; date: Date }
-  | { variant: "bigThree"; sunSign: string; moonSign: string; risingSign: string; name: string }
+  | { variant: "bigThree"; sunSign: string; moonSign: string; risingSign: string; name: string; risingUnknown?: boolean }
   | { variant: "compatibility"; name: string; otherName: string; score: number; headline: string };
 
 /**
@@ -52,6 +52,7 @@ export const ShareableCard = forwardRef<ViewInstance, { data: ShareCardData }>(
               sunSign={data.sunSign}
               moonSign={data.moonSign}
               risingSign={data.risingSign}
+              risingUnknown={data.risingUnknown}
               name={data.name}
               locale={locale}
               t={t}
@@ -127,10 +128,13 @@ function BigThreeContent({
   name,
   locale,
   t,
+  risingUnknown = false,
 }: {
   sunSign: string;
   moonSign: string;
   risingSign: string;
+  /** No birth time: the rising sign is a noon guess, so it isn't shared (F22). */
+  risingUnknown?: boolean;
   name: string;
   locale: string;
   t: (k: any, p?: any) => string;
@@ -138,7 +142,7 @@ function BigThreeContent({
   const rows: { glyph: string; label: string; sign: string }[] = [
     { glyph: "Sun", label: t("bigThree.sun"), sign: sunSign },
     { glyph: "Moon", label: t("bigThree.moon"), sign: moonSign },
-    { glyph: "Ascendant", label: t("bigThree.rising"), sign: risingSign },
+    ...(risingUnknown ? [] : [{ glyph: "Ascendant", label: t("bigThree.rising"), sign: risingSign }]),
   ];
   return (
     <>

@@ -63,7 +63,8 @@ export function useAffirmationAudio() {
     [recorder, stopPlayback],
   );
 
-  const stopRecording = useCallback(async () => {
+  /** `discard`: throw this take away and keep the previous recording (e.g. a slip of the thumb). */
+  const stopRecording = useCallback(async (opts?: { discard?: boolean }) => {
     const id = recordingId;
     setRecordingId(null);
     try {
@@ -71,6 +72,14 @@ export function useAffirmationAudio() {
       await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
       const tmp = recorder.uri;
       if (!id || !tmp) return;
+      if (opts?.discard) {
+        try {
+          new File(tmp).delete();
+        } catch {
+          // The recorder's temp file is already gone.
+        }
+        return;
+      }
 
       const dir = new Directory(Paths.document, "affirmations");
       dir.create({ intermediates: true, idempotent: true });

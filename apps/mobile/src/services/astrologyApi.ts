@@ -203,6 +203,8 @@ export interface AstrologyApi {
     goalText: string,
     lifeArea: LifeArea,
     locale: Locale,
+    /** "Write another": sentences already shown, so the new one differs. */
+    avoid?: string[],
   ): Promise<string>;
 
   // Personal sky plan (built on the server from the stored chart; the dto feeds the mock).
@@ -554,9 +556,9 @@ const mockAstrologyApi: AstrologyApi = {
     });
   },
 
-  async previewAffirmation(_dto, goalText, _lifeArea, locale) {
+  async previewAffirmation(_dto, goalText, _lifeArea, locale, avoid = []) {
     await delay();
-    return mockAffirmation(goalText, locale);
+    return mockAffirmation(goalText, locale, avoid.length);
   },
 
   async getTodayPlan(dto) {

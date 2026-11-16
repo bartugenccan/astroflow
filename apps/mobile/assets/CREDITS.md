@@ -9,3 +9,6 @@ fetched and resized by `scripts/fetch-tarot-assets.mjs`.
 "Casino Audio" by Kenney (www.kenney.nl), CC0 1.0 (public domain dedication).
 Converted from OGG to AAC/M4A for iOS: `card-shuffle` → tarot-shuffle, `card-fan-2` → tarot-fan,
 `card-slide-1` → tarot-pick, `card-place-1` → tarot-flip.
+
+## Tarot card back — `tarot/back.png`
+Our own design: `src/features/tarot/TarotCardBack.tsx` rasterised once (240×404) so the reading table can share one bitmap.
