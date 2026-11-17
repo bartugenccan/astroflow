@@ -83,6 +83,11 @@ export const practiceTr: typeof practiceEn = {
       recordedNote: "Kayıt yalnızca bu telefonda kalır. Asıl mesele kendi sesini duymak.",
       micDenied: "Mikrofon izni yok. Yine de sesli okuyup \"Okudum\"a dokunabilirsin.",
       recordFailed: "Bu kayıt kaydedilemedi. Bir kez daha dene.",
+      starting: "Mikrofon hazırlanıyor…",
+      recordingTitle: "Kaydediliyor",
+      recordingHint: "Cümleni yavaşça, kendi sesinle oku. Bitince durdur.",
+      tooShort: "Kayıt çok kısaydı. Cümleni okurken birkaç saniye kaydet.",
+      failCode: "Hata kodu: {{step}} · {{detail}}",
     },
     "369": {
       name: "3-6-9",

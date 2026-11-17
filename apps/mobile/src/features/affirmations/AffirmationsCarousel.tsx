@@ -137,6 +137,7 @@ export function AffirmationsCarousel({ category, onCategoryChange, suggested, on
     if (audio.recordingId) await audio.stopRecording();
     const result = await audio.startRecording(id);
     if (result === "denied") Alert.alert(t("affirmations.ui.micDenied"));
+    else if (result === "error") Alert.alert(t("practice.methods.read.recordFailed"));
   };
 
   const confirmDeleteRecording = (id: string) => {

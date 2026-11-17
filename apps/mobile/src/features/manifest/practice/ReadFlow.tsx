@@ -1,9 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated from "react-native-reanimated";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { AppText } from "../../../components/ui/AppText";
 import { ChunkyButton } from "../../../components/ui/ChunkyButton";
+import { ChunkyCard } from "../../../components/ui/ChunkyCard";
 import { PaperCard } from "../../../components/ui/Paper";
 import { SpringBottomSheet } from "../../../components/ui/SpringBottomSheet";
 import { useReflectionStore } from "../../../store/useReflectionStore";
@@ -45,6 +53,7 @@ export function ReadFlow({
   onClose: () => void;
 }) {
   const { t } = useTranslation();
+  const m = useMotion();
   const [wish, setWish] = useState(initial);
   const [count, setCount] = useState(0);
   const [step, setStep] = useState(1);
@@ -88,31 +97,38 @@ export function ReadFlow({
     setStep(2);
   };
 
-  const toggleRecord = async () => {
-    setMicNote(null);
-    if (audio.recordingId === recId) {
-      const took = audio.durationMs;
-      // Too short to be a reading: don't let it replace the last good take.
-      const slip = took < MIN_TAKE_MS;
-      await audio.stopRecording({ discard: slip });
-      if (slip) return;
-      if (!recordedThisFlow.current) {
-        recordedThisFlow.current = true;
-        useMascotStore.getState().report("VOICE_RECORD");
-      }
-      readOnce();
+  const stopTake = async () => {
+    const took = audio.durationMs;
+    // Too short to be a reading: don't let it replace the last good take.
+    const slip = took < MIN_TAKE_MS;
+    await audio.stopRecording({ discard: slip });
+    if (slip) {
+      setMicNote(t("practice.methods.read.tooShort"));
       return;
     }
+    haptics.tap();
+    if (!recordedThisFlow.current) {
+      recordedThisFlow.current = true;
+      useMascotStore.getState().report("VOICE_RECORD");
+    }
+    readOnce();
+  };
+
+  const startTake = async () => {
+    setMicNote(null);
     if (audio.playingId) audio.togglePlay(audio.playingId);
     const res = await audio.startRecording(recId);
     if (res === "denied") setMicNote(t("practice.methods.read.micDenied"));
     else if (res === "error") setMicNote(t("practice.methods.read.recordFailed"));
-    else haptics.tap();
+    else if (res === "started") haptics.tap();
   };
 
   const recording = audio.recordingId === recId;
+  /** Recording or getting the mic ready: the screen narrows to the sentence and the take. */
+  const focused = recording || audio.starting;
   const hasTake = audio.hasRecording(recId);
   const playing = audio.playingId === recId;
+  const failure = micNote && audio.failure ? audio.failure : null;
   const listenButton = hasTake ? (
     <ChunkyButton
       label={playing ? t("practice.methods.read.pause") : t("practice.methods.read.listen")}
@@ -127,72 +143,77 @@ export function ReadFlow({
     step === 1 ? (
       <>
         <MethodHeading method="read" />
-        <WishSwitcher
-          wishes={wishes}
-          current={wish}
-          onChange={(w) => {
-            if (audio.recordingId) audio.stopRecording();
-            setWish(w);
-            setChosen(null);
-            setCount(0);
-          }}
-          tone="candy"
-        />
-        <WhyCard method="read" />
-        <AsterPrompt text={t("practice.methods.read.prompt")} />
+        {/* While a take runs, everything that isn't the sentence steps aside. */}
+        {focused ? null : (
+          <Animated.View entering={m.enter("fade")} exiting={m.exit("fade")} style={styles.group}>
+            <WishSwitcher
+              wishes={wishes}
+              current={wish}
+              onChange={(w) => {
+                if (audio.recordingId) audio.stopRecording();
+                setWish(w);
+                setChosen(null);
+                setCount(0);
+              }}
+              tone="candy"
+            />
+            <WhyCard method="read" />
+            <AsterPrompt text={t("practice.methods.read.prompt")} />
+          </Animated.View>
+        )}
         <PaperCard lines={4} plain tilt={-0.5}>
           <AppText variant="scriptLarge" center>
             {text}
           </AppText>
         </PaperCard>
         <RepRings done={count} total={READ_REPS} />
-        <View style={styles.voice}>
-          <ChunkyButton
-            label={
-              recording
-                ? t("practice.methods.read.stop")
-                : hasTake
-                  ? t("practice.methods.read.rerecord")
-                  : t("practice.methods.read.record")
-            }
-            variant={recording ? "danger" : "night"}
-            size="sm"
-            onPress={toggleRecord}
-            haptic="none"
-            icon={
-              <Ionicons
-                name={recording ? "stop" : "mic"}
-                size={16}
-                color={recording ? palette.danger.on : palette.night.on}
+        {focused ? (
+          <RecordingPanel starting={!recording} ms={audio.durationMs} />
+        ) : (
+          <Animated.View entering={m.enter("fade")} style={styles.group}>
+            <View style={styles.voice}>
+              <ChunkyButton
+                label={hasTake ? t("practice.methods.read.rerecord") : t("practice.methods.read.record")}
+                variant="night"
+                size="sm"
+                onPress={startTake}
+                haptic="none"
+                icon={<Ionicons name="mic" size={16} color={palette.night.on} />}
               />
-            }
-          />
-          {recording ? null : listenButton}
-        </View>
-        {recording ? (
-          <AppText variant="bodySmall" center color={palette.danger.face} accessibilityLiveRegion="polite">
-            {t("practice.methods.read.recording", { s: Math.floor(audio.durationMs / 1000) })}
-          </AppText>
-        ) : micNote ? (
-          <AppText variant="bodySmall" center color={colors.text.secondary} accessibilityLiveRegion="polite">
-            {micNote}
-          </AppText>
-        ) : hasTake ? (
-          <AppText variant="bodySmall" center color={colors.text.secondary}>
-            {t("practice.methods.read.recordedNote")}
-          </AppText>
-        ) : null}
-        <Pressable
-          onPress={() => setLibrary(true)}
-          accessibilityRole="button"
-          style={styles.link}
-          hitSlop={8}
-        >
-          <Ionicons name="albums" size={16} color={colors.text.accent} />
-          <AppText variant="labelLong" color={colors.text.accent}>
-            {t("practice.methods.read.other")}
-          </AppText>
-        </Pressable>
+              {listenButton}
+            </View>
+            {micNote ? (
+              <View style={styles.noteBlock} accessibilityLiveRegion="polite">
+                <AppText variant="bodySmall" center color={colors.text.secondary}>
+                  {micNote}
+                </AppText>
+                {failure ? (
+                  <AppText variant="labelLong" center color={colors.text.tertiary} selectable>
+                    {t("practice.methods.read.failCode", {
+                      step: failure.step,
+                      detail: failure.detail.slice(0, 80),
+                    })}
+                  </AppText>
+                ) : null}
+              </View>
+            ) : hasTake ? (
+              <AppText variant="bodySmall" center color={colors.text.secondary}>
+                {t("practice.methods.read.recordedNote")}
+              </AppText>
+            ) : null}
+            <Pressable
+              onPress={() => setLibrary(true)}
+              accessibilityRole="button"
+              style={styles.link}
+              hitSlop={8}
+            >
+              <Ionicons name="albums" size={16} color={colors.text.accent} />
+              <AppText variant="labelLong" color={colors.text.accent}>
+                {t("practice.methods.read.other")}
+              </AppText>
+            </Pressable>
+          </Animated.View>
+        )}
       </>
     ) : (
       <FinishStep page={text}>
@@ -203,9 +224,23 @@ export function ReadFlow({
       </FinishStep>
     );
 
+  // The one action at the bottom is always the right one for the moment: while
+  // a take runs it is Stop, so it never hides below a long page.
   const footer =
     step === 1 ? (
-      <ChunkyButton label={t("practice.methods.read.tap")} variant="candy" onPress={readOnce} haptic="none" />
+      focused ? (
+        <ChunkyButton
+          label={t("practice.methods.read.stop")}
+          variant="danger"
+          onPress={stopTake}
+          loading={!recording}
+          disabled={!recording}
+          haptic="none"
+          icon={<Ionicons name="stop" size={20} color={palette.danger.on} />}
+        />
+      ) : (
+        <ChunkyButton label={t("practice.methods.read.tap")} variant="candy" onPress={readOnce} haptic="none" />
+      )
     ) : (
       <ChunkyButton label={t("practice.done")} variant="mint" onPress={onClose} />
     );
@@ -238,6 +273,56 @@ export function ReadFlow({
   );
 }
 
+function clock(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/**
+ * The take in progress: a beating red dot, the running time big enough to
+ * read from arm's length, and what to do. While the mic is still being set
+ * up it says so, so a slow start never looks like a dead button.
+ */
+function RecordingPanel({ starting, ms }: { starting: boolean; ms: number }) {
+  const { t } = useTranslation();
+  const m = useMotion();
+  const beat = useSharedValue(1);
+  useEffect(() => {
+    if (starting || m.reduced) {
+      cancelAnimation(beat);
+      beat.value = 1;
+      return;
+    }
+    beat.value = withRepeat(withTiming(0.35, { duration: 600, easing: Easing.inOut(Easing.quad) }), -1, true);
+    return () => cancelAnimation(beat);
+  }, [starting, m.reduced, beat]);
+  const dotStyle = useAnimatedStyle(() => ({ opacity: beat.value }));
+
+  return (
+    <Animated.View entering={m.enter("pop")}>
+      <ChunkyCard tone="danger" tinted style={styles.panel}>
+        <View
+          style={styles.panelHead}
+          accessible
+          accessibilityLabel={starting ? t("practice.methods.read.starting") : t("practice.methods.read.recordingTitle")}
+          accessibilityLiveRegion="polite"
+        >
+          <Animated.View style={[styles.dot, dotStyle]} />
+          <AppText variant="label" color={palette.danger.face}>
+            {starting ? t("practice.methods.read.starting") : t("practice.methods.read.recordingTitle")}
+          </AppText>
+        </View>
+        <AppText variant="display" center importantForAccessibility="no">
+          {clock(starting ? 0 : ms)}
+        </AppText>
+        <AppText variant="bodySmall" center color={colors.text.secondary}>
+          {t("practice.methods.read.recordingHint")}
+        </AppText>
+      </ChunkyCard>
+    </Animated.View>
+  );
+}
+
 /** Three rings that fill, one per reading. */
 function RepRings({ done, total }: { done: number; total: number }) {
   const { t } = useTranslation();
@@ -267,7 +352,14 @@ function RepRings({ done, total }: { done: number; total: number }) {
 
 const RING = 44;
 
+const DOT = 12;
+
 const styles = StyleSheet.create({
+  group: { gap: spacing.lg },
+  noteBlock: { gap: spacing.xs },
+  panel: { gap: spacing.sm, alignItems: "center" },
+  panelHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  dot: { width: DOT, height: DOT, borderRadius: DOT / 2, backgroundColor: palette.danger.face },
   rings: { flexDirection: "row", justifyContent: "center", gap: spacing.md },
   voice: { flexDirection: "row", justifyContent: "center", flexWrap: "wrap", gap: spacing.sm },
   ring: {

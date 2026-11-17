@@ -88,6 +88,11 @@ export const practiceEn = {
       recordedNote: "Saved on this phone only. Hearing your own voice is the point.",
       micDenied: "No microphone access. You can still read aloud and tap \"I read it\".",
       recordFailed: "That take didn't save. Try once more.",
+      starting: "Getting the mic ready…",
+      recordingTitle: "Recording",
+      recordingHint: "Read your sentence slowly, in your own voice. Stop when you're done.",
+      tooShort: "That take was too short. Keep recording while you read your sentence.",
+      failCode: "Error code: {{step}} · {{detail}}",
     },
     "369": {
       name: "3-6-9",

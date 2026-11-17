@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, View, type ViewInstance } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import { AppText } from "../../components/ui/AppText";
@@ -7,9 +7,10 @@ import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { Chip } from "../../components/ui/Chip";
 import { PressableScale } from "../../components/ui/PressableScale";
-import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { SpringBottomSheet, type SheetOrigin } from "../../components/ui/SpringBottomSheet";
 import { useTranslation } from "../../i18n";
 import { colors, palette, radii, spacing } from "../../lib/design-system";
+import { useMotion } from "../../lib/motion";
 import { runAfterTransition } from "../../lib/afterInteractions";
 import { useAppStore } from "../../store/useAppStore";
 import { useMascotStore } from "../../store/useMascotStore";
@@ -29,19 +30,25 @@ import {
 
 interface SkyMomentCardProps {
   moments: SkyMoment[];
+  /** The card's sheet is open: the card steps aside, since the sheet grew out of it. */
+  open?: boolean;
+  /** Tapped: the moment to show and where the card sits on screen (the sheet grows from there). */
+  onOpen: (id: string, origin: SheetOrigin | null) => void;
 }
 
 /**
  * "Key moment in your sky" on Today: the highest-ranked moment that is active
  * now or starts within the next weeks, in plain words. Tapping opens the
- * sheet with the why, the exact dates and the other upcoming moments. Hidden
- * when there is nothing worth a card.
+ * sheet (MomentSheet, mounted by the screen) with the why, the exact dates and
+ * the other upcoming moments; the sheet grows out of this card. Hidden when
+ * there is nothing worth a card.
  */
-export function SkyMomentCard({ moments }: SkyMomentCardProps) {
+export function SkyMomentCard({ moments, open = false, onOpen }: SkyMomentCardProps) {
   const { t, locale } = useTranslation();
+  const { reduced } = useMotion();
   const visible = useMemo(() => visibleMoments(moments), [moments]);
-  const [openId, setOpenId] = useState<string | null>(null);
   const report = useMascotStore((s) => s.report);
+  const frameRef = useRef<ViewInstance>(null);
 
   const top = visible[0];
   if (!top) return null;
@@ -50,17 +57,28 @@ export function SkyMomentCard({ moments }: SkyMomentCardProps) {
   const when = momentWhen(t, locale, top);
   const others = visible.length - 1;
 
+  const openSheet = () => {
+    // Reading a key moment feeds Aster (once a day; the server caps it).
+    if (!useMascotStore.getState().state?.today?.SKY_MOMENT) report("SKY_MOMENT");
+    const frame = frameRef.current;
+    if (!frame) {
+      onOpen(top.id, null);
+      return;
+    }
+    frame.measureInWindow((x, y, width, height) => {
+      onOpen(top.id, width > 0 && height > 0 ? { x, y, width, height } : null);
+    });
+  };
+
   return (
-    <>
+    // While its sheet is open the card hides: the sheet is the card, grown.
+    // Under Reduce Motion the sheet only fades, so the card stays put.
+    <View ref={frameRef} collapsable={false} style={open && !reduced ? styles.away : undefined}>
       <ChunkyCard
         tone={tone}
         tinted
         style={styles.card}
-        onPress={() => {
-          setOpenId(top.id);
-          // Reading a key moment feeds Aster (once a day; the server caps it).
-          if (!useMascotStore.getState().state?.today?.SKY_MOMENT) report("SKY_MOMENT");
-        }}
+        onPress={openSheet}
         accessibilityLabel={`${t("moments.cardLabel")}. ${title}. ${when}`}
         accessibilityHint={t("moments.open")}
       >
@@ -86,9 +104,7 @@ export function SkyMomentCard({ moments }: SkyMomentCardProps) {
           ) : null}
         </View>
       </ChunkyCard>
-
-      <MomentSheet moments={visible} openId={openId} onSelect={setOpenId} onClose={() => setOpenId(null)} />
-    </>
+    </View>
   );
 }
 
@@ -102,14 +118,22 @@ function IconBadge({ moment, size = 36 }: { moment: SkyMoment; size?: number }) 
 }
 
 interface MomentSheetProps {
+  /** All moments (the same list the card gets); the sheet picks the visible ones. */
   moments: SkyMoment[];
   openId: string | null;
+  /** The card's on-screen rect, so the sheet grows out of it (and back into it). */
+  origin?: SheetOrigin | null;
   onSelect: (id: string) => void;
   onClose: () => void;
 }
 
-function MomentSheet({ moments, openId, onSelect, onClose }: MomentSheetProps) {
+/**
+ * The key-moment sheet. Mounted by the screen beside its ScrollView (never
+ * inside the card), so it covers the screen rather than the card's slot.
+ */
+export function MomentSheet({ moments: all, openId, origin, onSelect, onClose }: MomentSheetProps) {
   const { t, locale } = useTranslation();
+  const moments = useMemo(() => visibleMoments(all), [all]);
   const router = useRouter();
   const remindersOn = useAppStore((s) => !!s.reminders.skyMoments);
   const toggleReminder = useReminderToggle();
@@ -141,6 +165,7 @@ function MomentSheet({ moments, openId, onSelect, onClose }: MomentSheetProps) {
     <SpringBottomSheet
       visible={openId !== null}
       onClose={onClose}
+      origin={origin}
       title={t("moments.sheetTitle")}
       icon="sparkles"
       tone={m ? momentTone(m) : "primary"}
@@ -255,6 +280,7 @@ function Fact({ label, value }: { label: string; value?: string }) {
 }
 
 const styles = StyleSheet.create({
+  away: { opacity: 0 },
   card: { gap: spacing.sm },
   flex: { flex: 1, minWidth: 0 },
   top: { flexDirection: "row", alignItems: "center", gap: spacing.sm },

@@ -8,7 +8,7 @@ import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { CelestialLoader } from "../../components/ui/CelestialLoader";
 import { StateView } from "../../components/ui/StateView";
 import { SectionLink } from "../../components/ui/SectionLink";
-import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
+import { SpringBottomSheet, type SheetOrigin } from "../../components/ui/SpringBottomSheet";
 import { EnterView } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
 import { DailyInsight } from "../../services/types";
@@ -30,7 +30,7 @@ import { TodayQuests } from "./TodayQuests";
 import { AsterPointsSheet } from "../aster/AsterPointsSheet";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { Ionicons } from "@expo/vector-icons";
-import { SkyMomentCard } from "./SkyMomentCard";
+import { MomentSheet, SkyMomentCard } from "./SkyMomentCard";
 import { visibleMoments } from "./momentCopy";
 import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
 
@@ -106,6 +106,11 @@ export function TodayScreen() {
   const [sheet, setSheet] = useState<null | "checkin">(null);
   const [pointsOpen, setPointsOpen] = useState(false);
   const closeSheet = useCallback(() => setSheet(null), []);
+  /** The key-moment sheet: which moment, and the card's rect it grows out of. */
+  const [moment, setMoment] = useState<{ id: string; origin: SheetOrigin | null } | null>(null);
+  const openMoment = useCallback((id: string, origin: SheetOrigin | null) => setMoment({ id, origin }), []);
+  const selectMoment = useCallback((id: string) => setMoment((m) => (m ? { ...m, id } : m)), []);
+  const closeMoment = useCallback(() => setMoment(null), []);
 
   // Three days in orbit: a good moment to offer protecting Aster with an account.
   const orbitStreak = mascot?.orbit?.streak ?? 0;
@@ -232,7 +237,7 @@ export function TodayScreen() {
         {/* 3 — A key moment in the user's own sky (returns, stations, eclipses…), when there is one. */}
         {moments && visibleMoments(moments.moments).length ? (
           <EnterView index={3}>
-            <SkyMomentCard moments={moments.moments} />
+            <SkyMomentCard moments={moments.moments} open={moment !== null} onOpen={openMoment} />
           </EnterView>
         ) : null}
 
@@ -293,6 +298,17 @@ export function TodayScreen() {
           <SkyCheckInCard onCheckedIn={reloadPlan} onClosed={closeSheet} />
         ) : null}
       </SpringBottomSheet>
+
+      {/* The key-moment sheet grows out of its card (screen-level, so it covers the screen). */}
+      {moments ? (
+        <MomentSheet
+          moments={moments.moments}
+          openId={moment?.id ?? null}
+          origin={moment?.origin}
+          onSelect={selectMoment}
+          onClose={closeMoment}
+        />
+      ) : null}
 
       <AsterPointsSheet visible={pointsOpen} onClose={() => setPointsOpen(false)} state={mascot} />
 
