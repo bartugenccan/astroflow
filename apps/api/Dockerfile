@@ -24,7 +24,7 @@ RUN npm run build --workspace apps/api
 # Prisma 7 reads the database URL from apps/api/prisma.config.ts, so run from there.
 FROM build AS migrate
 WORKDIR /app/apps/api
-CMD ["npx", "prisma", "migrate", "deploy"]
+CMD ["../../node_modules/.bin/prisma", "migrate", "deploy"]
 
 # ---- prod-deps: runtime node_modules without dev tooling --------------------
 FROM build AS prod-deps
@@ -58,8 +58,9 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-# Migration'lar: Railway bu imajda deploy oncesi `cd apps/api && npx prisma migrate deploy`
+# Migration'lar: Railway bu imajda deploy oncesi `cd apps/api && ../../node_modules/.bin/prisma migrate deploy`
 # calistirir (railway.json preDeployCommand; prisma CLI artik runtime bagimliligi).
+# npx kullanilmaz: 'app' sistem kullanicisinin home'u yok, npm cache/log yazamayip duser.
 # Pre-deploy kancasi olmayan host'larda ayri 'migrate' hedefini kullan (yukari bak).
 # nest build ciktisi dist/src/ altindadir (generated/ prisma istemcisi de derlendigi icin).
 CMD ["node", "apps/api/dist/src/main.js"]

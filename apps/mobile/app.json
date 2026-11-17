@@ -160,6 +160,12 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "29223973-9d57-49b1-be70-bc56ae029e07"
+      }
+    },
+    "owner": "bartugenccan"
   }
 }
