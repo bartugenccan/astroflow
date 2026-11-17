@@ -1,6 +1,7 @@
 import { Locale } from '../interpretation.types';
 import { SIGN_RULER, Sign } from '../astrology.constants';
 import { USER_DATA_RULE, userData } from '../../../common/ai/prompt-safety';
+import { localizeAstroTerms } from '../../../common/ai/astro-terms';
 
 /**
  * Prompt builders for chart interpretation. The AI writes in the requested
@@ -9,7 +10,7 @@ import { USER_DATA_RULE, userData } from '../../../common/ai/prompt-safety';
 
 const PERSONA: Record<Locale, string> = {
   en: 'You are a precise, warm, non-fatalistic astrologer. Ground every statement in the specific placement given. Speak in second person ("you"). Never predict disaster, illness, death, or financial outcomes. No medical or financial advice. Write in English.',
-  tr: 'Sen kesin, sıcak ve kaderci olmayan bir astrologsun. Her cümleyi verilen belirli yerleşime dayandır. İkinci tekil şahıs ("sen") kullan. Asla felaket, hastalık, ölüm veya finansal sonuç tahmin etme. Tıbbi veya finansal tavsiye verme. Türkçe yaz.',
+  tr: 'Sen kesin, sıcak ve kaderci olmayan bir astrologsun. Her cümleyi verilen belirli yerleşime dayandır. İkinci tekil şahıs ("sen") kullan. Asla felaket, hastalık, ölüm veya finansal sonuç tahmin etme. Tıbbi veya finansal tavsiye verme. Türkçe yaz; burç, gezegen ve açı adlarını da her zaman Türkçe yaz (Koç, Akrep, Güneş, Satürn, kare, üçgen gibi), İngilizce ad kullanma.',
 };
 
 export function systemPrompt(locale: Locale): string {
@@ -96,7 +97,7 @@ export function dailyInsightPrompt(
   const momentLine = !moments
     ? ''
     : locale === 'tr'
-      ? ` Bu dönemin kişisel önemli gökyüzü anları (önem sırasıyla, hesaplanmış gerçekler): ${moments}. Özette 1 numaralı anı mutlaka, bugünle bağını kurarak tek cümleyle doğal biçimde an (transit listesinde geçse de geçmese de); gezegen ve burç adlarını Türkçe yaz (Aries → Koç, Saturn → Satürn); tarih uydurma, korku dili ve kesin kehanet kullanma, sağlık ya da ilişki bitişi tahmini yapma.`
+      ? ` Bu dönemin kişisel önemli gökyüzü anları (önem sırasıyla, hesaplanmış gerçekler): ${moments}. Özette 1 numaralı anı mutlaka, bugünle bağını kurarak tek cümleyle doğal biçimde an (transit listesinde geçse de geçmese de); gezegen ve burç adlarını Türkçe yaz; tarih uydurma, korku dili ve kesin kehanet kullanma, sağlık ya da ilişki bitişi tahmini yapma.`
       : ` This period's key personal sky moments (most important first, computed facts): ${moments}. The summary must mention moment 1 naturally in one sentence and tie it to today (whether or not it is among the transits); do not invent dates, avoid fear language and certain predictions, and never predict health issues or breakups.`;
   const user =
     locale === 'tr'
@@ -498,7 +499,11 @@ export function guidancePrompt(
   },
 ): { user: string; schemaHint: string } {
   const label = GUIDANCE_TOPIC_LABEL[locale][args.topic] ?? args.topic;
-  const transitLine = args.transits.slice(0, 5).join('; ') || (locale === 'tr' ? 'sakin bir gökyüzü' : 'a calm sky');
+  // Chart and sky fields only: `memory` is the user's own words and stays as written.
+  const sun = localizeAstroTerms(args.sun, locale);
+  const moon = localizeAstroTerms(args.moon, locale);
+  const transitLine =
+    localizeAstroTerms(args.transits.slice(0, 5).join('; '), locale) || (locale === 'tr' ? 'sakin bir gökyüzü' : 'a calm sky');
   const mem = args.memory
     ? locale === 'tr'
       ? ` Kişi hakkında hatırlananlar:\n${args.memory}\n`
@@ -507,7 +512,7 @@ export function guidancePrompt(
 
   const user =
     locale === 'tr'
-      ? `Kullanıcı bugün "${label}" konusunda ne olduğunu merak ediyor. Güneş ${args.sun}, Ay ${args.moon}. Bugünkü öne çıkan transitler: ${transitLine}.${mem} ` +
+      ? `Kullanıcı bugün "${label}" konusunda ne olduğunu merak ediyor. Güneş ${sun}, Ay ${moon}. Bugünkü öne çıkan transitler: ${transitLine}.${mem} ` +
         `Astrolojiyi GİZLİ motor olarak kullan: yanıtta jargon (burç/ev/açı adı) KULLANMA. ` +
         `JSON üret: takeaway (tek cümlelik, sade, uygulanabilir çıkarım — örn. "Bugün daha sosyal hissedeceksin, bunu kullan"), why (bunu hangi göksel etkinin desteklediğini sade dille açıkla, 1-2 cümle), actions (1-3 somut küçük öneri).`
       : `The user wants to know about "${label}" today. Sun ${args.sun}, Moon ${args.moon}. Today's standout transits: ${transitLine}.${mem} ` +
@@ -605,12 +610,15 @@ export function intentionSuggestionsPrompt(
   locale: Locale,
   args: { sun: string; moon: string; transits: string[]; memory?: string },
 ): { user: string; schemaHint: string } {
+  // Chart and sky fields only: `memory` is the user's own words and stays as written.
+  const sun = localizeAstroTerms(args.sun, locale);
+  const moon = localizeAstroTerms(args.moon, locale);
   const transitLine =
-    args.transits.slice(0, 6).join('; ') || (locale === 'tr' ? 'sakin bir gökyüzü' : 'a calm sky');
+    localizeAstroTerms(args.transits.slice(0, 6).join('; '), locale) || (locale === 'tr' ? 'sakin bir gökyüzü' : 'a calm sky');
   const mem = args.memory ? (locale === 'tr' ? `\nHatırlananlar:\n${args.memory}` : `\nRemembered:\n${args.memory}`) : '';
   const user =
     locale === 'tr'
-      ? `Güneş ${args.sun}, Ay ${args.moon}. Bugünkü transitler kişinin şu an neyle uğraştığını gösteriyor: ${transitLine}.${mem} ` +
+      ? `Güneş ${sun}, Ay ${moon}. Bugünkü transitler kişinin şu an neyle uğraştığını gösteriyor: ${transitLine}.${mem} ` +
         `Bu ana uygun, sade dille 3 kısa "niyet" (hedef) öner — jargon yok. Her biri için: goal (kısa hedef ifadesi), why (neden şimdi uygun, sade), lifeArea ('love'|'career'|'money'|'energy'). JSON: { "suggestions": [{goal, why, lifeArea}] }.`
       : `Sun ${args.sun}, Moon ${args.moon}. Today's transits show what the person is dealing with now: ${transitLine}.${mem} ` +
         `Suggest 3 short, plain-language "intentions" (goals) that fit this moment — no jargon. For each: goal (short goal phrase), why (why it fits now, plain), lifeArea ('love'|'career'|'money'|'energy'). JSON: { "suggestions": [{goal, why, lifeArea}] }.`;

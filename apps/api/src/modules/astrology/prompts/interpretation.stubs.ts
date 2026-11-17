@@ -8,13 +8,14 @@ import {
   YearAhead,
 } from '../interpretation.types';
 import { signName } from '../../election/election.labels';
+import { localizeAstroDeep } from '../../../common/ai/astro-terms';
 
 /**
  * Deterministic, non-AI fallback copy so the app is fully functional with no
  * API key (dev). Concise but grounded in the actual placement.
  */
 
-export function placementStub(
+function placementStubImpl(
   locale: Locale,
   planet: string,
   sign: string,
@@ -32,7 +33,7 @@ export function placementStub(
     : `${planet} sits in ${sign} in your ${house}th house. This placement colors how you express ${sign} qualities within the affairs of the ${house}th house.${retro}`;
 }
 
-export function bigThreeStub(
+function bigThreeStubImpl(
   locale: Locale,
   sun: string,
   moon: string,
@@ -43,7 +44,7 @@ export function bigThreeStub(
     : `Your Sun is in ${sun}, Moon in ${moon}, and Rising in ${rising}. Your core is ${sun}, your inner world is shaped by ${moon}, and you meet the world through a ${rising} lens.`;
 }
 
-export function aspectStub(
+function aspectStubImpl(
   locale: Locale,
   p1: string,
   p2: string,
@@ -68,7 +69,7 @@ export function aspectStub(
 const ELEMENT_TR: Record<string, string> = { Fire: 'Ateş', Earth: 'Toprak', Air: 'Hava', Water: 'Su' };
 const MODALITY_TR: Record<string, string> = { Cardinal: 'öncü', Fixed: 'sabit', Mutable: 'değişken' };
 
-export function overviewStub(
+function overviewStubImpl(
   locale: Locale,
   sun: string,
   dominantElement: string,
@@ -79,7 +80,7 @@ export function overviewStub(
     : `Your chart leans toward the ${dominantElement} element and a ${dominantModality} modality. Your ${sun} Sun gives this balance a personal direction and purpose.`;
 }
 
-export function dailyInsightStub(
+function dailyInsightStubImpl(
   locale: Locale,
   energyState: EnergyState,
 ): { energyState: EnergyState; title: string; summary: string } {
@@ -105,7 +106,7 @@ export function dailyInsightStub(
   return { energyState, title: c.title, summary: c.summary };
 }
 
-export function houseStub(
+function houseStubImpl(
   locale: Locale,
   house: number,
   sign: string,
@@ -125,7 +126,7 @@ export function houseStub(
     : `The ${house}th house begins in ${sign} and is empty, so it is read through its ruler ${ruler}. With ${ruler} in ${rulerSign} in the ${rulerHouse}th house, this house's themes unfold through that area of life.`;
 }
 
-export function nodesStub(
+function nodesStubImpl(
   locale: Locale,
   northSign: string,
   northHouse: number,
@@ -137,7 +138,7 @@ export function nodesStub(
     : `Your South Node is in ${southSign} in the ${southHouse}th house — familiar patterns from the past to grow beyond. Your North Node in ${northSign} in the ${northHouse}th house points to this life's direction of growth.`;
 }
 
-export function chartContextStub(
+function chartContextStubImpl(
   locale: Locale,
   sect: 'day' | 'night',
   saturnSign: string,
@@ -149,7 +150,7 @@ export function chartContextStub(
     : `This is a ${sect} chart. Saturn is in ${saturnSign} in the ${saturnHouse}th house; your first Saturn return around age ${saturnReturnAge} brings themes of maturity and responsibility.`;
 }
 
-export function transitDetailStub(
+function transitDetailStubImpl(
   locale: Locale,
   planet: string,
   sign: string,
@@ -165,13 +166,13 @@ export function transitDetailStub(
       }. It highlights that area of life for a while — lean into the openings and stay patient where it brings friction.`;
 }
 
-export function transitOverviewStub(locale: Locale, date: string): string {
+function transitOverviewStubImpl(locale: Locale, date: string): string {
   return locale === 'tr'
     ? `${date} için gökyüzü sakin ve dengeli. Bugünü küçük, kararlı adımlar için kullan; enerjini dağıtmadan tek bir önceliğe yönel.`
     : `The sky for ${date} is calm and balanced. Use today for small, deliberate steps — focus on one priority rather than scattering your energy.`;
 }
 
-export function compatibilityStub(
+function compatibilityStubImpl(
   locale: Locale,
   overall: number,
   dimensions: { key: string; value: number; lowerIsBetter: boolean }[],
@@ -204,7 +205,7 @@ export function compatibilityStub(
       };
 }
 
-export function guidanceStub(locale: Locale, topic: string): GuidanceAnswer {
+function guidanceStubImpl(locale: Locale, topic: string): GuidanceAnswer {
   const copy: Record<string, Record<Locale, { takeaway: string; why: string; actions: string[] }>> = {
     love: {
       en: { takeaway: "Lead with warmth today — a small gesture lands well.", why: "The current sky softens your connections and makes sincerity easy to receive.", actions: ["Reach out to one person you care about.", "Say the kind thing you'd normally hold back."] },
@@ -289,7 +290,7 @@ export function companionStub(locale: Locale): { reply: string } {
   };
 }
 
-export function forecastStub(
+function forecastStubImpl(
   locale: Locale,
   period: ForecastPeriod,
   start: string,
@@ -370,7 +371,7 @@ const TURNING_LABEL: Record<Locale, Record<string, string[]>> = {
  * the whole point of the feature is that a beginner can read it, and the stub
  * is what ships whenever there is no API key.
  */
-export function yearAheadStub(
+function yearAheadStubImpl(
   locale: Locale,
   args: {
     start: string;
@@ -429,3 +430,27 @@ export function yearAheadStub(
         : 'This reading rests on the fresh arrangement the sky takes on around your birthday — where the weight of the year falls, and which months it becomes most noticeable in.',
   };
 }
+
+// ─── Turkish names in Turkish template readings ─────────────────────────────
+// Templates splice the English-canonical sign/planet/aspect values into the
+// sentence; these exports rewrite them for Turkish (see astro-terms.ts).
+
+const localized =
+  <A extends unknown[], R>(fn: (locale: Locale, ...rest: A) => R) =>
+  (locale: Locale, ...rest: A): R =>
+    localizeAstroDeep(fn(locale, ...rest), locale);
+
+export const placementStub = localized(placementStubImpl);
+export const bigThreeStub = localized(bigThreeStubImpl);
+export const aspectStub = localized(aspectStubImpl);
+export const overviewStub = localized(overviewStubImpl);
+export const dailyInsightStub = localized(dailyInsightStubImpl);
+export const houseStub = localized(houseStubImpl);
+export const nodesStub = localized(nodesStubImpl);
+export const chartContextStub = localized(chartContextStubImpl);
+export const transitDetailStub = localized(transitDetailStubImpl);
+export const transitOverviewStub = localized(transitOverviewStubImpl);
+export const compatibilityStub = localized(compatibilityStubImpl);
+export const guidanceStub = localized(guidanceStubImpl);
+export const forecastStub = localized(forecastStubImpl);
+export const yearAheadStub = localized(yearAheadStubImpl);

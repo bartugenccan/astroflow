@@ -42,6 +42,7 @@ import {
   TransitReportData,
   TransitSpotlight,
 } from './reports.types';
+import { localizeAstroTerms } from '../../common/ai/astro-terms';
 
 /** Parallel AI sections per report — quick, without flooding the provider. */
 const CONCURRENCY = 4;
@@ -265,7 +266,7 @@ export class ReportsService implements OnModuleInit {
         const { user, schemaHint } = natalExtrasPrompt(locale, { chart, balance, unknownTime: birth.unknownTime });
         const p = await this.ai.generateJson<Record<string, unknown>>({
           system: systemPrompt(locale),
-          user,
+          user: localizeAstroTerms(user, locale),
           schemaHint,
           temperature: 0.75,
           maxTokens: 4000,
@@ -296,7 +297,7 @@ export class ReportsService implements OnModuleInit {
         const { user, schemaHint } = spotlightPrompt(locale, { event: e, chart, unknownTime: birth.unknownTime });
         const p = await this.ai.generateJson<Record<string, unknown>>({
           system: systemPrompt(locale),
-          user,
+          user: localizeAstroTerms(user, locale),
           schemaHint,
           temperature: 0.75,
           maxTokens: 2200,
@@ -329,7 +330,7 @@ export class ReportsService implements OnModuleInit {
         const { user, schemaHint } = quarterPrompt(locale, { from, to, events, chart, unknownTime: birth.unknownTime });
         const p = await this.ai.generateJson<Record<string, unknown>>({
           system: systemPrompt(locale),
-          user,
+          user: localizeAstroTerms(user, locale),
           schemaHint,
           temperature: 0.75,
           maxTokens: 2200,

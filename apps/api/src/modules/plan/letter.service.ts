@@ -7,6 +7,7 @@ import type { Locale } from '../astrology/interpretation.types';
 import { ABILITIES, isoWeek, shiftDays } from '../mascot/mascot-rules';
 import { DeviceSkyService } from './device-sky.service';
 import { AsterLetterBody, LetterFacts, letterPrompt, letterStub, letterSystem } from './letter.prompts';
+import { localizeAstroTerms } from '../../common/ai/astro-terms';
 
 const LETTER_STAGE = ABILITIES.find((a) => a.key === 'weeklyLetter')?.minStage ?? 4;
 
@@ -109,7 +110,9 @@ export class LetterService {
     };
   }
 
-  private async write(locale: Locale, facts: LetterFacts): Promise<AsterLetterBody> {
+  private async write(locale: Locale, raw: LetterFacts): Promise<AsterLetterBody> {
+    // The sky lines are English-canonical; the rest of the facts are the user's own words.
+    const facts = { ...raw, transits: raw.transits.map((t) => localizeAstroTerms(t, locale)) };
     const stub = letterStub(locale, facts);
     if (!this.ai.available) return stub;
     try {

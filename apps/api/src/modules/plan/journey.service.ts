@@ -26,6 +26,7 @@ import {
   discoverySystem,
   DiscoveryText,
 } from "./journey.prompts";
+import { localizeAstroTerms } from '../../common/ai/astro-terms';
 
 export interface JourneyClaim {
   delta: MascotDelta;
@@ -186,7 +187,7 @@ export class JourneyService {
         const { user, schemaHint } = discoveryPrompt(locale, t);
         const parsed = await this.ai.generateJson<Partial<DiscoveryText>>({
           system: discoverySystem(locale),
-          user,
+          user: localizeAstroTerms(user, locale),
           schemaHint,
           temperature: 0.8,
           maxTokens: 400,

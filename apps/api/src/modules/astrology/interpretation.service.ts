@@ -68,9 +68,10 @@ import {
 import { safeError } from '../../common/logging/safe-error';
 import { ownedReading } from '../../common/ai/owned-reading-cache';
 import { noteAiFailure } from '../../common/ai/ai-call-tracker';
+import { localizeAstroTerms } from '../../common/ai/astro-terms';
 
 /** Bump when prompts/persona change so caches invalidate. */
-const CACHE_VERSION = 'v11';
+const CACHE_VERSION = 'v12';
 
 type InterpretationKind =
   | 'PLACEMENT'
@@ -239,7 +240,7 @@ export class InterpretationService {
             energyState?: string;
             title?: string;
             summary?: string;
-          }>({ system: systemPrompt(locale), user, schemaHint, temperature: 0.8, maxTokens: 1400 });
+          }>({ system: systemPrompt(locale), user: localizeAstroTerms(user, locale), schemaHint, temperature: 0.8, maxTokens: 1400 });
           const state = this.coerceEnergyState(parsed.energyState) ?? energyState;
           const stub = dailyInsightStub(locale, state);
           return {
@@ -498,7 +499,7 @@ export class InterpretationService {
           });
           const parsed = await this.ai.generateJson<{ text?: string; headline?: string }>({
             system: systemPrompt(locale),
-            user,
+            user: localizeAstroTerms(user, locale),
             schemaHint,
             temperature: 0.75,
             maxTokens: 2000,
@@ -552,7 +553,7 @@ export class InterpretationService {
             keyDates?: { date?: string; label?: string }[];
           }>({
             system: systemPrompt(locale),
-            user,
+            user: localizeAstroTerms(user, locale),
             schemaHint,
             temperature: 0.8,
             // Forecast prose is long across four life-areas — a generous cap
@@ -627,7 +628,7 @@ export class InterpretationService {
             why?: string;
           }>({
             system: systemPrompt(locale),
-            user,
+            user: localizeAstroTerms(user, locale),
             schemaHint,
             temperature: 0.8,
             // A full year across six fields — the same generous cap the
@@ -828,7 +829,7 @@ export class InterpretationService {
     try {
       const parsed = await this.ai.generateJson<{ text?: string }>({
         system: systemPrompt(locale),
-        user: prompt.user,
+        user: localizeAstroTerms(prompt.user, locale),
         schemaHint: prompt.schemaHint,
         temperature: 0.75,
         // v4 models spend reasoning tokens before output; a generous cap is

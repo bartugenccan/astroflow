@@ -1,5 +1,6 @@
 import { Locale } from '../astrology/interpretation.types';
 import { USER_DATA_RULE, userData } from '../../common/ai/prompt-safety';
+import { localizeAstroTerms } from '../../common/ai/astro-terms';
 
 /**
  * The companion's persona — a warm, plain-spoken friend who happens to read the
@@ -32,13 +33,16 @@ export function companionChatPrompt(
     message: string;
   },
 ): { user: string; schemaHint: string } {
+  // Chart and sky fields only: message, history and memory are the user's own words.
+  const sun = localizeAstroTerms(args.sun, locale);
+  const moon = localizeAstroTerms(args.moon, locale);
   const transitLine =
-    args.transits.slice(0, 5).join('; ') || (locale === 'tr' ? 'sakin bir gökyüzü' : 'a calm sky');
+    localizeAstroTerms(args.transits.slice(0, 5).join('; '), locale) || (locale === 'tr' ? 'sakin bir gökyüzü' : 'a calm sky');
   const historyLine = args.history
     .slice(-6)
     .map((m) => `${m.role === 'user' ? (locale === 'tr' ? 'Kişi' : 'Them') : 'Aster'}: ${m.role === 'user' ? userData(m.content) : m.content}`)
     .join('\n');
-  const rising = args.rising ? (locale === 'tr' ? `, Yükselen ${args.rising}` : `, Rising ${args.rising}`) : '';
+  const rising = args.rising ? (locale === 'tr' ? `, Yükselen ${localizeAstroTerms(args.rising, locale)}` : `, Rising ${args.rising}`) : '';
   const moodLine = args.moods?.length
     ? locale === 'tr'
       ? `Son günlerdeki gökyüzü check-in'leri (kendi seçtiği etiketler): ${args.moods.join('; ')}.\n`
@@ -57,7 +61,7 @@ export function companionChatPrompt(
 
   const user =
     locale === 'tr'
-      ? `Kişinin haritasından: Güneş ${args.sun}, Ay ${args.moon}${rising}. Bugünkü gökyüzü: ${transitLine}.\n${moodLine}${focusLine}\n${mem}${
+      ? `Kişinin haritasından: Güneş ${sun}, Ay ${moon}${rising}. Bugünkü gökyüzü: ${transitLine}.\n${moodLine}${focusLine}\n${mem}${
           historyLine ? `Önceki konuşma:\n${historyLine}\n\n` : ''
         }Kişi şimdi diyor ki: ${userData(args.message)}\n${USER_DATA_RULE.tr}\n\n` +
         `Bir arkadaş gibi, sade dille yanıt ver. JSON üret: reply (asıl yanıtın), takeaway (isteğe bağlı tek cümlelik özet), why (isteğe bağlı, bunu sezmene yol açan göksel etkinin JARGONSUZ sade açıklaması), remember (isteğe bağlı, bu kişi hakkında ileride hatırlanmaya değer tek kısa cümle).`
