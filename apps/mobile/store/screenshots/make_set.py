@@ -3,6 +3,7 @@
 Usage (from this folder, raw captures from an iPhone in the order of sets.json):
   python make_set.py tr out/tr shot1.png shot2.png shot3.png shot4.png shot5.png
   python make_set.py en out/en shot1.png ...
+A "-" in place of a shot skips that slot (the verb size still counts all rows).
 Output: 1320x2868 PNGs (iPhone 6.9"), background palette.primary #7C4DFF.
 """
 import os, subprocess, sys, json, pathlib
@@ -18,6 +19,8 @@ def run(lang, shots, out_dir, bg="#7C4DFF"):
     env = dict(os.environ, ASO_VERB_SIZE=str(size))
     files = []
     for i, ((v, desc), shot) in enumerate(zip(rows, shots), 1):
+        if shot == "-":  # capture not taken yet: skip this slot, keep numbering
+            continue
         out = out_dir / f"{i:02d}-{lang}.png"
         subprocess.run([sys.executable, str(HERE / "compose.py"), "--bg", bg, "--verb", v, "--desc", desc,
                         "--screenshot", shot, "--output", str(out)], check=True, env=env, capture_output=True)

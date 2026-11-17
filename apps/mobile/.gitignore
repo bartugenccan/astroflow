@@ -8,3 +8,6 @@ expo-env.d.ts
 # EAS and `expo run:*` recreate them; keep config in plugins, not in these folders.
 /android
 /ios
+
+# Raw iPhone captures for the store screenshots (inputs to store/screenshots/make_set.py)
+/assets/screenshots/
