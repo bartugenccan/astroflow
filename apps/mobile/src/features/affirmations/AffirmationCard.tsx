@@ -133,9 +133,20 @@ export function AffirmationCard({
           }
         >
           <Ionicons name="repeat" size={18} color={colors.star[300]} />
-          <AppText variant="button" color={colors.star[300]} numberOfLines={1} style={styles.shrink}>
-            {t("affirmations.ui.repeat")}
-          </AppText>
+          {/* With a recording the play button takes the label's room; the icon
+              and the count badge carry the button then (a11y label keeps the word). */}
+          {hasRecording ? null : (
+            <AppText
+              variant="button"
+              color={colors.star[300]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+              style={styles.shrink}
+            >
+              {t("affirmations.ui.repeat")}
+            </AppText>
+          )}
           {reps > 0 ? (
             <Animated.View style={[styles.repsBadge, popStyle]}>
               <AppText variant="numeric" color={colors.text.onAccent}>
@@ -144,8 +155,6 @@ export function AffirmationCard({
             </Animated.View>
           ) : null}
         </PressableScale>
-
-        <View style={styles.spacer} />
 
         {/* Voice */}
         {hasRecording && !isRecording ? (
@@ -256,9 +265,11 @@ const styles = StyleSheet.create({
   textRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
   text: { flex: 1, minWidth: 0 },
   actions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  spacer: { flex: 1 },
   shrink: { flexShrink: 1 },
   repeatBtn: {
+    // Pushes the voice + done buttons to the right edge without a spacer view,
+    // which would cost an extra row gap.
+    marginRight: "auto",
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
@@ -272,7 +283,12 @@ const styles = StyleSheet.create({
     backgroundColor: surface.raised,
     flexShrink: 1,
   },
+  // Sits on the button's corner like a notification count, so it costs the
+  // label no width.
   repsBadge: {
+    position: "absolute",
+    top: -8,
+    right: -6,
     minWidth: 22,
     height: 22,
     borderRadius: radii.pill,

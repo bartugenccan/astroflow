@@ -7,7 +7,7 @@ export const affirmationsTr: typeof affirmationsEn = {
     title: "Olumlamalar",
     intro: "Hayatının bir alanını seç. Olumlamayı yavaşça ve sesli oku, doğru hissettirene kadar tekrar et, sonra bugün için tik at.",
     todayPick: "Bugünün olumlaması",
-    repeat: "Tekrar et",
+    repeat: "Tekrar",
     repeatedToday: "Bugün {{n}}×",
     markDone: "Tamamlandı olarak işaretle",
     doneToday: "Bugün tamamlandı",
