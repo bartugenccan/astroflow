@@ -95,8 +95,8 @@ export const tr: Dict = {
       },
       {
         icon: 'spark',
-        title: 'Niyetler ve olumlamalar',
-        body: 'Küçük bir günlük pratik. Bir manifest yaz, check-in yap ve olumlamalarını kendi sesinle kaydet — kayıtlar telefonunda kalır.',
+        title: 'Manifest ve olumlamalar',
+        body: 'Küçük bir günlük pratik. Bir manifest yaz, her gün pratiğini yap ve olumlamalarını kendi sesinle kaydet — kayıtlar telefonunda kalır.',
       },
     ],
   },

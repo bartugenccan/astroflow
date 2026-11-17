@@ -93,8 +93,8 @@ export const en = {
       },
       {
         icon: 'spark',
-        title: 'Intentions & affirmations',
-        body: 'A small daily practice. Set an intention, check in, and record affirmations in your own voice — they stay on your phone.',
+        title: 'Manifestations & affirmations',
+        body: 'A small daily practice. Write a manifestation, practice it daily, and record affirmations in your own voice — they stay on your phone.',
       },
     ],
   },
@@ -256,7 +256,7 @@ export const en = {
           h: 'What we collect',
           p: [
             'Birth details you enter — date, time and place — to compute your chart. They are kept in secure storage on your device and on our server so your readings work and can be restored.',
-            'What you write in the app: messages to Aster, short memory notes Aster keeps, intentions and check-ins, tarot questions, affirmation text, people you save for compatibility, and event descriptions for electional searches.',
+            'What you write in the app: messages to Aster, short memory notes Aster keeps, manifestations and practice notes, tarot questions, affirmation text, people you save for compatibility, and event descriptions for electional searches.',
             'An anonymous install identifier, used to keep your data separate and to apply fair-use limits.',
             'If you choose to create an account: your email address, your Apple or Google account identifier, and the name those services share.',
             'Crash and error reports (stack traces, device model, OS and app version). These are not linked to you and contain no birth data or IP address.',
@@ -291,7 +291,7 @@ export const en = {
         {
           h: 'Your choices and rights',
           p: [
-            'Delete everything from inside the app: Profile → Delete my data. This erases your conversations, notes, intentions, saved people, readings and account, and revokes every device signed in to it.',
+            'Delete everything from inside the app: Profile → Delete my data. This erases your conversations, notes, manifestations, saved people, readings and account, and revokes every device signed in to it.',
             'To access, correct or export your data, or to be removed from the waitlist, email us. Depending on where you live (for example under the GDPR or KVKK), you may also object to processing or complain to your data-protection authority.',
           ],
         },
