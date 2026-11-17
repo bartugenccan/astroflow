@@ -28,7 +28,8 @@ Kodda yapilanlar:
 - Yerel bildirimler: `expo-notifications`, Profil'de gunluk yorum + aksam check-in hatirlaticisi, saat secici, dokununca dogru ekran. Push token yok.
 - AI / eglence bildirimi + onay (dogum verisi girilmeden once; eski kurulumlar ve hesapla girenler icin root'ta bir kez). Profil > Yardim ve yasal: gizlilik, sartlar, destek, AI notu. Aster'da "AI ile yazildi" dipnotu.
 - Niyet check-in'leri kullanicinin yerel gunune gore (`x-tz` basligi).
-- `supportsTablet: false` (iPad ekran goruntusu gerekmez), production profilinde `SENTRY_ALLOW_FAILURE`.
+- `supportsTablet: false` (iPad ekran goruntusu gerekmez).
+- preview/production profillerinde `SENTRY_DISABLE_AUTO_UPLOAD=true`. **`SENTRY_ALLOW_FAILURE` kullanma:** Sentry'nin Xcode betigi JS paketlemeyi `sentry-cli` icinden calistirir; org/token yokken sentry-cli paketlemeden once duser, ALLOW_FAILURE hatayi yutar ve IPA `main.jsbundle` olmadan cikar → uygulama acilista coker (build 5, 2026-11-17). Sourcemap yuklemesi istendiginde once `SENTRY_ORG`, `SENTRY_PROJECT` ve `SENTRY_AUTH_TOKEN` EAS env'e eklenir, sonra bu bayrak kaldirilir.
 - Eski `users`/`gamification`/`workers` modulleri ve kullanilmayan bagimliliklar (bullmq, ioredis, passport, bcrypt, @nestjs/schedule) kaldirildi; `nest build` temiz.
 - `railway.json` + Dockerfile: prisma CLI artik runtime bagimliligi, migration'lar `preDeployCommand` ile.
 
