@@ -1,8 +1,11 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { safeError } from '../../common/logging/safe-error';
 import { fillMissingHouses } from './house-fill';
+import { utcFromWall, wallFromUtc } from './time-zone';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { Origin, Horoscope } = require('circular-natal-horoscope-js');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const tzlookup: (latitude: number, longitude: number) => string = require('tz-lookup');
 
 export interface EphemerisInput {
   birthDate: string; // "YYYY-MM-DD"
@@ -48,37 +51,33 @@ export interface RawHoroscope {
 /** Mean motion of the Sun in degrees per day — the step size for the return solve. */
 const SUN_DEG_PER_DAY = 0.9856473;
 
+/** Sidereal time advances 360° per sidereal day (86 164.0905 s). */
+const SIDEREAL_DEG_PER_SECOND = 360 / 86_164.0905;
+
 /**
  * Thin wrapper around circular-natal-horoscope-js.
- * `Origin` auto-derives timezone + historical DST from lat/lon.
  * House system: Placidus. Zodiac: tropical. Labels are already English.
+ *
+ * Time zones: the library derives zone + DST from lat/lon with tz data frozen
+ * in 2019. We resolve every local time to UTC ourselves (tz-lookup for the
+ * zone, the runtime's ICU database for the offset — see time-zone.ts) and
+ * only hand the library a wall clock that it maps back to that exact instant.
  */
 @Injectable()
 export class EphemerisService {
   private readonly logger = new Logger(EphemerisService.name);
 
-  /**
-   * Zone offset (ms to add to a local wall-clock to get UTC) for a location on a
-   * given day. Memoised per location+day: the offset only moves at DST
-   * boundaries, and the N-day scans in best-days/forecast would otherwise pay
-   * for an extra Origin construction on every iteration.
-   */
-  private readonly offsetCache = new Map<string, number>();
+  /** IANA zone per location; coordinates never move between calls. */
+  private readonly zoneCache = new Map<string, string>();
 
   computeChart(input: EphemerisInput): RawHoroscope {
     const { year, month, day } = this.parseDate(input.birthDate);
     const { hour, minute } = this.parseTime(input.birthTime);
 
     try {
-      const origin = new Origin({
-        year,
-        month: month - 1, // library expects 0-indexed month
-        date: day,
-        hour,
-        minute,
-        latitude: input.latitude,
-        longitude: input.longitude,
-      });
+      const zone = this.zoneAt(input.latitude, input.longitude);
+      const when = new Date(utcFromWall(zone, Date.UTC(year, month - 1, day, hour, minute)));
+      const origin = this.originAtUtc(when, input.latitude, input.longitude);
 
       return fillMissingHouses(
         new Horoscope({
@@ -180,7 +179,7 @@ export class EphemerisService {
 
   /**
    * The UTC instant of a local wall-clock time at a location ("2027-10-30",
-   * 14:00 in Istanbul → 11:00Z), with the zone + DST the library derives.
+   * 14:00 in Istanbul → 11:00Z), with the location's zone and historical DST.
    */
   utcForLocal(
     dateISO: string,
@@ -190,13 +189,13 @@ export class EphemerisService {
     longitude: number,
   ): Date {
     const { year, month, day } = this.parseDate(dateISO);
-    const wall = new Date(Date.UTC(year, month - 1, day, hour, minute));
-    return new Date(wall.getTime() + this.zoneOffsetMs(wall, latitude, longitude));
+    const zone = this.zoneAt(latitude, longitude);
+    return new Date(utcFromWall(zone, Date.UTC(year, month - 1, day, hour, minute)));
   }
 
   /** Local wall-clock "HH:mm" at a location for a UTC instant. */
   localClock(when: Date, latitude: number, longitude: number): string {
-    const wall = new Date(when.getTime() - this.zoneOffsetMs(when, latitude, longitude));
+    const wall = new Date(wallFromUtc(this.zoneAt(latitude, longitude), when.getTime()));
     return `${String(wall.getUTCHours()).padStart(2, '0')}:${String(wall.getUTCMinutes()).padStart(2, '0')}`;
   }
 
@@ -243,42 +242,76 @@ export class EphemerisService {
   }
 
   /**
-   * `Origin` reads its date/time fields as LOCAL time at the supplied lat/lon —
-   * it derives the zone and historical DST itself. So a UTC instant has to be
-   * converted to that local wall-clock before construction. Passing UTC fields
-   * straight through offsets the chart by the zone offset, which merely nudges
-   * planet longitudes but rotates the house cusps by 15 deg per hour.
+   * An `Origin` for an exact UTC instant. `Origin` reads its fields as LOCAL
+   * time and converts with its own (2019) tz data, so we hand it the wall
+   * clock it maps back to `when`: start from the true local time and correct
+   * by whatever the library's conversion is off by. Where both databases
+   * agree (nearly always) the first guess is exact.
    */
   private originAtUtc(when: Date, latitude: number, longitude: number) {
-    const local = new Date(
-      when.getTime() - this.zoneOffsetMs(when, latitude, longitude),
-    );
-    return this.buildOrigin(local, latitude, longitude);
+    const target = Math.floor(when.getTime() / 1000) * 1000;
+    // The library keeps whole minutes only: aim at the nearest whole minute.
+    const targetMinute = Math.round(target / 60_000) * 60_000;
+    let wall = wallFromUtc(this.zoneAt(latitude, longitude), targetMinute);
+    let best = this.buildOrigin(wall, latitude, longitude);
+    let missMinute = Date.parse(best.utcTimeFormatted) - targetMinute;
+    // Off by whole hours only where the library's 2019 tz data disagrees.
+    for (let i = 0; i < 2 && missMinute !== 0; i++) {
+      const nextWall = wall - missMinute;
+      const next = this.buildOrigin(nextWall, latitude, longitude);
+      const nextMiss = Date.parse(next.utcTimeFormatted) - targetMinute;
+      if (Math.abs(nextMiss) >= Math.abs(missMinute)) break;
+      wall = nextWall;
+      best = next;
+      missMinute = nextMiss;
+    }
+    const miss = Date.parse(best.utcTimeFormatted) - target;
+    if (Math.abs(miss) >= 60_000) {
+      // Only inside an hour the library's old tz data repeats (clocks going
+      // back) can an instant have no wall clock that maps onto it.
+      this.logger.warn(`origin off by ${miss / 60_000} min at ${when.toISOString()}`);
+      return best;
+    }
+    if (miss !== 0) {
+      // The library works in whole minutes and drops seconds. Planets barely
+      // move in < 1 min (the Moon ~0.5′), but the angles turn 15′ per minute:
+      // carry the leftover seconds as the equivalent turn of sidereal time,
+      // i.e. a matching shift east in the longitude the houses are cast from.
+      let lon = longitude - (miss / 1000) * SIDEREAL_DEG_PER_SECOND;
+      if (lon > 180) lon -= 360;
+      if (lon < -180) lon += 360;
+      try {
+        const shifted = this.buildOrigin(wall, latitude, lon);
+        // Across the date line the shifted longitude may fall in another zone;
+        // keep the shift only if the library still reads the same instant.
+        if (Date.parse(shifted.utcTimeFormatted) === Date.parse(best.utcTimeFormatted)) return shifted;
+      } catch {
+        // The unshifted origin is still right to within the minute.
+      }
+    }
+    return best;
   }
 
-  private zoneOffsetMs(when: Date, latitude: number, longitude: number): number {
-    const key = `${latitude.toFixed(4)}|${longitude.toFixed(4)}|${when
-      .toISOString()
-      .slice(0, 10)}`;
-    const hit = this.offsetCache.get(key);
-    if (hit !== undefined) return hit;
-
-    // Probe: interpret the UTC wall-clock as if it were local, then read back
-    // which UTC the library thinks that is. The difference is the zone offset.
-    const probe = this.buildOrigin(when, latitude, longitude);
-    const offset = Date.parse(probe.utcTimeFormatted) - when.getTime();
-    this.offsetCache.set(key, offset);
-    return offset;
+  private zoneAt(latitude: number, longitude: number): string {
+    const key = `${latitude}|${longitude}`;
+    let zone = this.zoneCache.get(key);
+    if (!zone) {
+      zone = tzlookup(latitude, longitude);
+      this.zoneCache.set(key, zone);
+    }
+    return zone;
   }
 
-  /** Construct an Origin from a Date whose UTC accessors carry local wall-clock. */
-  private buildOrigin(local: Date, latitude: number, longitude: number) {
+  /** Construct an Origin from wall ms (UTC fields carry the local wall clock). */
+  private buildOrigin(wallMs: number, latitude: number, longitude: number) {
+    const local = new Date(wallMs);
     return new Origin({
       year: local.getUTCFullYear(),
       month: local.getUTCMonth(),
       date: local.getUTCDate(),
       hour: local.getUTCHours(),
       minute: local.getUTCMinutes(),
+      second: local.getUTCSeconds(),
       latitude,
       longitude,
     });
