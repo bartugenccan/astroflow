@@ -99,7 +99,7 @@ const { values: args } = parseArgs({
     out: { type: 'string' },
     rescan: { type: 'string' },
     bulk: { type: 'string', default: '500' },
-    tz: { type: 'string', default: '510' },
+    tz: { type: 'string', default: '1380' },
     seed: { type: 'string', default: '20261117' },
   },
 });
@@ -874,6 +874,20 @@ async function checkPrivacy(c, locale) {
     else L.fail('Şablon metinleri (model yanıt vermezse)', `${leaks.length} İngilizce ad · örn. ${leaks.slice(0, 3).map((f) => `${f.reading}: ${f.claim}`).join('; ')}`);
   }
 
+  // The year-ahead prompt carries a number-free life stage instead of the age.
+  const yearPrompt = seen.filter((s) => s.route === 'Yıllık yorum').map((s) => s.text).join('\n');
+  const [by, bm, bd] = c.birthDate.split('-').map(Number);
+  const now = new Date();
+  const birthdayThisYear = Date.UTC(now.getUTCFullYear(), bm - 1, bd);
+  const nearBirthday = Math.abs(now.getTime() - birthdayThisYear) < 3 * 86_400_000;
+  if (yearPrompt && !nearBirthday) {
+    const { lifeStage } = require(join(DIST, 'modules/astrology/prompts/interpretation.prompts.js'));
+    const age = now.getUTCFullYear() - by - (now.getTime() < birthdayThisYear ? 1 : 0);
+    const stage = lifeStage(age);
+    const says = /bir çocuk|is a child/.test(yearPrompt) ? 'child' : /reşit olmayan|is a minor/.test(yearPrompt) ? 'teen' : 'adult';
+    (says === stage ? L.pass : L.fail)('Yıllık yorum yaşam evresi', `beklenen ${stage}, prompt ${says} (rakamsız)`);
+  }
+
   const patterns = birthDataPatterns(c);
   for (const [route] of routes) {
     const texts = seen.filter((s) => s.route === route).map((s) => s.text);
@@ -1016,6 +1030,7 @@ function checkBulkMath(n, seed) {
 
 // ─── Layer 6: time zones against the system's own tz database (ICU) ─────────
 const TZ_CITIES = [
+  // Turkey and neighbours — most users.
   ['İstanbul', 41.0082, 28.9784, 'Europe/Istanbul'],
   ['Ankara', 39.9334, 32.8597, 'Europe/Istanbul'],
   ['İzmir', 38.4237, 27.1428, 'Europe/Istanbul'],
@@ -1025,16 +1040,71 @@ const TZ_CITIES = [
   // North of the Green Line: KKTC followed Turkey's UTC+3 from 2016-09 to 2017-10.
   ['Lefkoşa (KKTC)', 35.1856, 33.3823, 'Asia/Famagusta'],
   ['Limasol', 34.6786, 33.0413, 'Asia/Nicosia'],
+  ['Atina', 37.9838, 23.7275, 'Europe/Athens'],
+  ['Sofya', 42.6977, 23.3219, 'Europe/Sofia'],
+  ['Bükreş', 44.4268, 26.1025, 'Europe/Bucharest'],
+  ['Tiflis', 41.7151, 44.8271, 'Asia/Tbilisi'],
+  ['Erivan', 40.1792, 44.4991, 'Asia/Yerevan'],
   ['Bakü', 40.4093, 49.8671, 'Asia/Baku'],
-  ['Berlin', 52.52, 13.405, 'Europe/Berlin'],
-  ['Amsterdam', 52.3676, 4.9041, 'Europe/Amsterdam'],
-  ['Londra', 51.5074, -0.1278, 'Europe/London'],
-  ['Moskova', 55.7558, 37.6173, 'Europe/Moscow'],
   ['Tahran', 35.6892, 51.389, 'Asia/Tehran'],
-  ['New York', 40.7128, -74.006, 'America/New_York'],
-  ['Los Angeles', 34.0522, -118.2437, 'America/Los_Angeles'],
+  ['Bağdat', 33.3152, 44.3661, 'Asia/Baghdad'],
+  ['Şam', 33.5138, 36.2765, 'Asia/Damascus'],
+  ['Amman', 31.9454, 35.9284, 'Asia/Amman'],
+  ['Beyrut', 33.8938, 35.5018, 'Asia/Beirut'],
+  ['Kudüs', 31.7683, 35.2137, 'Asia/Jerusalem'],
+  ['Kahire', 30.0444, 31.2357, 'Africa/Cairo'],
+  ['Riyad', 24.7136, 46.6753, 'Asia/Riyadh'],
+  ['Dubai', 25.2048, 55.2708, 'Asia/Dubai'],
+  // Europe.
+  ['Londra', 51.5074, -0.1278, 'Europe/London'],
+  ['Dublin', 53.3498, -6.2603, 'Europe/Dublin'],
+  ['Lizbon', 38.7223, -9.1393, 'Europe/Lisbon'],
+  ['Madrid', 40.4168, -3.7038, 'Europe/Madrid'],
+  ['Paris', 48.8566, 2.3522, 'Europe/Paris'],
+  ['Amsterdam', 52.3676, 4.9041, 'Europe/Amsterdam'],
+  ['Berlin', 52.52, 13.405, 'Europe/Berlin'],
+  ['Roma', 41.9028, 12.4964, 'Europe/Rome'],
+  ['Kiev', 50.4501, 30.5234, 'Europe/Kyiv'],
+  ['Minsk', 53.9006, 27.559, 'Europe/Minsk'],
+  ['Moskova', 55.7558, 37.6173, 'Europe/Moscow'],
+  ['Volgograd', 48.708, 44.5133, 'Europe/Volgograd'],
+  ['Samara', 53.1959, 50.1002, 'Europe/Samara'],
+  // Asia and Oceania.
+  ['Karaçi', 24.8607, 67.0011, 'Asia/Karachi'],
+  ['Delhi', 28.6139, 77.209, 'Asia/Kolkata'],
+  ['Dakka', 23.8103, 90.4125, 'Asia/Dhaka'],
+  ['Almatı', 43.2389, 76.8897, 'Asia/Almaty'],
+  ['Taşkent', 41.2995, 69.2401, 'Asia/Tashkent'],
+  ['Bişkek', 42.8746, 74.5698, 'Asia/Bishkek'],
+  ['Ulan Batur', 47.8864, 106.9057, 'Asia/Ulaanbaatar'],
+  ['Pekin', 39.9042, 116.4074, 'Asia/Shanghai'],
+  ['Seul', 37.5665, 126.978, 'Asia/Seoul'],
   ['Tokyo', 35.6762, 139.6503, 'Asia/Tokyo'],
+  ['Manila', 14.5995, 120.9842, 'Asia/Manila'],
+  ['Cakarta', -6.2088, 106.8456, 'Asia/Jakarta'],
   ['Sidney', -33.8688, 151.2093, 'Australia/Sydney'],
+  ['Auckland', -36.8485, 174.7633, 'Pacific/Auckland'],
+  // Africa.
+  ['Lagos', 6.5244, 3.3792, 'Africa/Lagos'],
+  ['Kazablanka', 33.5731, -7.5898, 'Africa/Casablanca'],
+  ['Nairobi', -1.2921, 36.8219, 'Africa/Nairobi'],
+  ['Johannesburg', -26.2041, 28.0473, 'Africa/Johannesburg'],
+  // The Americas.
+  ['New York', 40.7128, -74.006, 'America/New_York'],
+  ['Toronto', 43.6532, -79.3832, 'America/Toronto'],
+  ['Chicago', 41.8781, -87.6298, 'America/Chicago'],
+  ['Denver', 39.7392, -104.9903, 'America/Denver'],
+  ['Phoenix', 33.4484, -112.074, 'America/Phoenix'],
+  ['Los Angeles', 34.0522, -118.2437, 'America/Los_Angeles'],
+  ['Meksiko', 19.4326, -99.1332, 'America/Mexico_City'],
+  // Split from Ojinaga's zone in 2022; old border data puts it there.
+  ['Ciudad Juárez', 31.6904, -106.4245, 'America/Ciudad_Juarez'],
+  ['Havana', 23.1136, -82.3666, 'America/Havana'],
+  ['Bogota', 4.711, -74.0721, 'America/Bogota'],
+  ['São Paulo', -23.5505, -46.6333, 'America/Sao_Paulo'],
+  ['Buenos Aires', -34.6037, -58.3816, 'America/Argentina/Buenos_Aires'],
+  ['Santiago', -33.4489, -70.6693, 'America/Santiago'],
+  ['Nuuk', 64.1814, -51.6941, 'America/Nuuk'],
 ];
 
 const intlFormatters = new Map();
@@ -1077,15 +1147,20 @@ function expectedUtc(zone, wallMs) {
  * ephemeris library's own bundled 2019 tz data would have been wrong.
  */
 function checkTimeZones(n, seed) {
-  const L = makeLayer(`6 · Saat dilimi (${n} rastgele yerel saat, 1950–2025, uçtan uca)`);
+  const L = makeLayer(`6 · Saat dilimi (${n} rastgele yerel saat, ${TZ_CITIES.length} şehir, 1950–2025, uçtan uca)`);
   const moment = require('moment-timezone');
   const { Origin } = require('circular-natal-horoscope-js');
   const rnd = makeRng(seed);
-  const T0 = Date.UTC(1950, 0, 1);
-  const T1 = Date.UTC(2025, 11, 31);
+  // Every other sample comes from 2019–2025: Mexico, Brazil, Kazakhstan, Egypt,
+  // Syria, Jordan, Greenland and Iran all changed their clocks in those years.
+  const SPANS = [
+    [Date.UTC(1950, 0, 1), Date.UTC(2025, 11, 31)],
+    [Date.UTC(2019, 0, 1), Date.UTC(2025, 11, 31)],
+  ];
   const perCity = new Map(TZ_CITIES.map(([name]) => [name, { checked: 0, skipped: 0, wrong: [], libWrong: 0 }]));
   for (let i = 0; i < n; i++) {
     const [name, lat, lon, zone] = TZ_CITIES[i % TZ_CITIES.length];
+    const [T0, T1] = SPANS[Math.floor(i / TZ_CITIES.length) % 2];
     const wall = new Date(Math.floor((T0 + rnd() * (T1 - T0)) / 60_000) * 60_000);
     const s = perCity.get(name);
     if (expectedUtc(zone, wall.getTime()) === null) {
