@@ -45,6 +45,7 @@ import {
   compatibilityPrompt,
   forecastPrompt,
   yearAheadPrompt,
+  lifeStage,
   guidancePrompt,
   affirmationPrompt,
 } from './prompts/interpretation.prompts';
@@ -611,7 +612,8 @@ export class InterpretationService {
     return this.cached<YearAhead>(
       'YEAR_AHEAD',
       locale,
-      `yearahead|${chartSig}|${args.start}`,
+      // The life stage shapes the prompt, so it is part of the key.
+      `yearahead|${chartSig}|${args.start}|${lifeStage(args.age)}`,
       async () => {
         if (!this.ai.available) return yearAheadStub(locale, stubArgs);
         try {

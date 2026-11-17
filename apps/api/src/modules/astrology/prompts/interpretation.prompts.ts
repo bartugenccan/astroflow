@@ -428,10 +428,37 @@ export function forecastPrompt(
  * The raw return chart travels alongside this in the API response, so the
  * prose never has to carry the technical detail.
  */
+export type LifeStage = 'child' | 'teen' | 'adult';
+
+/** A coarse, number-free life stage: enough to keep a reading age-appropriate. */
+export function lifeStage(age: number): LifeStage {
+  if (age < 13) return 'child';
+  if (age < 18) return 'teen';
+  return 'adult';
+}
+
+const LIFE_STAGE_NOTE: Record<Locale, Record<LifeStage, string>> = {
+  tr: {
+    child:
+      'Bu kişi bir çocuk: aşk alanını aile ve arkadaşlık, kariyeri okul ve öğrenme, parayı paylaşmak ve değer verdiği şeyler olarak yaz; romantik ilişki, iş ya da para kararı anlatma. ',
+    teen:
+      'Bu kişi reşit olmayan bir genç: aşk alanını arkadaşlık ve ilk duygular, kariyeri okul, öğrenme ve yetenekler, parayı harçlık ve değer verdiği şeyler olarak yaz; yetişkin iş ya da finans kararları anlatma. ',
+    adult: '',
+  },
+  en: {
+    child:
+      'This person is a child: write love as family and friendship, career as school and learning, money as sharing and the things they value; no romance, jobs or money decisions. ',
+    teen:
+      'This person is a minor: write love as friendship and first feelings, career as school, learning and talents, money as pocket money and the things they value; no adult job or finance decisions. ',
+    adult: '',
+  },
+};
+
 /**
  * The window's dates and the age are left out of the prompt on purpose: the
  * window opens on the birthday, so start date + age would hand the model the
- * birth date. They stay in the cache key and the template reading only.
+ * birth date. They stay in the cache key and the template reading only; the
+ * prompt gets a number-free life stage instead.
  */
 export function yearAheadPrompt(
   locale: Locale,
@@ -453,16 +480,17 @@ export function yearAheadPrompt(
   const list = (arr: string[], empty: string) =>
     arr.length ? arr.join('; ') : empty;
   const areas = AREA_LABEL[locale];
+  const stage = LIFE_STAGE_NOTE[locale][lifeStage(args.age)];
 
   const user =
     locale === 'tr'
-      ? `Kişinin önümüzdeki on iki aylık yeni yaşam yılı için bir "yıl önizlemesi". ` +
+      ? `Kişinin önümüzdeki on iki aylık yeni yaşam yılı için bir "yıl önizlemesi". ${stage}` +
         `Yılın ağırlık merkezi: ${list(args.emphasis, 'dengeli dağılmış')}. Yılın ana teması: ${args.sunTheme}. ` +
         `En görünür etkiler: ${list(args.angular, 'belirgin bir tane yok')}. Öne çıkan alanlar: ${args.focusAreas.join(', ')}. ` +
         `Dönüm noktaları: ${list(args.turningPoints, 'yok')}. ` +
         `Astrolojiyi GİZLİ motor olarak kullan: metinde jargon (burç/ev/açı/gezegen adı) KULLANMA — "why" alanında bile sade konuş. ` +
         `JSON üret: headline (bu yılın neyle ilgili olduğunu söyleyen tek kısa cümle), overview (2-4 cümle), strengths (yılın desteklediği 2 alan), tender (özen isteyen 1-2 alan), turningPoints (verilen aylar için sade etiketler), why (bu okumanın neye dayandığını sade dille, 2-3 cümle). Kaderci olma, kapı kapatma.`
-      : `A "year ahead" preview for the person's coming twelve-month life year. ` +
+      : `A "year ahead" preview for the person's coming twelve-month life year. ${stage}` +
         `Where the year concentrates: ${list(args.emphasis, 'evenly spread')}. The year's central theme: ${args.sunTheme}. ` +
         `Most visible influences: ${list(args.angular, 'none standing out')}. Leading areas: ${args.focusAreas.join(', ')}. ` +
         `Turning points: ${list(args.turningPoints, 'none')}. ` +
