@@ -9,6 +9,7 @@
     "start:prod": "node dist/src/main",
     "gen:auth-key": "node scripts/gen-auth-key.mjs",
     "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --test \"test/*.test.mjs\"",
+    "check:astro": "nest build && node scripts/astro-consistency.mjs",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix"
   },
   "dependencies": {
