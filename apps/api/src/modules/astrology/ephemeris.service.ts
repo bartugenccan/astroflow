@@ -4,8 +4,10 @@ import { fillMissingHouses } from './house-fill';
 import { utcFromWall, wallFromUtc } from './time-zone';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { Origin, Horoscope } = require('circular-natal-horoscope-js');
+// The maintained fork: the original tz-lookup's zone borders stopped in 2020
+// (it put Ciudad Juárez, split off in 2022, in Ojinaga's zone).
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const tzlookup: (latitude: number, longitude: number) => string = require('tz-lookup');
+const tzlookup: (latitude: number, longitude: number) => string = require('@photostructure/tz-lookup');
 
 export interface EphemerisInput {
   birthDate: string; // "YYYY-MM-DD"
@@ -59,7 +61,7 @@ const SIDEREAL_DEG_PER_SECOND = 360 / 86_164.0905;
  * House system: Placidus. Zodiac: tropical. Labels are already English.
  *
  * Time zones: the library derives zone + DST from lat/lon with tz data frozen
- * in 2019. We resolve every local time to UTC ourselves (tz-lookup for the
+ * in 2019. We resolve every local time to UTC ourselves (@photostructure/tz-lookup for the
  * zone, the runtime's ICU database for the offset — see time-zone.ts) and
  * only hand the library a wall clock that it maps back to that exact instant.
  */
