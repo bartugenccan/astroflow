@@ -1037,6 +1037,16 @@ const TZ_CITIES = [
   ['Antalya', 36.8969, 30.7133, 'Europe/Istanbul'],
   ['Diyarbakır', 37.9144, 40.2306, 'Europe/Istanbul'],
   ['Trabzon', 41.0027, 39.7168, 'Europe/Istanbul'],
+  // Border and coast towns a coarse zone grid hands to the neighbour
+  // (tz-lookup: Tbilisi, Athens, Damascus, Tehran, Sofia).
+  ['Hopa', 41.39, 41.42, 'Europe/Istanbul'],
+  ['Borçka', 41.364, 41.679, 'Europe/Istanbul'],
+  ['Erenler (Artvin)', 41.27941, 41.78814, 'Europe/Istanbul'],
+  ['Posof', 41.511, 42.729, 'Europe/Istanbul'],
+  ['Ayvalık', 39.317, 26.694, 'Europe/Istanbul'],
+  ['Ceylanpınar', 36.845, 40.05, 'Europe/Istanbul'],
+  ['Esendere', 37.72, 44.6, 'Europe/Istanbul'],
+  ['Kapıkule', 41.72, 26.36, 'Europe/Istanbul'],
   // North of the Green Line: KKTC followed Turkey's UTC+3 from 2016-09 to 2017-10.
   ['Lefkoşa (KKTC)', 35.1856, 33.3823, 'Asia/Famagusta'],
   ['Limasol', 34.6786, 33.0413, 'Asia/Nicosia'],

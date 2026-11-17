@@ -4,10 +4,22 @@ import { fillMissingHouses } from './house-fill';
 import { utcFromWall, wallFromUtc } from './time-zone';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { Origin, Horoscope } = require('circular-natal-horoscope-js');
-// The maintained fork: the original tz-lookup's zone borders stopped in 2020
-// (it put Ciudad Juárez, split off in 2022, in Ojinaga's zone).
+// Zone lookup. geo-tz reads the real zone borders (timezone-boundary-builder).
+// tz-lookup's coarse grid put towns well inside a border in the neighbour's
+// zone: Hopa, Borçka and Posof in Asia/Tbilisi, Ayvalık in Europe/Athens,
+// Ceylanpınar in Asia/Damascus — an hour or more of Ascendant for some dates.
+// geo-tz answers Etc/GMT±N out at sea, where tz-lookup still names the
+// nearest country's zone (with its DST), so it remains the fallback there.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const geoTz: { find: (latitude: number, longitude: number) => string[] } = require('geo-tz');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const tzlookup: (latitude: number, longitude: number) => string = require('@photostructure/tz-lookup');
+
+/** The IANA zone of a point: its real zone on land, the nearest country's at sea. */
+export function zoneOf(latitude: number, longitude: number): string {
+  const zone = geoTz.find(latitude, longitude)[0];
+  return zone && !zone.startsWith('Etc/') ? zone : tzlookup(latitude, longitude);
+}
 
 export interface EphemerisInput {
   birthDate: string; // "YYYY-MM-DD"
@@ -61,8 +73,8 @@ const SIDEREAL_DEG_PER_SECOND = 360 / 86_164.0905;
  * House system: Placidus. Zodiac: tropical. Labels are already English.
  *
  * Time zones: the library derives zone + DST from lat/lon with tz data frozen
- * in 2019. We resolve every local time to UTC ourselves (@photostructure/tz-lookup for the
- * zone, the runtime's ICU database for the offset — see time-zone.ts) and
+ * in 2019. We resolve every local time to UTC ourselves (geo-tz for the zone,
+ * see `zoneOf`; the runtime's ICU database for the offset — see time-zone.ts) and
  * only hand the library a wall clock that it maps back to that exact instant.
  */
 @Injectable()
@@ -298,7 +310,7 @@ export class EphemerisService {
     const key = `${latitude}|${longitude}`;
     let zone = this.zoneCache.get(key);
     if (!zone) {
-      zone = tzlookup(latitude, longitude);
+      zone = zoneOf(latitude, longitude);
       this.zoneCache.set(key, zone);
     }
     return zone;
