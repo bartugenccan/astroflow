@@ -55,7 +55,7 @@ Dogrulama: scratch API + PGlite + sahte Anthropic ile 17/17 e2e + 4 OTP kontrolu
 
 ### Railway env (API)
 `NODE_ENV=production`, `TRUST_PROXY=1`, `PREMIUM_BETA=true`, `DATABASE_URL` (Railway Postgres), `JWT_DEVICE_SECRET` (>=32),
-`AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, opsiyonel: `SENTRY_DSN`, `APPLE_*` + `AUTH_ENCRYPTION_KEY`, `GOOGLE_CLIENT_IDS`, `RESEND_API_KEY` + `AUTH_EMAIL_FROM`.
+`AI_PROVIDER=deepseek`, `DEEPSEEK_API_KEY` (opsiyonel `DEEPSEEK_MIN_BALANCE`), opsiyonel: `SENTRY_DSN`, `APPLE_*` + `AUTH_ENCRYPTION_KEY`, `GOOGLE_CLIENT_IDS`, `RESEND_API_KEY` + `AUTH_EMAIL_FROM`.
 **Production'a koyma:** `ALLOW_LEGACY_DEVICE_HEADER`, `ENABLE_STUB_UNLOCK`, `AUTH_EMAIL_DEV_LOG`.
 
 ### Elle yapilacaklar (TestFlight icin)

@@ -528,7 +528,7 @@ export const tr: TranslationShape = {
     entertainmentTitle: "Kehanet değil, içgörü için",
     entertainmentBody: "Yorumlar, hesaplanan haritandan yapay zekâ ile yazılır. Düşünmen ve keyif alman içindir — tıbbi, psikolojik, finansal ya da hukuki tavsiye değildir ve yanılabilir.",
     dataTitle: "Telefonundan neler çıkar",
-    dataBody: "Yorumlarını yazabilmek için doğum bilgilerin sunucumuza gider. Yapay zekâ sağlayıcımız Anthropic (Claude); türetilmiş harita yerleşimlerini ve bugünkü transitleri, ayrıca uygulamada yazdıklarını alır: Aster'e mesajların, manifestlerin ve olumlamaların (düzenlediklerin dahil), pratik notların (yazdığın ve 3-6-9 satırların), tarot ve eleksiyon soruların. Gökyüzü check-in'indeki ruh halin (yalnızca seçtiğin etiket) Aster'in sana cevap vermesine yardım eder. Adın ve ham doğum bilgilerin yapay zekâya asla gönderilmez.",
+    dataBody: "Yorumlarını yazabilmek için doğum bilgilerin sunucumuza gider. Yapay zekâ sağlayıcılarımız DeepSeek ve Anthropic (Claude); türetilmiş harita yerleşimlerini ve bugünkü transitleri, ayrıca uygulamada yazdıklarını alır: Aster'e mesajların, manifestlerin ve olumlamaların (düzenlediklerin dahil), pratik notların (yazdığın ve 3-6-9 satırların), tarot ve eleksiyon soruların. Gökyüzü check-in'indeki ruh halin (yalnızca seçtiğin etiket) Aster'in sana cevap vermesine yardım eder. Adın ve ham doğum bilgilerin yapay zekâya asla gönderilmez.",
     controlTitle: "Kontrol sende",
     controlBody: "Reklam yok, takip yok. Profil → Verilerimi sil ile her şeyi istediğin an silebilirsin.",
     privacyLink: "Gizlilik Politikasını oku",

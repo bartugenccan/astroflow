@@ -525,7 +525,7 @@ export const en = {
     entertainmentTitle: "For reflection, not prediction",
     entertainmentBody: "Readings are written by AI from your computed chart. They’re for reflection and entertainment — not medical, psychological, financial or legal advice — and they can be wrong.",
     dataTitle: "What leaves your phone",
-    dataBody: "To write your readings, your birth details go to our server. Anthropic (Claude), our AI provider, receives the derived chart placements and today's transits, plus what you write in the app: messages to Aster, your manifestations and their affirmations (including ones you edit), your practice notes (what you script and your 3-6-9 lines), tarot and election questions. Your sky check-in mood (just the label you pick) helps Aster answer you. Your name and raw birth data are never sent to the AI.",
+    dataBody: "To write your readings, your birth details go to our server. Our AI providers, DeepSeek and Anthropic (Claude), receive the derived chart placements and today's transits, plus what you write in the app: messages to Aster, your manifestations and their affirmations (including ones you edit), your practice notes (what you script and your 3-6-9 lines), tarot and election questions. Your sky check-in mood (just the label you pick) helps Aster answer you. Your name and raw birth data are never sent to the AI.",
     controlTitle: "You stay in control",
     controlBody: "No ads, no tracking. Delete everything anytime in Profile → Delete my data.",
     privacyLink: "Read the Privacy Policy",

@@ -16,8 +16,8 @@
   "ai": {
    "used": true,
    "providers": [
-    "Anthropic (Claude) — varsayilan (AI_PROVIDER=anthropic)",
-    "DeepSeek — alternatif (AI_PROVIDER=deepseek)"
+    "DeepSeek — production'da kullanilan (AI_PROVIDER=deepseek, 2026-11-17)",
+    "Anthropic (Claude) — kod varsayilani / yedek (AI_PROVIDER=anthropic)"
    ],
    "dataShared": [
     "Dogum haritasindan turetilen yerlesimler (gunes, ay, yukselen, gezegen/burc/ev, acilar)",

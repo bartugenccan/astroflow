@@ -41,7 +41,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd --system --gid 1001 app \
-  && useradd --system --uid 1001 --gid app app
+  && useradd --system --create-home --uid 1001 --gid app app
 
 COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
 COPY --from=build --chown=app:app /app/apps/api/dist ./apps/api/dist
@@ -49,6 +49,9 @@ COPY --from=prod-deps --chown=app:app /app/apps/api/node_modules ./apps/api/node
 COPY --from=build --chown=app:app /app/apps/api/prisma ./apps/api/prisma
 COPY --from=build --chown=app:app /app/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
 COPY --from=build --chown=app:app /app/package.json ./package.json
+# Lets `npm run start --workspace=@astroflow/api` resolve too (Railway's monorepo
+# auto-detection sets that as the start command); `start` runs the built server.
+COPY --from=build --chown=app:app /app/apps/api/package.json ./apps/api/package.json
 
 USER app
 EXPOSE 3000
