@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { safeError } from '../../common/logging/safe-error';
+import { fillMissingHouses } from './house-fill';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { Origin, Horoscope } = require('circular-natal-horoscope-js');
 
@@ -79,15 +80,17 @@ export class EphemerisService {
         longitude: input.longitude,
       });
 
-      return new Horoscope({
-        origin,
-        houseSystem: 'placidus',
-        zodiac: 'tropical',
-        aspectPoints: ['bodies', 'angles'],
-        aspectWithPoints: ['bodies', 'angles'],
-        aspectTypes: ['major'],
-        language: 'en',
-      }) as RawHoroscope;
+      return fillMissingHouses(
+        new Horoscope({
+          origin,
+          houseSystem: 'placidus',
+          zodiac: 'tropical',
+          aspectPoints: ['bodies', 'angles'],
+          aspectWithPoints: ['bodies', 'angles'],
+          aspectTypes: ['major'],
+          language: 'en',
+        }) as RawHoroscope,
+      );
     } catch (err) {
       // The library's message stays in the log; the client gets a generic one.
       this.logger.warn(`compute chart failed: ${safeError(err)}`);
@@ -134,15 +137,17 @@ export class EphemerisService {
     longitude: number,
   ): RawHoroscope {
     try {
-      return new Horoscope({
-        origin: this.originAtUtc(when, latitude, longitude),
-        houseSystem: 'placidus',
-        zodiac: 'tropical',
-        aspectPoints: ['bodies', 'angles'],
-        aspectWithPoints: ['bodies', 'angles'],
-        aspectTypes: ['major'],
-        language: 'en',
-      }) as RawHoroscope;
+      return fillMissingHouses(
+        new Horoscope({
+          origin: this.originAtUtc(when, latitude, longitude),
+          houseSystem: 'placidus',
+          zodiac: 'tropical',
+          aspectPoints: ['bodies', 'angles'],
+          aspectWithPoints: ['bodies', 'angles'],
+          aspectTypes: ['major'],
+          language: 'en',
+        }) as RawHoroscope,
+      );
     } catch (err) {
       // The library's message stays in the log; the client gets a generic one.
       this.logger.warn(`compute return chart failed: ${safeError(err)}`);
