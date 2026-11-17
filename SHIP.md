@@ -99,7 +99,7 @@ ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
 
 | Asama | Durum |
 |---|---|
-| Apple Developer / Google Play hesaplari | ☐ |
+| Apple Developer / Google Play hesaplari | ◐ Apple aktif (bireysel, team 3XR3YYGBUB); Google Play yok |
 | Gizlilik + destek URL yayinda | ✅ (2026-11-17, astroflowhq@gmail.com) |
 | `ship.config.json` URL alanlari dolduruldu | ✅ (astroflow-web.vercel.app, yayinda) |
 | Mock katmani release build disinda, gercek API bagli | ✅ (API URL EAS env ile verilecek) |
@@ -115,7 +115,7 @@ ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
 | API production'da, `/health` yesil | ✅ (2026-11-17, Railway EU West, astroflowapi-production.up.railway.app; e2e: cihaz kaydi, DeepSeek okuma, veri silme) |
 | `ship-kit doctor` yesil | ☐ |
 | `ship-kit preflight` yesil | ☐ |
-| TestFlight | ☐ |
+| TestFlight | ◐ ilk build yüklendi (2026-11-17, ASC app 6835863763); iç test bekleniyor |
 | App Store | ☐ |
 | Google Play | ☐ |
 
