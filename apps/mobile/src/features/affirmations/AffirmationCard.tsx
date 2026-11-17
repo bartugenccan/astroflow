@@ -30,6 +30,8 @@ interface AffirmationCardProps {
   isPlaying: boolean;
   hasRecording: boolean;
   onRepeat: () => void;
+  /** Take back one repeat (offered while today's count is above zero). */
+  onUndoRepeat: () => void;
   onToggleDone: () => void;
   onRecord: () => void;
   onPlay: () => void;
@@ -54,6 +56,7 @@ export function AffirmationCard({
   isPlaying,
   hasRecording,
   onRepeat,
+  onUndoRepeat,
   onToggleDone,
   onRecord,
   onPlay,
@@ -74,6 +77,12 @@ export function AffirmationCard({
       pop.value = withSequence(withSpring(1.35, motion.spring.snappy), withSpring(1, motion.spring.gentle));
     }
     onRepeat();
+  };
+  const undoRepeat = () => {
+    if (!reduced) {
+      pop.value = withSequence(withSpring(0.8, motion.spring.snappy), withSpring(1, motion.spring.gentle));
+    }
+    onUndoRepeat();
   };
 
   // Recording dot breathes while the mic is live.
@@ -196,18 +205,36 @@ export function AffirmationCard({
         </AppText>
       ) : null}
 
-      {hasRecording && !isRecording ? (
-        <PressableScale
-          onPress={onDeleteRecording}
-          scaleTo={0.96}
-          haptic="light"
-          style={styles.linkBtn}
-          accessibilityRole="button"
-          accessibilityLabel={t("affirmations.ui.deleteRecording")}
-        >
-          <Ionicons name="trash-outline" size={16} color={colors.text.tertiary} />
-          <AppText variant="bodySmall">{t("affirmations.ui.deleteRecording")}</AppText>
-        </PressableScale>
+      {(reps > 0 || hasRecording) && !isRecording ? (
+        <View style={styles.links}>
+          {/* A mis-tapped repeat can be taken back, one at a time. */}
+          {reps > 0 ? (
+            <PressableScale
+              onPress={undoRepeat}
+              scaleTo={0.96}
+              haptic="light"
+              style={styles.linkBtn}
+              accessibilityRole="button"
+              accessibilityLabel={`${t("affirmations.ui.undoRepeat")}, ${t("affirmations.ui.repeatedToday", { n: reps })}`}
+            >
+              <Ionicons name="arrow-undo" size={16} color={colors.text.tertiary} />
+              <AppText variant="bodySmall">{t("affirmations.ui.undoRepeat")}</AppText>
+            </PressableScale>
+          ) : null}
+          {hasRecording ? (
+            <PressableScale
+              onPress={onDeleteRecording}
+              scaleTo={0.96}
+              haptic="light"
+              style={styles.linkBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t("affirmations.ui.deleteRecording")}
+            >
+              <Ionicons name="trash-outline" size={16} color={colors.text.tertiary} />
+              <AppText variant="bodySmall">{t("affirmations.ui.deleteRecording")}</AppText>
+            </PressableScale>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );
@@ -267,6 +294,7 @@ const styles = StyleSheet.create({
     backgroundColor: surface.raised,
   },
   roundLive: { borderColor: colors.semantic.challenging },
+  links: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", columnGap: spacing.lg },
   linkBtn: { flexDirection: "row", alignItems: "center", gap: spacing.xs, minHeight: 44, alignSelf: "flex-start" },
   recDot: { width: 14, height: 14, borderRadius: radii.pill, backgroundColor: colors.semantic.challenging },
   doneBtn: { backgroundColor: palette.mint.face, borderColor: palette.mint.face, borderBottomColor: palette.mint.slab },

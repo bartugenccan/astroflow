@@ -91,6 +91,7 @@ export function AffirmationsCarousel({ category, onCategoryChange, suggested, on
   const days = useAffirmationStore((s) => s.days);
   const removeCustom = useAffirmationStore((s) => s.removeCustom);
   const repeat = useAffirmationStore((s) => s.repeat);
+  const unrepeat = useAffirmationStore((s) => s.unrepeat);
   const toggleDone = useAffirmationStore((s) => s.toggleDone);
   const audio = useAffirmationAudio();
 
@@ -233,6 +234,7 @@ export function AffirmationsCarousel({ category, onCategoryChange, suggested, on
                 isPlaying={audio.playingId === a.id}
                 hasRecording={audio.hasRecording(a.id)}
                 onRepeat={() => repeat(a.id)}
+                onUndoRepeat={() => unrepeat(a.id)}
                 onToggleDone={() => markDone(a.id)}
                 onRecord={() => record(a.id)}
                 onPlay={() => audio.togglePlay(a.id)}

@@ -57,6 +57,8 @@ interface AffirmationState {
   addCustom: (category: AffirmationCategory, text: string) => Affirmation;
   removeCustom: (id: string) => void;
   repeat: (id: string) => void;
+  /** Take back one of today's repeats (a mis-tap); never below zero. */
+  unrepeat: (id: string) => void;
   toggleDone: (id: string) => boolean;
   setRecording: (id: string, uri: string | null) => void;
 }
@@ -108,6 +110,17 @@ export const useAffirmationStore = create<AffirmationState>()(
         set((s) => {
           const day = today(s.days);
           const reps = { ...day.reps, [id]: (day.reps[id] ?? 0) + 1 };
+          return { days: prune({ ...s.days, [day.date]: { ...day, reps } }) };
+        }),
+
+      unrepeat: (id) =>
+        set((s) => {
+          const day = today(s.days);
+          const current = day.reps[id] ?? 0;
+          if (current <= 0) return {};
+          const reps = { ...day.reps };
+          if (current === 1) delete reps[id];
+          else reps[id] = current - 1;
           return { days: prune({ ...s.days, [day.date]: { ...day, reps } }) };
         }),
 

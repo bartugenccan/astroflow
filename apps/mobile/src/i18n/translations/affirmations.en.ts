@@ -19,6 +19,7 @@ export const affirmationsEn = {
     pause: "Pause",
     reRecord: "Record again",
     deleteRecording: "Delete recording",
+    undoRepeat: "Undo one repeat",
     micDenied: "Microphone access is off. Turn it on in Settings to record your voice.",
     recordHint: "Hearing it in your own voice makes it stick. Recordings stay on this phone.",
     addOwn: "Add your own",

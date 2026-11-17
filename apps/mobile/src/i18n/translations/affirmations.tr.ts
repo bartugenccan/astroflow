@@ -17,6 +17,7 @@ export const affirmationsTr: typeof affirmationsEn = {
     pause: "Duraklat",
     reRecord: "Yeniden kaydet",
     deleteRecording: "Kaydı sil",
+    undoRepeat: "Bir tekrarı geri al",
     micDenied: "Mikrofon erişimi kapalı. Sesini kaydetmek için Ayarlar'dan aç.",
     recordHint: "Kendi sesinden duymak kalıcı kılar. Kayıtlar sadece bu telefonda kalır.",
     addOwn: "Kendi olumlamanı ekle",
