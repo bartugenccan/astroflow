@@ -112,7 +112,7 @@ ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
 | PostHog kuruldu | ☐ |
 | Efemeris astro.com'a karsi dogrulandi | ☐ |
 | Kritik modul testleri yazildi | ☐ |
-| API production'da, `/health` yesil | ☐ |
+| API production'da, `/health` yesil | ✅ (2026-11-17, Railway EU West, astroflowapi-production.up.railway.app; e2e: cihaz kaydi, DeepSeek okuma, veri silme) |
 | `ship-kit doctor` yesil | ☐ |
 | `ship-kit preflight` yesil | ☐ |
 | TestFlight | ☐ |

@@ -106,8 +106,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#060810",
-        "foregroundImage": "./assets/adaptive-icon.png"
+        "backgroundColor": "#211853",
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-monochrome.png"
       },
       "package": "com.astroflow.app",
       "allowBackup": false,
@@ -136,7 +137,7 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#060810"
+          "backgroundColor": "#211853"
         }
       ],
       "expo-status-bar",
@@ -152,7 +153,7 @@
       [
         "expo-notifications",
         {
-          "color": "#E7CD8F"
+          "color": "#FFC83D"
         }
       ],
       "@sentry/react-native",
