@@ -428,6 +428,11 @@ export function forecastPrompt(
  * The raw return chart travels alongside this in the API response, so the
  * prose never has to carry the technical detail.
  */
+/**
+ * The window's dates and the age are left out of the prompt on purpose: the
+ * window opens on the birthday, so start date + age would hand the model the
+ * birth date. They stay in the cache key and the template reading only.
+ */
 export function yearAheadPrompt(
   locale: Locale,
   args: {
@@ -451,13 +456,13 @@ export function yearAheadPrompt(
 
   const user =
     locale === 'tr'
-      ? `Kişinin ${args.start} ile ${args.end} arasındaki yeni yaşam yılı için bir "yıl önizlemesi". Bu yıl ${args.age} yaşına giriyor. ` +
+      ? `Kişinin önümüzdeki on iki aylık yeni yaşam yılı için bir "yıl önizlemesi". ` +
         `Yılın ağırlık merkezi: ${list(args.emphasis, 'dengeli dağılmış')}. Yılın ana teması: ${args.sunTheme}. ` +
         `En görünür etkiler: ${list(args.angular, 'belirgin bir tane yok')}. Öne çıkan alanlar: ${args.focusAreas.join(', ')}. ` +
         `Dönüm noktaları: ${list(args.turningPoints, 'yok')}. ` +
         `Astrolojiyi GİZLİ motor olarak kullan: metinde jargon (burç/ev/açı/gezegen adı) KULLANMA — "why" alanında bile sade konuş. ` +
         `JSON üret: headline (bu yılın neyle ilgili olduğunu söyleyen tek kısa cümle), overview (2-4 cümle), strengths (yılın desteklediği 2 alan), tender (özen isteyen 1-2 alan), turningPoints (verilen aylar için sade etiketler), why (bu okumanın neye dayandığını sade dille, 2-3 cümle). Kaderci olma, kapı kapatma.`
-      : `A "year ahead" preview for the person's new life year running ${args.start} to ${args.end}. They turn ${args.age} in this cycle. ` +
+      : `A "year ahead" preview for the person's coming twelve-month life year. ` +
         `Where the year concentrates: ${list(args.emphasis, 'evenly spread')}. The year's central theme: ${args.sunTheme}. ` +
         `Most visible influences: ${list(args.angular, 'none standing out')}. Leading areas: ${args.focusAreas.join(', ')}. ` +
         `Turning points: ${list(args.turningPoints, 'none')}. ` +
