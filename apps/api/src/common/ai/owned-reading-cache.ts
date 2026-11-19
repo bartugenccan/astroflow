@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { InterpretationKind } from '../../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AiTextProvider } from '../../modules/ai/ai-text-provider';
-import { currentDeviceId } from '../context/request-context';
+import { currentDeviceId, noteAiFallback } from '../context/request-context';
 import { safeError } from '../logging/safe-error';
 import { trackAiCalls } from './ai-call-tracker';
 
@@ -44,7 +44,10 @@ export async function ownedReading<T>(
     deps.logger.warn(`cache read failed: ${safeError(err)}`);
   }
 
-  if (!deps.ai.available) return build();
+  if (!deps.ai.available) {
+    noteAiFallback();
+    return build();
+  }
   const { value: content, failed } = await trackAiCalls(build);
   if (failed) return content;
 

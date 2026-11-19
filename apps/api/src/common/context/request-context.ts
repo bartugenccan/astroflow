@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from 'async_hooks';
 import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
-import { Observable } from 'rxjs';
+import { Observable, tap } from 'rxjs';
 
 /**
  * Who a piece of work is for, available anywhere below the controller without
@@ -13,6 +13,17 @@ interface RequestContext {
   timeZone?: string;
   /** Which feature the request belongs to ("tarot", "companion"…), from the controller name. */
   feature?: string;
+  /** Set when an AI call failed (or no provider ran) and the answer carries templated stub text. */
+  aiFallback?: boolean;
+}
+
+/** Response header telling the app this answer is (partly) stub text: show it, never keep it. */
+export const AI_FALLBACK_HEADER = 'x-ai-fallback';
+
+/** Marks the current request's answer as stub text (see `AI_FALLBACK_HEADER`). */
+export function noteAiFallback(): void {
+  const ctx = store.getStore();
+  if (ctx) ctx.aiFallback = true;
 }
 
 const store = new AsyncLocalStorage<RequestContext>();
@@ -63,11 +74,27 @@ export class RequestContextInterceptor implements NestInterceptor {
       deviceId?: string;
       headers?: Record<string, string | string[] | undefined>;
     }>();
+    const res = context.switchToHttp().getResponse<{
+      headersSent?: boolean;
+      setHeader?: (name: string, value: string) => void;
+    }>();
     const ctx: RequestContext = {
       deviceId: req?.deviceId,
       timeZone: validTimeZone(req?.headers?.['x-tz']),
       feature: context.getClass()?.name?.replace(/Controller$/, '').toLowerCase() || undefined,
     };
-    return new Observable((subscriber) => store.run(ctx, () => next.handle().subscribe(subscriber)));
+    return new Observable((subscriber) =>
+      store.run(ctx, () =>
+        next
+          .handle()
+          .pipe(
+            tap(() => {
+              // Runs before Nest writes the body, so the header still goes out.
+              if (ctx.aiFallback && res && !res.headersSent) res.setHeader?.(AI_FALLBACK_HEADER, '1');
+            }),
+          )
+          .subscribe(subscriber),
+      ),
+    );
   }
 }

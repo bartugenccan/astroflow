@@ -3,13 +3,22 @@ import { DailyQuotaService } from '../../common/quota/daily-quota.service';
 import { DeviceEntitlementService } from '../../common/device/device-entitlement.service';
 import { localToday } from '../../common/context/request-context';
 import { MascotService } from '../mascot/mascot.service';
-import { FREE_DAILY, FreeLimitBody, MeteredFeature, tarotReadingKey } from './free-tier';
+import {
+  FREE_DAILY,
+  FairUseBody,
+  FreeLimitBody,
+  MeteredFeature,
+  companionAllowance,
+  tarotReadingKey,
+} from './free-tier';
 
 /**
- * Server-side free tier: Premium (or beta) passes straight through; everyone
- * else gets FREE_DAILY plus today's bought passes, counted in the user's local
- * day. A refusal is a 402 `{ code: "FREE_LIMIT", feature }` — distinct from the
- * throttler's 429 — which the app turns into its limit card.
+ * Server-side free tier: Premium (or beta) passes through up to the fair-use
+ * cap (PREMIUM_DAILY); everyone else gets FREE_DAILY plus today's bought
+ * passes, counted in the user's local day. A free refusal is a 402
+ * `{ code: "FREE_LIMIT", feature }`, which the app turns into its limit card;
+ * a Premium one is a 429 `{ code: "FAIR_USE", feature }`, which it shows as
+ * Aster's "see you tomorrow" (no paywall).
  */
 @Injectable()
 export class FreeTierService {
@@ -19,11 +28,16 @@ export class FreeTierService {
     private readonly mascot: MascotService,
   ) {}
 
-  /** One Aster message. Throws 402 when today's free messages are used up. */
+  /**
+   * One Aster message. Throws 402 when today's free messages are used up, and
+   * 429 FAIR_USE when a Premium user passes the daily fair-use cap.
+   */
   async chargeCompanionMessage(deviceId: string): Promise<void> {
-    if (await this.entitlement.isPremium(deviceId)) return;
-    const ok = await this.quota.take(deviceId, 'free_companion', await this.limit(deviceId, 'companion'), localToday());
-    if (!ok) throw limitReached('companion');
+    const premium = await this.entitlement.isPremium(deviceId);
+    const allowance = companionAllowance(premium, premium ? 0 : await this.limit(deviceId, 'companion'));
+    const ok = await this.quota.take(deviceId, allowance.quotaKey, allowance.limit, localToday());
+    if (ok) return;
+    throw allowance.refusal === 'FAIR_USE' ? fairUseReached('companion') : limitReached('companion');
   }
 
   /**
@@ -53,4 +67,9 @@ export class FreeTierService {
 function limitReached(feature: MeteredFeature): HttpException {
   const body: FreeLimitBody = { code: 'FREE_LIMIT', feature };
   return new HttpException(body, HttpStatus.PAYMENT_REQUIRED);
+}
+
+function fairUseReached(feature: FairUseBody['feature']): HttpException {
+  const body: FairUseBody = { code: 'FAIR_USE', feature };
+  return new HttpException(body, HttpStatus.TOO_MANY_REQUESTS);
 }

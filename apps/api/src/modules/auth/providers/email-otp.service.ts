@@ -11,12 +11,10 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { ResendMailer } from './resend.mailer';
 import type { VerifiedIdentity } from './verified-identity';
+import { OTP_LIMITS, otpSendVerdict } from './email-otp-rules';
 
 const CODE_TTL_MS = 10 * 60_000;
 const MAX_ATTEMPTS = 5;
-const SEND_WINDOW_MS = 15 * 60_000;
-const MAX_SENDS_PER_WINDOW = 3;
-const MAX_SENDS_PER_DAY = 10;
 /** Wrong guesses across all of an address's codes before it is locked for the hour. */
 const MAX_FAILURES_PER_HOUR = 10;
 const HOUR_MS = 60 * 60_000;
@@ -25,15 +23,18 @@ const DAY_MS = 24 * HOUR_MS;
 /**
  * Passwordless email sign-in with a 6-digit code. Codes are stored hashed
  * (bound to the address and a server secret), expire after 10 minutes, allow
- * five guesses, and an address gets at most three codes per 15 minutes and
- * ten per day — on top of the per-IP @AuthRoute limit. Guesses are counted
- * across codes too, so requesting fresh codes doesn't reset the guess budget.
+ * five guesses, and an address gets one code a minute, at most three per 15
+ * minutes and ten per day (`email-otp-rules.ts`). Across all addresses at
+ * most OTP_HOURLY_GLOBAL codes go out per hour; per IP the @OtpRoute limit
+ * applies on top. Guesses are counted across codes too, so requesting fresh
+ * codes doesn't reset the guess budget.
  */
 @Injectable()
 export class EmailOtpService {
   private readonly logger = new Logger(EmailOtpService.name);
   private readonly pepper: string;
   private readonly devLog: boolean;
+  private readonly hourlyGlobalCap: number;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -46,6 +47,7 @@ export class EmailOtpService {
     ).toString('hex');
     this.devLog =
       config.get<boolean>('AUTH_EMAIL_DEV_LOG') === true && config.get<string>('NODE_ENV') !== 'production';
+    this.hourlyGlobalCap = config.get<number>('OTP_HOURLY_GLOBAL') ?? 200;
   }
 
   static normalize(email: string): string {
@@ -60,18 +62,38 @@ export class EmailOtpService {
     const now = Date.now();
     // Codes older than a day no longer count toward any limit: drop them.
     await this.prisma.emailOtp.deleteMany({ where: { createdAt: { lt: new Date(now - DAY_MS) } } });
-    const [recent, today] = await Promise.all([
-      this.prisma.emailOtp.count({ where: { email, createdAt: { gt: new Date(now - SEND_WINDOW_MS) } } }),
-      this.prisma.emailOtp.count({ where: { email } }),
-    ]);
-    if (recent >= MAX_SENDS_PER_WINDOW || today >= MAX_SENDS_PER_DAY) {
-      throw new HttpException('Too many codes requested. Try again later.', HttpStatus.TOO_MANY_REQUESTS);
-    }
 
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
-    await this.prisma.emailOtp.create({
-      data: { email, codeHash: this.hash(email, code), expiresAt: new Date(Date.now() + CODE_TTL_MS) },
+    // Count and create under a per-address lock, so parallel requests for one
+    // address cannot all pass the same count.
+    const verdict = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`otp:${email}`}))`;
+      const [inWindow, inDay, last, globalLastHour] = await Promise.all([
+        tx.emailOtp.count({ where: { email, createdAt: { gt: new Date(now - OTP_LIMITS.windowMs) } } }),
+        tx.emailOtp.count({ where: { email } }),
+        tx.emailOtp.findFirst({ where: { email }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } }),
+        tx.emailOtp.count({ where: { createdAt: { gt: new Date(now - HOUR_MS) } } }),
+      ]);
+      const result = otpSendVerdict(
+        { lastSentAt: last?.createdAt.getTime() ?? null, inWindow, inDay, globalLastHour },
+        now,
+        this.hourlyGlobalCap,
+      );
+      if (result === 'ok') {
+        await tx.emailOtp.create({
+          data: { email, codeHash: this.hash(email, code), expiresAt: new Date(now + CODE_TTL_MS) },
+        });
+      }
+      return result;
     });
+    if (verdict === 'global_limit') {
+      // Never log the address; the count alone says what happened.
+      this.logger.warn(`hourly sign-in code cap reached (${this.hourlyGlobalCap}/h)`);
+      throw new ServiceUnavailableException('Sign-in codes are paused for a moment. Try again later.');
+    }
+    if (verdict !== 'ok') {
+      throw new HttpException('Too many codes requested. Try again later.', HttpStatus.TOO_MANY_REQUESTS);
+    }
 
     if (this.mailer.configured) {
       const sent = await this.mailer.sendSignInCode(email, code, locale);

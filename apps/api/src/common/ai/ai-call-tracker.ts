@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from 'async_hooks';
+import { noteAiFallback } from '../context/request-context';
 
 /**
  * Tracks whether any AI call failed while a cacheable result was being built.
@@ -21,4 +22,6 @@ export async function trackAiCalls<T>(build: () => Promise<T>): Promise<{ value:
 export function noteAiFailure(): void {
   const state = store.getStore();
   if (state) state.failed = true;
+  // The app must not keep this answer either (it shows it, then retries later).
+  noteAiFallback();
 }

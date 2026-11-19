@@ -206,25 +206,19 @@ export class AstrologyController {
     @DeviceId() deviceId: string,
     @Query('locale') locale?: string,
   ) {
-    const chart = this.compute(dto);
-    const transits = this.adapter.getCurrentTransits(
-      dto.birthDate,
-      dto.birthTime,
-      dto.latitude,
-      dto.longitude,
-    );
     // The user's local day, so the cached insight and the SKY_READ award agree.
     const date = localToday();
-    const insight = await this.interpretation.getDailyInsight(
-      chart,
-      transits,
-      deviceId,
-      this.locale(locale),
-      date,
-      this.keyMomentLines(dto, chart, date),
-    );
-    // Reading today's sky feeds Aster (once per local day; never blocks the reading).
-    await this.mascot.awardSafely(deviceId, 'SKY_READ');
+    // Reading today's sky feeds Aster (once per local day). It runs alongside
+    // the reading rather than after it, and is still awaited so the app's
+    // mascot refresh right after this answer already sees it.
+    const award = this.mascot.awardSafely(deviceId, 'SKY_READ');
+    const insight = await this.interpretation.getDailyInsight(deviceId, this.locale(locale), date, () => {
+      // Only on a cache miss: a cached insight skips the ephemeris work.
+      const chart = this.compute(dto);
+      const transits = this.adapter.getCurrentTransits(dto.birthDate, dto.birthTime, dto.latitude, dto.longitude);
+      return { chart, transits, keyMoments: this.keyMomentLines(dto, chart, date) };
+    });
+    await award;
     return insight;
   }
 

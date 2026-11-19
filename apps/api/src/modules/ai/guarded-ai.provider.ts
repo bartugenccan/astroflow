@@ -5,6 +5,7 @@ import { AiBudgetService } from './ai-budget.service';
 import { DeepSeekBalanceService } from './deepseek-balance.service';
 import { currentDeviceId, currentFeature } from '../../common/context/request-context';
 import { noteAiFailure } from '../../common/ai/ai-call-tracker';
+import { trackAiUsage } from '../../common/ai/ai-usage';
 import { AnalyticsService } from '../../common/analytics/analytics.service';
 
 export class AiPaused extends Error {
@@ -22,7 +23,8 @@ export class AiPaused extends Error {
  * caller serves its stub — and `noteAiFailure` keeps that stub out of caches.
  *
  * Every vendor call is also reported to PostHog as an `$ai_generation`
- * (provider, model, feature, latency, success; never the prompt or answer).
+ * (provider, model, feature, latency, success, billed tokens; never the
+ * prompt or answer).
  */
 @Injectable()
 export class GuardedAiProvider implements AiTextProvider {
@@ -64,13 +66,17 @@ export class GuardedAiProvider implements AiTextProvider {
       feature: currentFeature(),
       inputChars: params.system.length + params.user.length,
     };
+    const { usage, result } = trackAiUsage(call);
+    const tokens = () =>
+      usage.reported ? { inputTokens: usage.inputTokens, outputTokens: usage.outputTokens } : {};
     try {
-      const out = await call();
+      const out = await result;
       this.analytics.captureAiGeneration(currentDeviceId(), {
         ...base,
         latencyMs: Date.now() - started,
         ok: true,
         outputChars: size(out),
+        ...tokens(),
       });
       return out;
     } catch (err) {
@@ -79,6 +85,8 @@ export class GuardedAiProvider implements AiTextProvider {
         latencyMs: Date.now() - started,
         ok: false,
         errorType: err instanceof Error ? err.name : 'unknown',
+        // Failed attempts that got an answer (empty, unparseable) still cost tokens.
+        ...tokens(),
       });
       throw err;
     }

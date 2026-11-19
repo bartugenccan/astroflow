@@ -4,7 +4,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppConfigModule } from './common/config/app-config.module';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { QuotaModule } from './common/quota/quota.module';
-import { isAiRoute, isAuthRoute } from './common/auth/route-tags';
+import { isAiRoute, isAuthRoute, isDeviceMintRoute, isOtpRoute } from './common/auth/route-tags';
 import { RequestContextInterceptor } from './common/context/request-context';
 import { AuthModule } from './modules/auth/auth.module';
 import { DeviceAuthGuard } from './modules/auth/device-auth.guard';
@@ -24,6 +24,7 @@ import { AnalyticsModule } from './common/analytics/analytics.module';
 import { BillingModule } from './modules/billing/billing.module';
 
 const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
 
 @Module({
   imports: [
@@ -35,11 +36,16 @@ const MINUTE = 60_000;
      * Rate limits (in-memory; per instance):
      *  - default: 60 requests/min per client IP, every route;
      *  - ai:      20 requests/min per device on routes tagged @AiRoute;
-     *  - auth:    5 requests/min per IP on routes tagged @AuthRoute (device sign-up, sign-in).
-     * The daily AI caps live in AiBudgetService.
+     *  - auth:    5 requests/min per IP on routes tagged @AuthRoute (device sign-up, sign-in);
+     *  - otp:     10 sign-in codes/hour per IP (@OtpRoute);
+     *  - device:  20 new devices/hour per IP (@DeviceMintRoute).
+     * The daily AI caps live in AiBudgetService; per-address and global code
+     * caps in EmailOtpService. Per-IP keys need TRUST_PROXY behind a proxy.
      */
     ThrottlerModule.forRoot({
       throttlers: [
+        { name: 'otp', ttl: HOUR, limit: 10, skipIf: (ctx) => !isOtpRoute(ctx) },
+        { name: 'device', ttl: HOUR, limit: 20, skipIf: (ctx) => !isDeviceMintRoute(ctx) },
         { name: 'default', ttl: MINUTE, limit: 60 },
         {
           name: 'ai',

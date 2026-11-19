@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { createHash } from 'crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { AI_TEXT_PROVIDER, AiTextProvider } from '../ai/ai-text-provider';
@@ -102,10 +103,16 @@ export type ExternalReadingKind = 'REPORT_NATAL_EXTRAS' | 'TRANSIT_SPOTLIGHT' | 
 export class InterpretationService {
   private readonly logger = new Logger(InterpretationService.name);
 
+  /** Ceiling on the daily insight's AI call (retries included); AI_INSIGHT_BUDGET_MS. */
+  private readonly insightBudgetMs: number;
+
   constructor(
     @Inject(AI_TEXT_PROVIDER) private readonly ai: AiTextProvider,
     private readonly prisma: PrismaService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.insightBudgetMs = config.get<number>('AI_INSIGHT_BUDGET_MS') ?? 30_000;
+  }
 
   async getPlacements(
     chart: NatalChartData,
@@ -215,20 +222,23 @@ export class InterpretationService {
   }
 
   async getDailyInsight(
-    chart: NatalChartData,
-    transits: TransitData,
     deviceId: string,
     locale: Locale,
     date: string,
-    /** Key personal sky moments active today, as short fact lines (may be empty). */
-    keyMoments: string[] = [],
+    /**
+     * The chart, today's transits and the key sky moments active today (short
+     * fact lines, may be empty). Lazy: only computed on a cache miss, so a
+     * cached insight answers without any ephemeris work.
+     */
+    inputs: () => { chart: NatalChartData; transits: TransitData; keyMoments: string[] },
   ): Promise<DailyInsight> {
-    const energyState = this.energyStateFromTransits(transits);
     return this.cached<DailyInsight>(
       'DAILY_INSIGHT',
       locale,
       `insight|${deviceId}|${date}`,
       async () => {
+        const { chart, transits, keyMoments } = inputs();
+        const energyState = this.energyStateFromTransits(transits);
         if (!this.ai.available) {
           return dailyInsightStub(locale, energyState);
         }
@@ -241,15 +251,23 @@ export class InterpretationService {
             energyState?: string;
             title?: string;
             summary?: string;
-          }>({ system: systemPrompt(locale), user: localizeAstroTerms(user, locale), schemaHint, temperature: 0.8, maxTokens: 1400 });
+          }>({ system: systemPrompt(locale), user: localizeAstroTerms(user, locale), schemaHint, temperature: 0.8, maxTokens: 1400,
+            // Today's card waits on this: give up sooner than the provider's
+            // 50s and serve the stub (not cached). Tune with PostHog latency.
+            budgetMs: this.insightBudgetMs });
           const state = this.coerceEnergyState(parsed.energyState) ?? energyState;
           const stub = dailyInsightStub(locale, state);
+          const title = (parsed.title ?? '').trim();
+          const summary = (parsed.summary ?? '').trim();
+          // An empty answer is a failed generation: serve the stub, but keep it
+          // out of the device+day cache so the next open tries the AI again.
+          if (!title || !summary) noteAiFailure();
           return {
             energyState: state,
             // Generous caps only — a low cap (was 320) chopped longer Turkish
             // summaries mid-sentence. The prompt already bounds this to 2-3 sentences.
-            title: (parsed.title ?? stub.title).slice(0, 120),
-            summary: (parsed.summary ?? stub.summary).slice(0, 700),
+            title: (title || stub.title).slice(0, 120),
+            summary: (summary || stub.summary).slice(0, 700),
           };
         } catch (err) {
           this.logger.warn(`daily insight AI failed: ${safeError(err)}`);
@@ -843,7 +861,10 @@ export class InterpretationService {
       // No hard length cap here — the prompts bound the word count. `slice(4000)`
       // is only a runaway guard; a lower cap (e.g. 900) chopped readings
       // mid-sentence.
-      return text.length > 0 ? text.slice(0, 4000) : stub();
+      if (text.length > 0) return text.slice(0, 4000);
+      // Empty answer: the stub is served but never cached.
+      noteAiFailure();
+      return stub();
     } catch (err) {
       this.logger.warn(`interpretation AI failed: ${safeError(err)}`);
       return stub();

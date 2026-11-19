@@ -7,6 +7,7 @@ import {
   GenerateTextParams,
 } from './ai-text-provider';
 import { noteAiFailure } from '../../common/ai/ai-call-tracker';
+import { noteAiUsage } from '../../common/ai/ai-usage';
 import { parseModelJson, withSchemaHint } from './ai-json';
 
 interface DeepSeekResponse {
@@ -14,6 +15,7 @@ interface DeepSeekResponse {
     message: { content: string; reasoning_content?: string };
     finish_reason?: string;
   }[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
 /**
@@ -88,7 +90,7 @@ export class DeepSeekProvider implements AiTextProvider {
     // platform's (~60s). Three long attempts back to back would outlast that
     // and the caller would see a network error instead of the stub fallback —
     // so bound the whole retry loop, not just each attempt.
-    const deadline = Date.now() + TOTAL_BUDGET_MS;
+    const deadline = Date.now() + Math.min(params.budgetMs ?? TOTAL_BUDGET_MS, TOTAL_BUDGET_MS);
 
     for (let attempt = 1; attempt <= 3; attempt++) {
       if (attempt > 1 && Date.now() >= deadline) {
@@ -127,6 +129,8 @@ export class DeepSeekProvider implements AiTextProvider {
           throw new DeepSeekHttpError(res.status);
         }
         const data = (await res.json()) as DeepSeekResponse;
+        // Billed even when the content turns out empty below.
+        noteAiUsage(data.usage?.prompt_tokens, data.usage?.completion_tokens);
         const choice = data.choices?.[0];
         const content = choice?.message?.content?.trim() ?? '';
         // Reasoning models spend the token budget on hidden reasoning first and

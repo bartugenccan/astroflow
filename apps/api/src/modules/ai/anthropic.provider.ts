@@ -8,6 +8,7 @@ import {
   GenerateTextParams,
 } from './ai-text-provider';
 import { noteAiFailure } from '../../common/ai/ai-call-tracker';
+import { noteAiUsage } from '../../common/ai/ai-usage';
 import { parseModelJson, withSchemaHint } from './ai-json';
 
 /**
@@ -68,6 +69,7 @@ export class AnthropicProvider implements AiTextProvider {
       throw new Error('Anthropic provider is not configured');
     }
     const effortModel = EFFORT_MODELS.test(this.model);
+    const budget = Math.min(params.budgetMs ?? TOTAL_BUDGET_MS, TOTAL_BUDGET_MS);
 
     try {
       const response = await this.client.beta.messages.create(
@@ -87,10 +89,11 @@ export class AnthropicProvider implements AiTextProvider {
             : { temperature }),
         },
         {
-          timeout: this.timeoutFor(maxTokens),
-          signal: AbortSignal.timeout(TOTAL_BUDGET_MS),
+          timeout: Math.min(this.timeoutFor(maxTokens), budget),
+          signal: AbortSignal.timeout(budget),
         },
       );
+      noteAiUsage(response.usage?.input_tokens, response.usage?.output_tokens);
 
       if (response.stop_reason === 'refusal') {
         throw new Error(`Claude declined (category: ${response.stop_details?.category ?? 'unknown'})`);

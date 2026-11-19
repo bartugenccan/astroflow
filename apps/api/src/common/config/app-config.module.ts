@@ -20,11 +20,26 @@ import * as Joi from "joi";
         DEEPSEEK_API_KEY: Joi.string().allow("").optional(),
         DEEPSEEK_API_URL: Joi.string().default("https://api.deepseek.com/v1"),
         // Which vendor serves AI text (see AIModule). Claude needs ANTHROPIC_API_KEY.
+        // Production must name it (and the Claude model): a missing variable
+        // must stop the boot, never silently move every user onto the most
+        // expensive model.
         AI_PROVIDER: Joi.string()
           .valid("anthropic", "deepseek")
-          .default("anthropic"),
+          .when("NODE_ENV", {
+            is: "production",
+            then: Joi.required(),
+            otherwise: Joi.optional().default("anthropic"),
+          }),
         ANTHROPIC_API_KEY: Joi.string().allow("").optional(),
-        ANTHROPIC_MODEL: Joi.string().default("claude-opus-5-5"),
+        ANTHROPIC_MODEL: Joi.string().when("NODE_ENV", {
+          is: "production",
+          then: Joi.when("AI_PROVIDER", {
+            is: "anthropic",
+            then: Joi.required(),
+            otherwise: Joi.optional(),
+          }),
+          otherwise: Joi.optional().default("claude-opus-5-5"),
+        }),
         ANTHROPIC_EFFORT: Joi.string()
           .valid("low", "medium", "high", "xhigh", "max")
           .default("low"),
@@ -40,6 +55,15 @@ import * as Joi from "joi";
         // Cost guards (see AiBudgetService / DeepSeekBalanceService).
         AI_DAILY_PER_DEVICE: Joi.number().integer().min(1).default(300),
         AI_DAILY_GLOBAL: Joi.number().integer().min(1).default(20000),
+        // Devices younger than a day draw from their own, smaller pool, so a
+        // script minting fresh devices cannot drain the global budget.
+        AI_DAILY_NEW_DEVICES: Joi.number().integer().min(1).default(10000),
+        AI_DAILY_PER_NEW_DEVICE: Joi.number().integer().min(1).default(100),
+        // Ceiling (ms, retries included) on the daily insight's AI call; the
+        // provider's own ceiling is 50s. Lower it once PostHog latency allows.
+        AI_INSIGHT_BUDGET_MS: Joi.number().integer().min(5000).max(50000).default(30000),
+        // Sign-in codes sent per hour across all addresses (mail cost / abuse cap).
+        OTP_HOURLY_GLOBAL: Joi.number().integer().min(1).default(200),
         DEEPSEEK_MIN_BALANCE: Joi.number().min(0).default(0.2),
         REPORTS_DAILY_PER_DEVICE: Joi.number().integer().min(1).default(3),
         // Fresh affirmation previews (cache misses) per device per UTC day; over it, the template.

@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { AuthProvider } from '../../../../generated/prisma/client';
-import { AuthRoute } from '../../../common/auth/route-tags';
+import { AuthRoute, OtpRoute } from '../../../common/auth/route-tags';
 import { DeviceId, InstallId } from '../../../common/device/device-id.decorator';
 import { DeviceAuthService } from '../device-auth.service';
 import { AppleVerifier } from '../providers/apple.verifier';
@@ -58,6 +58,7 @@ export class AccountController {
   }
 
   @AuthRoute()
+  @OtpRoute()
   @Post('email/start')
   @HttpCode(204)
   @ApiOperation({ summary: 'Email a 6-digit sign-in code' })

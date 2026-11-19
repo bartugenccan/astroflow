@@ -16,6 +16,9 @@ export interface AiGenerationEvent {
   /** Length in characters of the prompt and the answer, as a rough size signal. */
   inputChars: number;
   outputChars?: number;
+  /** Tokens the vendor billed for this call (all attempts), when it reported them. */
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 /**
@@ -59,6 +62,8 @@ export class AnalyticsService implements OnApplicationShutdown {
           feature: e.feature ?? 'unknown',
           input_chars: e.inputChars,
           ...(e.outputChars !== undefined ? { output_chars: e.outputChars } : {}),
+          ...(e.inputTokens !== undefined ? { $ai_input_tokens: e.inputTokens } : {}),
+          ...(e.outputTokens !== undefined ? { $ai_output_tokens: e.outputTokens } : {}),
         },
       });
     } catch (err) {

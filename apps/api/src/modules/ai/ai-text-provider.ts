@@ -9,6 +9,12 @@ export interface GenerateTextParams {
   user: string;
   temperature?: number;
   maxTokens?: number;
+  /**
+   * Ceiling on the whole call, retries included. Short texts the user waits
+   * for on screen pass a tighter one so a slow vendor falls back to the stub
+   * sooner. Never above the provider's own ceiling (50s).
+   */
+  budgetMs?: number;
 }
 
 export interface GenerateJsonParams extends GenerateTextParams {
