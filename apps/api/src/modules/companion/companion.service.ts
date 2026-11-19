@@ -9,6 +9,7 @@ import { companionStub } from '../astrology/prompts/interpretation.stubs';
 import { ChatMessageDto, ChatReply } from './companion.types';
 import { safeError } from '../../common/logging/safe-error';
 import { localToday } from '../../common/context/request-context';
+import { FreeTierService } from '../billing/free-tier.service';
 
 /** Stored chat turns per subject; older ones are deleted as new ones arrive. */
 const CHAT_HISTORY_KEEP = 200;
@@ -22,6 +23,7 @@ export class CompanionService {
     private readonly prisma: PrismaService,
     private readonly adapter: AstrologyAdapterService,
     private readonly memory: MemoryService,
+    private readonly freeTier: FreeTierService,
   ) {}
 
   /** Top standout transit lines today — private reasoning for the prompt. */
@@ -49,6 +51,8 @@ export class CompanionService {
   ): Promise<ChatReply> {
     const clean = (message ?? '').trim().slice(0, 1000);
     if (!clean) return { reply: '' };
+    // Free tier: 5 messages a day (+ passes); throws 402 FREE_LIMIT before anything is stored.
+    await this.freeTier.chargeCompanionMessage(deviceId);
 
     // Persist the user's turn first.
     await this.prisma.chatMessage.create({

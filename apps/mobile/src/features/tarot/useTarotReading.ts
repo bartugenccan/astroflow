@@ -5,6 +5,7 @@ import { cachedCall, tarotCardKey, tarotSynthesisKey } from "../../services/inte
 import type { CreateBirthProfileDto, TarotCardReading, TarotSpread, TarotSynthesis } from "../../services/types";
 import type { Locale } from "../../i18n";
 import { tarotToday, useTarotStore } from "../../store/useTarotStore";
+import { isFreeLimit } from "../../services/httpAstrologyApi";
 
 export interface Part<T> {
   data: T | null;
@@ -21,6 +22,8 @@ export function useTarotReading(
   dto: CreateBirthProfileDto | null,
   spread: TarotSpread,
   locale: Locale,
+  /** The server refused today's free reading (402 FREE_LIMIT): the screen opens the paywall. */
+  onLimit?: () => void,
 ) {
   const saved = useTarotStore((s) => s.lastReading);
   const saveCard = useTarotStore((s) => s.saveCard);
@@ -38,6 +41,11 @@ export function useTarotReading(
     error: false,
   }));
   const alive = useRef(true);
+  const limitRef = useRef(onLimit);
+  limitRef.current = onLimit;
+  const fail = (err: unknown) => {
+    if (isFreeLimit(err)) limitRef.current?.();
+  };
   useEffect(
     () => () => {
       alive.current = false;
@@ -59,7 +67,8 @@ export function useTarotReading(
           saveCard(index, reading);
           if (alive.current) setCards((prev) => prev.map((p, i) => (i === index ? { data: reading, error: false } : p)));
         })
-        .catch(() => {
+        .catch((err) => {
+          fail(err);
           if (alive.current) setCards((prev) => prev.map((p, i) => (i === index ? { ...p, error: true } : p)));
         });
     },
@@ -82,7 +91,8 @@ export function useTarotReading(
           useMascotStore.getState().report("TAROT");
           if (alive.current) setSynthesis({ data: result, error: false });
         })
-        .catch(() => {
+        .catch((err) => {
+          fail(err);
           if (alive.current) setSynthesis((prev) => ({ ...prev, error: true }));
         });
     },

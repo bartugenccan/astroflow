@@ -32,6 +32,7 @@ import { GoldToggle } from "../../components/ui/GoldToggle";
 import { ReminderTimeSheet } from "./ReminderTimeSheet";
 import { PREMIUM_BETA, legalUrl, type LegalPage } from "../../services/config";
 import { PremiumBetaSheet } from "./PremiumBetaSheet";
+import { MANAGE_SUBSCRIPTIONS_URL, PURCHASES_ENABLED, restorePurchases, useBillingStore } from "../../services/purchases";
 import { asterA11y, stageName } from "../aster/asterCopy";
 import type { TranslationKey } from "../../i18n";
 import type { AccountInfo, AuthProviderId } from "../../services/types";
@@ -64,6 +65,17 @@ export function ProfileScreen() {
   const displayName = useAppStore((s) => s.displayName);
   const profile = useAppStore((s) => s.birthProfile);
   const isPremium = useAppStore((s) => s.isPremium);
+  const billing = useBillingStore();
+  const [restoring, setRestoring] = useState(false);
+  const onRestore = async () => {
+    setRestoring(true);
+    const res = await restorePurchases();
+    setRestoring(false);
+    Alert.alert(
+      t("paywall.restore"),
+      res === "restored" ? t("paywall.restored") : res === "none" ? t("paywall.restoreNone") : t("paywall.purchaseFailed"),
+    );
+  };
   const setLocale = useAppStore((s) => s.setLocale);
   const detailLevel = useAppStore((s) => s.detailLevel);
   const setDetailLevel = useAppStore((s) => s.setDetailLevel);
@@ -123,7 +135,22 @@ export function ProfileScreen() {
   // Delete my data: server first, then this phone; nothing local goes if the server call fails.
   const [deleting, setDeleting] = useState(false);
   const confirmDelete = () => {
-    Alert.alert(t("profile.deleteData"), t("profile.deleteDataConfirm"), [
+    // A paid subscription keeps billing until it is cancelled in the store; say so before deleting.
+    const subscribed = billing.storeActive || billing.serverActive;
+    const body = subscribed
+      ? `${t("profile.deleteDataConfirm")}\n\n${t("profileUi.paywall.deleteKeepsBilling")}`
+      : t("profile.deleteDataConfirm");
+    Alert.alert(t("profile.deleteData"), body, [
+      ...(subscribed
+        ? [
+            {
+              text: t("profileUi.paywall.manage"),
+              onPress: () => {
+                Linking.openURL(billing.managementURL ?? MANAGE_SUBSCRIPTIONS_URL).catch(() => undefined);
+              },
+            },
+          ]
+        : []),
       { text: t("profile.cancel"), style: "cancel" },
       {
         text: t("profile.deleteDataAction"),
@@ -385,11 +412,52 @@ export function ProfileScreen() {
               <>
                 <View style={styles.sep} />
                 <View style={styles.settingRow}>
-                  <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
-                    {t("paywall.premiumBadge")}
-                  </AppText>
+                  <View style={styles.settingLabel}>
+                    <AppText variant="body" color={colors.text.primary}>
+                      {t("profileUi.paywall.activeTitle")}
+                    </AppText>
+                    {billing.expiresAt ? (
+                      <AppText variant="bodySmall" color={colors.text.tertiary}>
+                        {t(billing.willRenew ? "profileUi.paywall.renewsOn" : "profileUi.paywall.endsOn", {
+                          date: formatInstant(billing.expiresAt, locale),
+                        })}
+                      </AppText>
+                    ) : null}
+                  </View>
                   <Chip label={t("paywall.premiumBadge")} tone="star" icon="sparkles" selected />
                 </View>
+                <View style={styles.sep} />
+                <PressableScale
+                  onPress={() => Linking.openURL(billing.managementURL ?? MANAGE_SUBSCRIPTIONS_URL).catch(() => undefined)}
+                  scaleTo={0.98}
+                  accessibilityRole="link"
+                  accessibilityLabel={t("profileUi.paywall.manage")}
+                >
+                  <View style={styles.settingRow}>
+                    <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                      {t("profileUi.paywall.manage")}
+                    </AppText>
+                    <Ionicons name="open-outline" size={16} color={colors.text.tertiary} />
+                  </View>
+                </PressableScale>
+              </>
+            ) : PURCHASES_ENABLED ? (
+              <>
+                <View style={styles.sep} />
+                <PressableScale
+                  onPress={onRestore}
+                  scaleTo={0.98}
+                  disabled={restoring}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("paywall.restore")}
+                >
+                  <View style={styles.settingRow}>
+                    <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                      {t("paywall.restore")}
+                    </AppText>
+                    <Ionicons name="refresh" size={16} color={colors.text.tertiary} />
+                  </View>
+                </PressableScale>
               </>
             ) : null}
             <View style={styles.sep} />
@@ -707,6 +775,13 @@ function NavCard({
       <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
     </ChunkyCard>
   );
+}
+
+/** A subscription renewal/expiry instant as a local calendar date. */
+function formatInstant(iso: string, locale: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function formatDate(iso: string, locale: string): string {

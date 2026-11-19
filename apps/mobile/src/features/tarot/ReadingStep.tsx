@@ -26,6 +26,8 @@ interface Props {
   freshDraw: boolean;
   onFlip: () => void;
   onNewReading: () => void;
+  /** The server refused this reading on the free tier. */
+  onLimit?: () => void;
 }
 
 const SECTIONS = ["essence", "inPosition", "forYou", "shadow", "advice"] as const;
@@ -35,11 +37,11 @@ const SECTIONS = ["essence", "inPosition", "forYou", "shadow", "advice"] as cons
  * its own chapter — the art, then a detailed reading right beneath it — and the
  * spread closes with the cards read together.
  */
-export function ReadingStep({ spread, freshDraw, onFlip, onNewReading }: Props) {
+export function ReadingStep({ spread, freshDraw, onFlip, onNewReading, onLimit }: Props) {
   const { t, locale } = useTranslation();
   const dto = useBirthDto();
   const { width } = useWindowDimensions();
-  const { cards, synthesis, retryCard, retrySynthesis } = useTarotReading(dto, spread, locale);
+  const { cards, synthesis, retryCard, retrySynthesis } = useTarotReading(dto, spread, locale, onLimit);
   const [revealed, setRevealed] = useState(!freshDraw);
   const [zoom, setZoom] = useState<TarotDrawnCard | null>(null);
 

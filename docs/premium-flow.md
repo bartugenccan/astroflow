@@ -1,77 +1,75 @@
-# Premium akışı: kontrol noktaları ve kancalar
+# Premium akışı: kontrol noktaları, kancalar ve abonelik
 
-Son güncelleme: 2026-11-19. Durum: herkes Premium (`PREMIUM_BETA=true`). RevenueCat kodu hazır, anahtarlar girilince açılıyor.
+Son güncelleme: 2026-11-19. Durum: **abonelik açık** (RevenueCat, entitlement `premium`). Planlar Aylık + Yıllık, yıllıkta 7 gün ücretsiz deneme. Beta (`PREMIUM_BETA`) mobilde kapalı; sunucuda build 9 testçilere ulaşınca kapanacak.
 
 ## 1. Premium kim, nerede karar veriliyor
 
-| Katman | Kaynak | Not |
-| --- | --- | --- |
-| Mobil bayrak | `EXPO_PUBLIC_PREMIUM_BETA` (`apps/mobile/src/services/config.ts`), eas.json'da üç profilde `"true"` | Tanımsızsa **true** sayılır |
-| Mobil durum | `useAppStore.isPremium` (persist). Rehydrate'te `PREMIUM_BETA` değerine eşitlenir | 2026-11-19 düzeltmesi: beta kapanınca eski `true` artık kalmıyor |
-| Mobil abonelik | `services/purchases.ts`: RevenueCat `premium` entitlement'ı → `setPremium(beta \|\| active)` | Anahtar yoksa kapalı |
-| Sunucu bayrak | `PREMIUM_BETA` (`app-config.module.ts`, varsayılan **false**) → `DeviceEntitlementService` | Mobil ve sunucu varsayılanları **farklı** |
-| Sunucu kilit | `DeviceUnlockedFeature` tablosu, `POST /unlock` (yalnız dev stub) | RevenueCat'i henüz bilmiyor |
+| Katman | Kaynak |
+| --- | --- |
+| Kimlik | RevenueCat app user id = **subjectId** (cihaz token'ının `sub`'ı; anonim kurulum ya da girilen hesap). Rastgele UUID. `deviceAuth.ts` `subjectOf/onIdentityChange` |
+| Mobil | `services/purchases.ts`: `isPremium = PREMIUM_BETA \|\| RevenueCat "premium" \|\| sunucu`. Kimlik değişince `logIn(sub)` → `syncPurchases()` → `POST /billing/sync` |
+| Sunucu | `subscriptions` tablosu (subject başına). `POST /billing/sync` ve `POST /webhooks/revenuecat` RevenueCat REST v1'den yeniden okur (gövdeye güvenilmez) |
+| Karar | `DeviceEntitlementService.isPremium/premiumState`: beta ya da aktif abonelik (`expiresAt` geçince kendiliğinden düşer). Premium her özelliği açar |
+| Beta | Mobil: eas.json'da üç profilde `EXPO_PUBLIC_PREMIUM_BETA=false`. Sunucu: Railway `PREMIUM_BETA` (build 9 sonrası `false`) |
 
-## 2. Kapı noktaları (gate)
+## 2. Kapı noktaları
 
-| Özellik | Ücretsiz sınır | Nerede kontrol | Sunucu doğruluyor mu |
+| Özellik | Ücretsiz sınır | İstemci | Sunucu |
 | --- | --- | --- | --- |
-| Aster sohbeti | günde 5 mesaj (+ Yıldız Tozu geçişi) | `CompanionScreen.tsx` | Hayır (yalnız AI günlük bütçesi 300) |
-| Tarot | günde 1 okuma (+ geçiş) | `TarotScreen.tsx`, `CategoryStep.tsx` | Hayır |
-| Haftalık/aylık tahmin | kilitli | `ForecastScreen.tsx` + `PremiumGate` | Hayır |
-| En iyi günler (seçim) | arama modu kilitli | `ElectionFormScreen.tsx`, `ElectionCard.tsx` | Hayır |
-| Manifest | 1 aktif | `ManifestScreen.tsx`, `CreateWishFlow.tsx` | Hayır |
-| Kayıtlı kişi haritası | 2 kişi | `savedPerson.ts`, `PersonScreenFrame.tsx` | Hayır (sunucu üst sınırı 50) |
-| Uyum yorumu | 2 açı + kilit | `CompatibilityResultScreen.tsx` | **Evet** (`astrology.controller.ts` 403) |
-| PDF rapor | günde 3 | `ReportsScreen.tsx` | Evet (`REPORTS_DAILY_PER_DEVICE`) ama premium bilmiyor |
+| Aster sohbeti | 5/gün + geçiş | `CompanionScreen.tsx` | **Evet**: `FreeTierService.chargeCompanionMessage` → 402 `FREE_LIMIT` |
+| Tarot | 1 okuma/gün + geçiş | `TarotScreen.tsx` | **Evet**: okuma anahtarı başına 1 (kart + sentez çağrıları tek okuma), 402 `FREE_LIMIT` |
+| Uyum yorumu | 2 açı + kilit | `CompatibilityResultScreen.tsx` | **Evet**: premium ⇒ açık |
+| Haftalık/aylık tahmin | kilitli | `ForecastScreen.tsx` | Hayır |
+| En iyi günler araması | kilitli | `ElectionFormScreen.tsx` | Hayır |
+| Manifest | 1 aktif | `ManifestScreen.tsx` | Hayır |
+| Kişi haritası | 2 kişi | `savedPerson.ts` | Hayır (üst sınır 50) |
+| PDF rapor | Premium | `ReportsScreen.tsx` | Günlük 3 (premium bilmiyor) |
 
-Kazanılan derinlik (Premium değil, Işık ile açılır): harita bölümleri, tarot açılımları (`TAROT_SPREAD_STAGE`), mektup (Constellation), Aster aşamaları.
+Günler kullanıcının yerel günü (`localToday()` / `x-tz`). Sınırlar `apps/api/src/modules/billing/free-tier.ts` ↔ `useAppStore.ts` FREE_* (birlikte değişir).
 
-## 3. Kancalar (yükseltme anları)
+## 3. Kancalar
 
-1. Sınıra çarpınca: tarot limiti kartı (`SpotlightCard`, "Premium'u aç" + Yıldız Tozu geçişi), sohbet limiti, manifest limiti.
-2. Kilitli içerik: tahmin ve uyum yorumunda `PremiumGate` veya ödeme duvarı.
-3. Profil: Premium satırı (beta notu veya ödeme duvarı).
-4. Yumuşak alternatif: Yıldız Tozu ile günlük geçiş. Ödeme yerine oyun içi para; kullanıcıyı tutar.
+1. Sınıra çarpınca: limit kartı (`SpotlightCard`, "Premium'u aç" + Yıldız Tozu geçişi). Sunucu 402 dönerse de aynı kart/duvar açılır.
+2. Kilitli içerik: `PremiumGate` / ödeme duvarı (tahmin, uyum, kişi, rapor, seçim).
+3. Profil: Premium kartı; abonede "Premium aktif · yenilenir/biter", "Aboneliği yönet", değilse "Satın alımı geri yükle".
 
-Ölçüm (PostHog, 2026-11-19): `paywall_viewed{source}`, `purchase_started/completed/failed`, `purchases_restored`. Huni: kanca → `paywall_viewed` → `purchase_started` → `purchase_completed`.
+Ölçüm (PostHog): `paywall_viewed{source}`, `purchase_started/completed/failed`, `purchases_restored`.
 
 ## 4. Akış
 
 ```mermaid
 flowchart TD
-  A[Kullanıcı bir özelliğe girer] --> B{isPremium?}
-  B -- evet --> Z[Özellik açık]
-  B -- hayır --> C{Ücretsiz sınır doldu mu?}
-  C -- hayır --> Z
-  C -- evet --> D[Kanca: limit kartı / PremiumGate]
-  D --> E{Yıldız Tozu geçişi var mı?}
-  E -- evet, alır --> Z
-  E -- hayır / ister --> F[PaywallSheet · paywall_viewed]
-  F --> G{PREMIUM_BETA?}
-  G -- evet --> H[Devam et → setPremium true] --> Z
-  G -- hayır --> I{RevenueCat anahtarı?}
-  I -- yok --> J[Çok yakında]
-  I -- var --> K[PremiumPlans: planlar, Abone ol, Geri yükle]
-  K -- satın aldı --> L[RevenueCat premium entitlement] --> M[setPremium true] --> Z
-  K -- iptal/hata --> F
-  subgraph Sunucu
-    S1[PREMIUM_BETA veya DeviceUnlockedFeature] --> S2[Uyum yorumu 403 / tam]
-  end
-  M -. henüz bağlı değil .-> S1
+  A[Özellik] --> B{isPremium?}
+  B -- evet --> Z[Açık]
+  B -- hayır --> C{Ücretsiz sınır?}
+  C -- kaldı --> S{Sunucu da sayar}
+  S -- izin --> Z
+  S -- 402 FREE_LIMIT --> D
+  C -- doldu --> D[Limit kartı / kilit]
+  D --> E{Yıldız Tozu geçişi}
+  E -- alır --> Z
+  E -- Premium --> F[Ödeme duvarı · paywall_viewed]
+  F --> K[Planlar: Yıllık ₺X/yıl 7 gün ücretsiz · Aylık ₺Y/ay]
+  K -- satın al --> L[RevenueCat premium] --> M[POST /billing/sync] --> N[Premium açıldı ekranı] --> Z
+  K -- geri yükle --> L
+  W[RevenueCat webhook] --> R[REST'ten yeniden oku] --> T[(subscriptions)]
+  M --> R
 ```
 
-## 5. Riskler (beta kapanmadan önce kapanmalı)
+## 5. Bilinen davranışlar
 
-1. **Sunucu RevenueCat'i bilmiyor.** Beta kapanınca abone olan kullanıcı uyum yorumunda 403 alır. Çözüm: RevenueCat webhook'u → `DeviceEntitlement` (deviceId'ye bağlı; RevenueCat app user id = device subject) ve `DeviceEntitlementService.isFeatureUnlocked` bunu okusun. RevenueCat'te `Purchases.logIn(deviceSubject)` gerekir.
-2. **Kapıların çoğu yalnız istemcide.** Değiştirilmiş bir istemci sınırları aşar. Maliyetli olanlar (sohbet, tarot) için sunucuda premium'a duyarlı günlük sınır gerekir (AI bütçesi şu an herkese 300).
-3. **Mobil ve sunucu beta varsayılanları farklı.** Kapatırken ikisi de açıkça `false` verilmeli: eas.json ve Railway.
-4. **Uyum (compat) varyantı** RevenueCat planlarını göstermiyor (sunucu tarafı tamamlanana kadar "çok yakında").
+- Hesapla satın alıp ikinci telefonda giriş: aynı subject, abonelik doğrudan gelir.
+- Anonimken satın alıp sonra hesaba giriş: `syncPurchases` makbuzu hesaba taşır (RevenueCat "Transfer to new App User ID").
+- Çıkış: yeni anonim subject ücretsizdir; tekrar girişte geri gelir. Çıkıştan sonra "Geri yükle" aboneliği anonim kimliğe taşıyabilir (kabul edildi).
+- Verilerimi sil: `subscriptions` satırı silinir, mağaza aboneliği **iptal olmaz** (onayda uyarı + "Aboneliği yönet").
+- `environment` (SANDBOX/PRODUCTION) yalnızca kayıt; App Review sandbox'ta satın alır.
 
-## 6. Betayı kapatma listesi
+## 6. Yayın listesi
 
-- [ ] App Store Connect / Play'de abonelik ürünleri, RevenueCat'te `premium` entitlement + current offering
-- [ ] EAS env: `EXPO_PUBLIC_REVENUECAT_IOS_KEY` / `_ANDROID_KEY`, `EXPO_PUBLIC_PREMIUM_BETA=false`
-- [ ] Railway: `PREMIUM_BETA=false` + RevenueCat webhook (risk 1)
-- [ ] Sandbox satın alma, iptal ve geri yükleme testi
-- [ ] App Privacy: Purchases > Purchase History (ship.config.json'da hazır)
+- [ ] App Store Connect: Paid Applications Agreement, banka, vergi
+- [ ] Abonelik grubu + `…premium.monthly`, `…premium.yearly` (7 gün ücretsiz), inceleme görseli
+- [ ] RevenueCat: proje, IAP key, ürünler → `premium`, `default` offering, webhook (`/api/v1/webhooks/revenuecat` + Authorization)
+- [ ] EAS: `EXPO_PUBLIC_REVENUECAT_IOS_KEY` · Railway: `REVENUECAT_SECRET_KEY`, `REVENUECAT_WEBHOOK_AUTH`
+- [ ] App Privacy: Purchase History → Linked: Yes, yeniden Publish
+- [ ] Web: gizlilikte "anonim kimlik" cümlesi → "uygulama kimliğine bağlı"; Koşullar'a abonelik maddesi; yeniden yayın
+- [ ] Build 9 → sandbox testleri → Railway `PREMIUM_BETA=false` → abonelikleri 1.1.0'a ekle, gönder

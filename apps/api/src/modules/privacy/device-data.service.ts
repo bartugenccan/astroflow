@@ -43,6 +43,7 @@ export class DeviceDataService {
       plans,
       vaults,
       letters,
+      subscriptions,
     ] = await this.prisma.$transaction([
       this.prisma.chatMessage.deleteMany({ where }),
       this.prisma.memoryEntry.deleteMany({ where }),
@@ -65,6 +66,8 @@ export class DeviceDataService {
       this.prisma.dailyPlan.deleteMany({ where }),
       this.prisma.userVault.deleteMany({ where }),
       this.prisma.asterLetter.deleteMany({ where }),
+      // Our cached copy only; the store subscription itself keeps billing until the user cancels it.
+      this.prisma.subscription.deleteMany({ where }),
     ]);
     const account = await this.accounts.deleteForSubject(deviceId);
     await this.auth.revokeSubject(deviceId);
@@ -91,6 +94,7 @@ export class DeviceDataService {
       plans: plans.count,
       vaults: vaults.count,
       letters: letters.count,
+      subscriptions: subscriptions.count,
     };
   }
 }

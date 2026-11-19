@@ -45,6 +45,7 @@ import { colors, depth, spacing, radii, fonts, motion, palette, surface, typogra
 import { todayISO } from "../../lib/dates";
 import { track } from "../../services/analytics";
 import { SUPPORT_EMAIL } from "../../services/config";
+import { isFreeLimit } from "../../services/httpAstrologyApi";
 
 /** Springy rise for a freshly-sent / freshly-received bubble. */
 const bubbleEnter = FadeInDown.springify()
@@ -74,6 +75,8 @@ export function CompanionScreen() {
     Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`).catch(() => undefined);
   };
   const [paywall, setPaywall] = useState(false);
+  /** The server said today's free messages are used up (counts across phones and reinstalls). */
+  const [serverLimited, setServerLimited] = useState(false);
   const [kbShown, setKbShown] = useState(false);
   const [history, setHistory] = useState<"loading" | "ready" | "error">("loading");
   const scrollRef = useRef<ScrollViewInstance>(null);
@@ -84,7 +87,11 @@ export function CompanionScreen() {
   const usedToday = msgDate === today ? msgCount : 0;
   // A bought taste (chatPass, +5) adds to today's free messages.
   const chatPasses = mascot?.passesToday?.chat ?? 0;
-  const atLimit = !isPremium && usedToday >= FREE_DAILY_MESSAGES + chatPasses;
+  const atLimit = !isPremium && (serverLimited || usedToday >= FREE_DAILY_MESSAGES + chatPasses);
+  // A bought pass or Premium lifts the server's refusal; the next send asks again.
+  useEffect(() => {
+    setServerLimited(false);
+  }, [chatPasses, isPremium]);
   const passItem = mascot?.catalog?.find((i) => i.id === "chatPass");
   const purchase = useMascotStore((s) => s.purchase);
   const [buyingPass, setBuyingPass] = useState(false);
@@ -160,11 +167,17 @@ export function CompanionScreen() {
           createdAt: new Date().toISOString(),
         },
       ]);
-    } catch {
+    } catch (err) {
       // Drop the unanswered bubble and give the text back so a retry is one tap.
       setMessages((m) => m.filter((x) => x.id !== userMsg.id));
       setInput((cur) => cur || clean);
-      Alert.alert(t("companion.name"), t("companion.sendFailed"));
+      if (isFreeLimit(err)) {
+        // The server counted today's free messages (another phone, a reinstall): show the limit.
+        setServerLimited(true);
+        setPaywall(true);
+      } else {
+        Alert.alert(t("companion.name"), t("companion.sendFailed"));
+      }
     } finally {
       setSending(false);
       requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));

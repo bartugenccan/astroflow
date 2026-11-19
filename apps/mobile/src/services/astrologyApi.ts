@@ -51,6 +51,7 @@ import {
   TransitOverview,
   YearAhead,
   SkyMomentsResponse,
+  BillingState,
 } from "./types";
 import { mockSkyMoments } from "./mock/skyMoments";
 import { mockAward, mockResetMascot, mockTodayMood } from "./mascotApi";
@@ -165,6 +166,8 @@ export interface AstrologyApi {
   // Entitlements (device-scoped; unlock is a STUB pending real IAP)
   unlockFeature(feature: string): Promise<void>;
   getEntitlements(): Promise<string[]>;
+  /** Ask the server to re-read this subject's subscription from RevenueCat. */
+  syncBilling(): Promise<BillingState>;
 
   // Companion
   getGuidance(
@@ -434,6 +437,11 @@ const mockAstrologyApi: AstrologyApi = {
   async getEntitlements() {
     await delay();
     return [...mockUnlocked];
+  },
+
+  async syncBilling() {
+    await delay();
+    return { premium: false, source: null, expiresAt: null, willRenew: false, productId: null };
   },
 
   // Companion

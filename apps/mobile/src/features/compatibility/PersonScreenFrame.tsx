@@ -18,6 +18,7 @@ import { TransitsScreen } from "../transits/TransitsScreen";
 import { savedPersonToDto, usePerson, usePersonChartAccess } from "./savedPerson";
 import { useTranslation } from "../../i18n";
 import { palette, spacing, radii } from "../../lib/design-system";
+import { FREE_PERSON_CHARTS } from "../../store/useAppStore";
 
 function formatDate(iso: string, locale: string): string {
   return formatCalendarDate(iso, locale, { day: "numeric", month: "short", year: "numeric" }) ?? iso;
@@ -90,7 +91,7 @@ export function PersonScreenFrame({ mode }: { mode: "chart" | "transits" }) {
             <AppText variant="title" center>
               {person.label}
             </AppText>
-            <AsterCameo text={t("paywall.forecastSubtitle")} size={56} />
+            <AsterCameo text={t("profileUi.paywall.personLocked", { n: FREE_PERSON_CHARTS })} size={56} />
             <ChunkyButton
               label={t("paywall.unlockPremium")}
               variant="star"

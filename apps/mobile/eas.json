@@ -10,7 +10,7 @@
       "channel": "development",
       "env": {
         "EXPO_PUBLIC_API_URL": "http://localhost:3000",
-        "EXPO_PUBLIC_PREMIUM_BETA": "true",
+        "EXPO_PUBLIC_PREMIUM_BETA": "false",
         "EXPO_PUBLIC_APP_ENV": "development",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
@@ -26,7 +26,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_PREMIUM_BETA": "true",
+        "EXPO_PUBLIC_PREMIUM_BETA": "false",
         "EXPO_PUBLIC_APP_ENV": "preview"
       },
       "environment": "preview"
@@ -38,7 +38,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_PREMIUM_BETA": "true",
+        "EXPO_PUBLIC_PREMIUM_BETA": "false",
         "EXPO_PUBLIC_APP_ENV": "production"
       },
       "environment": "production"

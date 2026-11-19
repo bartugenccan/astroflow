@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Linking, StyleSheet, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,7 +8,7 @@ import { PressableScale } from "./ui/PressableScale";
 import { CelestialLoader } from "./ui/CelestialLoader";
 import { TranslationKey, useTranslation } from "../i18n";
 import { legalUrl } from "../services/config";
-import { buyPlan, loadPlans, restorePurchases, type PremiumPlan } from "../services/purchases";
+import { annualSaving, buyPlan, loadPlans, restorePurchases, type PremiumPlan } from "../services/purchases";
 import { colors, palette, radii, spacing, surface } from "../lib/design-system";
 
 const PERIOD_KEY: Record<string, TranslationKey> = {
@@ -21,10 +21,13 @@ const PERIOD_KEY: Record<string, TranslationKey> = {
 };
 
 /**
- * The store's plans (RevenueCat's current offering): pick one, subscribe,
- * or restore. Prices come from the store, never from us. Carries what App
- * Review asks of a subscription screen (3.1.2): price and period, the
- * auto-renew note, Restore, and links to the Terms and the Privacy Policy.
+ * The store's plans (RevenueCat's current offering): pick one, subscribe, or
+ * restore. Prices come from the store, never from us.
+ *
+ * App Review 3.1.2: the billed amount ("₺999,99/yıl") is the biggest price on
+ * every card; the monthly equivalent and the badges sit under it, smaller. A
+ * trial CTA names what follows ("7 gün ücretsiz, sonra ₺X/yıl") right under the
+ * button, and the renewal terms, Restore, Terms and Privacy are always shown.
  */
 export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
   const { t, locale } = useTranslation();
@@ -40,6 +43,7 @@ export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
     loadPlans().then((p) => {
       if (!alive) return;
       setPlans(p);
+      // The yearly plan (first) is the recommended one.
       setPicked((cur) => cur ?? p[0]?.id ?? null);
     });
     return () => {
@@ -47,7 +51,16 @@ export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
     };
   }, [attempt]);
 
+  const saving = useMemo(() => (plans ? annualSaving(plans) : null), [plans]);
   const plan = plans?.find((p) => p.id === picked) ?? null;
+  const annual = plans?.find((p) => p.period === "annual") ?? null;
+
+  const billed = (p: PremiumPlan) =>
+    p.period === "annual"
+      ? t("profileUi.paywall.perYear", { price: p.price })
+      : p.period === "monthly"
+        ? t("profileUi.paywall.perMonth", { price: p.price })
+        : p.price;
 
   const buy = async () => {
     if (!plan || busy) return;
@@ -70,7 +83,6 @@ export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
     const res = await restorePurchases();
     setBusy(null);
     if (res === "restored") {
-      setNote({ text: t("paywall.restored"), error: false });
       onPurchased();
     } else {
       setNote({ text: res === "none" ? t("paywall.restoreNone") : t("paywall.purchaseFailed"), error: res === "failed" });
@@ -82,7 +94,7 @@ export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
   return (
     <View style={styles.wrap}>
       {plans === null ? (
-        <View style={styles.loading}>
+        <View style={styles.loading} accessibilityLiveRegion="polite">
           <CelestialLoader size="sm" />
           <AppText variant="bodySmall" color={colors.text.secondary}>
             {t("paywall.plansLoading")}
@@ -99,25 +111,61 @@ export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
         <View style={styles.plans} accessibilityRole="radiogroup">
           {plans.map((p) => {
             const selected = p.id === picked;
+            const isAnnual = p.period === "annual";
             return (
               <PressableScale
                 key={p.id}
                 onPress={() => setPicked(p.id)}
                 scaleTo={0.98}
+                haptic="selection"
                 style={[styles.plan, selected && styles.planSelected]}
                 accessibilityRole="radio"
                 accessibilityState={{ selected }}
-                accessibilityLabel={`${t(PERIOD_KEY[p.period] ?? "paywall.planMonthly")}, ${p.price}`}
+                accessibilityLabel={`${t(PERIOD_KEY[p.period] ?? "paywall.planMonthly")}, ${billed(p)}${
+                  p.trialDays ? `, ${t("profileUi.paywall.trialBadge", { n: p.trialDays })}` : ""
+                }`}
               >
-                <Ionicons
-                  name={selected ? "radio-button-on" : "radio-button-off"}
-                  size={22}
-                  color={selected ? palette.star.face : colors.text.tertiary}
-                />
-                <AppText variant="heading" style={styles.grow}>
-                  {PERIOD_KEY[p.period] ? t(PERIOD_KEY[p.period]) : p.id}
+                <View style={styles.planTop}>
+                  <View style={[styles.radio, selected && styles.radioOn]}>
+                    {selected ? <Ionicons name="checkmark" size={14} color={palette.star.on} /> : null}
+                  </View>
+                  <AppText variant="heading" style={styles.grow}>
+                    {PERIOD_KEY[p.period] ? t(PERIOD_KEY[p.period]) : p.id}
+                  </AppText>
+                  {isAnnual && saving ? (
+                    <View style={[styles.badge, styles.badgeStar]}>
+                      <AppText variant="label" color={palette.star.on}>
+                        {t("profileUi.paywall.saveBadge", { n: saving })}
+                      </AppText>
+                    </View>
+                  ) : isAnnual ? (
+                    <View style={[styles.badge, styles.badgeStar]}>
+                      <AppText variant="label" color={palette.star.on}>
+                        {t("profileUi.paywall.bestValue")}
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
+                {/* The billed amount is the most prominent price (3.1.2). */}
+                <AppText variant="title" style={styles.price}>
+                  {billed(p)}
                 </AppText>
-                <AppText variant="numeric">{p.price}</AppText>
+                {(isAnnual && p.pricePerMonth) || p.trialDays ? (
+                  <View style={styles.subRow}>
+                    {isAnnual && p.pricePerMonth ? (
+                      <AppText variant="bodySmall" color={colors.text.secondary}>
+                        {t("profileUi.paywall.perMonthEquivalent", { price: p.pricePerMonth })}
+                      </AppText>
+                    ) : null}
+                    {p.trialDays ? (
+                      <View style={[styles.badge, styles.badgeMint]}>
+                        <AppText variant="label" color={palette.mint.on}>
+                          {t("profileUi.paywall.trialBadge", { n: p.trialDays })}
+                        </AppText>
+                      </View>
+                    ) : null}
+                  </View>
+                ) : null}
               </PressableScale>
             );
           })}
@@ -125,13 +173,26 @@ export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
       )}
 
       {plan ? (
-        <ChunkyButton
-          label={t("paywall.subscribe", { price: plan.price })}
-          onPress={buy}
-          loading={busy === "buy"}
-          variant="star"
-          size="lg"
-        />
+        <View style={styles.cta}>
+          <ChunkyButton
+            label={
+              plan.trialDays
+                ? t("profileUi.paywall.ctaTrial", { n: plan.trialDays })
+                : t("profileUi.paywall.ctaSubscribe", { price: billed(plan) })
+            }
+            onPress={buy}
+            loading={busy === "buy"}
+            disabled={busy !== null}
+            variant="star"
+            size="lg"
+            icon={<Ionicons name="sparkles" size={18} color={palette.star.on} />}
+          />
+          <AppText variant="bodySmall" center color={colors.text.secondary}>
+            {plan.trialDays
+              ? t("profileUi.paywall.afterTrial", { n: plan.trialDays, price: plan.price })
+              : t("profileUi.paywall.cancelAnytime")}
+          </AppText>
+        </View>
       ) : null}
 
       {note ? (
@@ -149,13 +210,16 @@ export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
         label={t("paywall.restore")}
         onPress={restore}
         loading={busy === "restore"}
+        disabled={busy !== null}
         variant="ghost"
         size="md"
         uppercase={false}
       />
 
       <AppText variant="bodySmall" center color={colors.text.tertiary}>
-        {t("paywall.renewNote")}
+        {plan?.trialDays && annual
+          ? t("profileUi.paywall.trialRenewNote", { price: annual.price })
+          : t("paywall.renewNote")}
       </AppText>
       <View style={styles.legal}>
         <PressableScale onPress={() => open("terms")} hitSlop={8} accessibilityRole="link" style={styles.legalLink}>
@@ -178,14 +242,12 @@ export function PremiumPlans({ onPurchased }: { onPurchased: () => void }) {
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
-  loading: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md },
-  plans: { gap: spacing.sm },
+  loading: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.lg },
+  plans: { gap: spacing.md },
   plan: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    minHeight: 56,
+    gap: spacing.xs,
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: radii.lg,
     backgroundColor: surface.raised,
     borderWidth: 2,
@@ -198,7 +260,35 @@ const styles = StyleSheet.create({
     borderBottomColor: palette.star.slab,
     backgroundColor: palette.star.soft,
   },
+  planTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  radio: {
+    width: 24,
+    height: 24,
+    borderRadius: radii.pill,
+    borderWidth: 2,
+    borderColor: colors.border.chunky,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioOn: { backgroundColor: palette.star.face, borderColor: palette.star.face },
   grow: { flex: 1, minWidth: 0 },
+  price: { marginLeft: 24 + spacing.sm },
+  subRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginLeft: 24 + spacing.sm,
+  },
+  badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+    borderBottomWidth: 2,
+  },
+  badgeStar: { backgroundColor: palette.star.face, borderBottomColor: palette.star.slab },
+  badgeMint: { backgroundColor: palette.mint.face, borderBottomColor: palette.mint.slab },
+  cta: { gap: spacing.sm },
   legal: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: spacing.sm },
   legalLink: { minHeight: 44, justifyContent: "center" },
 });

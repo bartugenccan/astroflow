@@ -56,6 +56,9 @@ import * as Joi from "joi";
         // PostHog (product analytics). Empty key = off. See common/analytics.
         POSTHOG_API_KEY: Joi.string().allow("").optional(),
         POSTHOG_HOST: Joi.string().uri().allow("").default("https://eu.i.posthog.com"),
+        // RevenueCat (subscriptions). Secret REST key + the webhook Authorization value; empty = sync off.
+        REVENUECAT_SECRET_KEY: Joi.string().allow("").optional(),
+        REVENUECAT_WEBHOOK_AUTH: Joi.string().allow("").optional(),
         // Accounts (optional). A missing provider config turns that route into a 503.
         APPLE_BUNDLE_ID: Joi.string().default("com.astroflow.app"),
         APPLE_TEAM_ID: Joi.string().allow("").optional(),

@@ -41,6 +41,12 @@ export class SubjectMergeService {
       });
       await tx.deviceUnlockedFeature.updateMany({ where, data: move });
 
+      // Subscription cache: the account's row wins; otherwise this install's moves over.
+      // RevenueCat stays the source of truth — the app re-syncs right after signing in.
+      const intoSub = await tx.subscription.findUnique({ where: { deviceId: into }, select: { deviceId: true } });
+      if (intoSub) await tx.subscription.deleteMany({ where });
+      else await tx.subscription.updateMany({ where, data: move });
+
       // Daily AI counters add up, so merging can't reset a budget.
       await tx.$executeRaw`
         INSERT INTO ai_usage (day, "deviceId", count)

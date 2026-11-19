@@ -133,6 +133,7 @@ export function TarotScreen() {
               freshDraw={freshDraw}
               onFlip={sounds.playFlip}
               onNewReading={() => setPhase("category")}
+              onLimit={() => setPaywall(true)}
             />
           ) : (
             <CategoryStep

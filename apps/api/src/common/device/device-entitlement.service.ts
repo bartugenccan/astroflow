@@ -2,12 +2,22 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { FeatureType } from '../../../generated/prisma/client';
+import { isStoredActive } from '../../modules/billing/subscription-rules';
+
+export interface PremiumState {
+  premium: boolean;
+  /** Why: "beta" (everyone), "subscription", or null when not Premium. */
+  source: 'beta' | 'subscription' | null;
+  expiresAt: string | null;
+  willRenew: boolean;
+  productId: string | null;
+}
 
 /**
- * Device-scoped entitlement checks for the anonymous flow. Mirrors the
- * user-scoped UnlockService but keyed by `deviceId` (the anonymous flow has no
- * User). Payment/IAP is out of scope here — `unlock()` simply records the grant
- * so the real store callback can call it later.
+ * Subject-scoped entitlements. Premium comes from the `subscriptions` row
+ * (RevenueCat "premium", refreshed by /billing/sync and the webhook) or from
+ * PREMIUM_BETA. Per-feature unlocks (`device_unlocked_features`) stay for the
+ * dev stub; a Premium subject has every feature.
  */
 @Injectable()
 export class DeviceEntitlementService {
@@ -16,16 +26,30 @@ export class DeviceEntitlementService {
     private readonly config: ConfigService,
   ) {}
 
-  /** Beta: everything Premium is open to everyone until real payments ship. */
+  /** Beta: everything Premium is open to everyone. */
   get premiumBeta(): boolean {
     return this.config.get<boolean>('PREMIUM_BETA') === true;
   }
 
-  async isFeatureUnlocked(
-    deviceId: string,
-    featureType: FeatureType,
-  ): Promise<boolean> {
-    if (this.premiumBeta) return true;
+  async premiumState(deviceId: string): Promise<PremiumState> {
+    const row = await this.prisma.subscription.findUnique({ where: { deviceId } }).catch(() => null);
+    const subscribed = isStoredActive(row);
+    const premium = this.premiumBeta || subscribed;
+    return {
+      premium,
+      source: subscribed ? 'subscription' : this.premiumBeta ? 'beta' : null,
+      expiresAt: subscribed && row?.expiresAt ? row.expiresAt.toISOString() : null,
+      willRenew: subscribed ? !!row?.willRenew : false,
+      productId: subscribed ? (row?.productId ?? null) : null,
+    };
+  }
+
+  async isPremium(deviceId: string): Promise<boolean> {
+    return (await this.premiumState(deviceId)).premium;
+  }
+
+  async isFeatureUnlocked(deviceId: string, featureType: FeatureType): Promise<boolean> {
+    if (await this.isPremium(deviceId)) return true;
     try {
       const hit = await this.prisma.deviceUnlockedFeature.findUnique({
         where: { deviceId_featureType: { deviceId, featureType } },
@@ -45,7 +69,7 @@ export class DeviceEntitlementService {
   }
 
   async listUnlocked(deviceId: string): Promise<FeatureType[]> {
-    if (this.premiumBeta) return Object.values(FeatureType);
+    if (await this.isPremium(deviceId)) return Object.values(FeatureType);
     const rows = await this.prisma.deviceUnlockedFeature.findMany({
       where: { deviceId },
       select: { featureType: true },

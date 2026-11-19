@@ -21,6 +21,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { HealthController } from './common/health/health.controller';
 import { AnalyticsModule } from './common/analytics/analytics.module';
+import { BillingModule } from './modules/billing/billing.module';
 
 const MINUTE = 60_000;
 
@@ -52,6 +53,7 @@ const MINUTE = 60_000;
     }),
     AuthModule,
     AstrologyModule,
+    BillingModule,
     AIModule,
     CompanionModule,
     IntentionsModule,

@@ -413,7 +413,11 @@ export class AstrologyController {
   @Get('entitlements')
   @ApiOperation({ summary: 'List device-scoped unlocked features' })
   async getEntitlements(@DeviceId() deviceId: string) {
-    return { features: await this.entitlement.listUnlocked(deviceId) };
+    const [features, premium] = await Promise.all([
+      this.entitlement.listUnlocked(deviceId),
+      this.entitlement.premiumState(deviceId),
+    ]);
+    return { features, ...premium };
   }
 
   @Post('people')

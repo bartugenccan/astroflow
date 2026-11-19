@@ -139,8 +139,8 @@
    {
     "name": "react-native-purchases (RevenueCat)",
     "purpose": "Uygulama ici abonelik (Premium), satin alma geri yukleme",
-    "dataSent": "RevenueCat'e: anonim RevenueCat kullanici id'si, satin alma makbuzu/gecmisi, uygulama surumu. Cihaz/hesap kimligimiz GONDERILMEZ. Anahtar yoksa SDK baslatilmaz.",
-    "privacyManifest": "SDK kendi manifestini getirir; app.json'da PurchaseHistory (linked:false) beyan edildi"
+    "dataSent": "RevenueCat'e: app user id = subjectId (cihaz token'inin sub'i; rastgele UUID, PII degil; beyan edilen User ID ile ayni), satin alma makbuzu/gecmisi, uygulama surumu. Sunucu RevenueCat REST'ten (secret key) abonelik durumunu okur ve webhook alir. Anahtar yoksa SDK baslatilmaz.",
+    "privacyManifest": "SDK kendi manifestini getirir; app.json'da PurchaseHistory (linked:true, App Functionality) beyan edildi"
    }
   ],
   "dataSafetySubmitted": false,
@@ -246,11 +246,11 @@
     },
     {
      "category": "Purchases > Purchase History",
-     "linked": false,
+     "linked": true,
      "purposes": [
       "App Functionality"
      ],
-     "source": "RevenueCat abonelik durumu (anonim RevenueCat id)"
+     "source": "RevenueCat abonelik durumu; RevenueCat app user id = subjectId (beyan edilen User ID), bu yuzden linked"
     }
    ],
    "notCollected": [
@@ -365,7 +365,7 @@
      "purposes": [
       "App functionality"
      ],
-     "note": "RevenueCat abonelik durumu"
+     "note": "RevenueCat abonelik durumu (subjectId ile iliskili)"
     }
    ],
    "playSecurity": {

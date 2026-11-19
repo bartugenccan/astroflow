@@ -20,6 +20,7 @@ import { tarotCardStub, tarotSynthesisStub } from './prompts/tarot.stubs';
 import { TarotCardReading, TarotContext, TarotSynthesis } from './tarot.types';
 import { safeError } from '../../common/logging/safe-error';
 import { ownedReading } from '../../common/ai/owned-reading-cache';
+import { FreeTierService } from '../billing/free-tier.service';
 
 /** Bump when tarot prompts change so cached readings regenerate. */
 const TAROT_CACHE_VERSION = 't3';
@@ -36,6 +37,7 @@ export class TarotService {
     private readonly adapter: AstrologyAdapterService,
     private readonly memory: MemoryService,
     private readonly mascot: MascotService,
+    private readonly freeTier: FreeTierService,
   ) {}
 
   /** Detailed reading of one card of the spread. */
@@ -132,6 +134,8 @@ export class TarotService {
     if (spread !== 'three' && !(await this.mascot.spreadAllowed(deviceId, spread))) {
       throw new ForbiddenException('This spread opens when Aster grows to Glimmer.');
     }
+    // Free tier: one reading a day (+ passes), counted once per spread across its card/synthesis calls.
+    await this.freeTier.chargeTarotReading(deviceId, { spread, category: dto.category, cards: dto.cards });
     return {
       category: dto.category,
       spread,

@@ -47,11 +47,17 @@ import {
   TransitDetail,
   TransitOverview,
   YearAhead,
+  BillingState,
 } from "./types";
 import type { AstrologyApi } from "./astrologyApi";
 import { Locale } from "../i18n";
 import { API_URL } from "./config";
 import { getDeviceToken, resetDeviceToken } from "./deviceAuth";
+
+/** The server's free-tier refusal (402 FREE_LIMIT): show the limit card / paywall, not an error. */
+export function isFreeLimit(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 402 && e.code === "FREE_LIMIT";
+}
 
 export class ApiError extends Error {
   constructor(
@@ -258,6 +264,11 @@ export const httpAstrologyApi: AstrologyApi = {
   async getEntitlements() {
     const res = await request<{ features: string[] }>("GET", "astrology/entitlements");
     return res?.features ?? [];
+  },
+
+  async syncBilling() {
+    const res = await request<BillingState>("POST", "billing/sync");
+    return res ?? { premium: false, source: null, expiresAt: null, willRenew: false, productId: null };
   },
 
   // Companion

@@ -91,6 +91,25 @@ model Interpretation {
 
 // Device-scoped entitlement mirror of UnlockedFeature. The anonymous flow has no
 // User, so per-report unlocks (e.g. COMPATIBILITY) are keyed by deviceId instead.
+/// The subject's Premium subscription as RevenueCat last reported it (entitlement
+/// "premium"). RevenueCat is the source of truth; this row is a cache refreshed by
+/// POST /billing/sync and the RevenueCat webhook. `deviceId` is the subject id,
+/// which is also the RevenueCat app user id.
+model Subscription {
+  deviceId    String    @id
+  active      Boolean   @default(false)
+  productId   String?
+  /// Null for lifetime purchases; otherwise when the current period ends.
+  expiresAt   DateTime?
+  store       String?
+  /// "SANDBOX" | "PRODUCTION" — recorded for support only, never used as a gate.
+  environment String?
+  willRenew   Boolean   @default(false)
+  updatedAt   DateTime  @updatedAt
+
+  @@map("subscriptions")
+}
+
 model DeviceUnlockedFeature {
   id          String      @id @default(uuid()) @db.Uuid
   deviceId    String

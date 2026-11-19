@@ -136,6 +136,15 @@ export interface BirthProfileResponse {
 }
 
 /** A linked account, as GET /auth/me returns it. */
+/** The server's view of this subject's Premium (POST /billing/sync, GET /astrology/entitlements). */
+export interface BillingState {
+  premium: boolean;
+  source: "beta" | "subscription" | null;
+  expiresAt: string | null;
+  willRenew: boolean;
+  productId: string | null;
+}
+
 export interface AccountInfo {
   id: string;
   providers: AuthProviderId[];
