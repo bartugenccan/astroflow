@@ -91,6 +91,8 @@ interface Geometry {
   slotH: number;
   slotCx: number[];
   slotCy: number;
+  /** Centre-to-centre distance between slots: a label wider than this would run into its neighbour. */
+  slotPitch: number;
 }
 
 function geometry(width: number, size: number): Geometry {
@@ -102,7 +104,8 @@ function geometry(width: number, size: number): Geometry {
   const slotScale = size > 3 ? 0.54 : 0.82;
   const slotW = W * slotScale;
   const slotH = H * slotScale;
-  const slotsHeight = slotH + 28;
+  // Room for a two-line label under each slot (long English uppercase labels wrap).
+  const slotsHeight = slotH + 44;
   const lift = 26;
   const topRadius = R + H / 2;
   const pivotY = slotsHeight + spacing.xl + lift + topRadius;
@@ -126,6 +129,7 @@ function geometry(width: number, size: number): Geometry {
     slotW,
     slotH,
     slotCx: Array.from({ length: size }, (_, i) => cx + (i - (size - 1) / 2) * (slotW + gap)),
+    slotPitch: slotW + gap,
     slotCy: slotH / 2,
   };
 }
@@ -505,23 +509,17 @@ function Slots({ g, visible, labels, picks }: { g: Geometry; visible: boolean; l
           key={`l${i}`}
           style={[
             styles.slotLabel,
-            g.slotCx.length > 3
-              ? {
-                  left: x - g.slotW / 2 - 4,
-                  top: g.slotH + 6,
-                  width: g.slotW + 8,
-                }
-              : {
-                  left: x - g.slotW / 2 - 12,
-                  top: g.slotH + 6,
-                  width: g.slotW + 24,
-                },
+            // Each label owns exactly its slot's pitch (minus a hairline), so neighbours never overlap.
+            { left: x - (g.slotPitch - 2) / 2, top: g.slotH + 6, width: g.slotPitch - 2 },
           ]}
         >
           <AppText
             variant="label"
             center
-            numberOfLines={1}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.8}
+            style={styles.slotLabelText}
             color={i < picks ? colors.text.accent : colors.text.tertiary}
           >
             {labels[i]}
@@ -878,6 +876,9 @@ const styles = StyleSheet.create({
   },
   slotLabel: {
     position: "absolute",
+  },
+  slotLabelText: {
+    letterSpacing: 0.4,
   },
   hint: {
     position: "absolute",
