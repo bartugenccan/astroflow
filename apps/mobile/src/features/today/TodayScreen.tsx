@@ -1,7 +1,8 @@
 import { runAfterInteractions, runAfterTransition } from "../../lib/afterInteractions";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useFocusEffect, useRouter, type Href } from "expo-router";
-import { StyleSheet, View, ScrollView } from "react-native";
+import { AppState, StyleSheet, View, ScrollView, type ScrollViewInstance } from "react-native";
+import { useTourTarget } from "../tour/tourTargets";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
@@ -12,7 +13,8 @@ import { SpringBottomSheet, type SheetOrigin } from "../../components/ui/SpringB
 import { EnterView } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
 import { DailyInsight } from "../../services/types";
-import { prefetchForecast } from "../../services/interpretationCache";
+import { dailyInsightKey, prefetchForecast } from "../../services/interpretationCache";
+import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
 import { usePlanStore } from "../../store/usePlanStore";
@@ -58,13 +60,24 @@ export function TodayScreen() {
   const { t, locale } = useTranslation();
   const router = useRouter();
   const dto = useBirthDto();
+  // The app tour points at Aster and today's goals (and scrolls to them).
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const asterTarget = useTourTarget("today.aster", { scrollRef });
+  const questsTarget = useTourTarget("today.quests", { scrollRef });
   const displayName = useAppStore((s) => s.displayName);
   const setUnlockedFeatures = useAppStore((s) => s.setUnlockedFeatures);
 
-  const [insight, setInsight] = useState<DailyInsight | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
+  // The day's reading, shared with /sky-today (one request) and kept on disk,
+  // so reopening the app the same day shows it at once while it refreshes.
+  const {
+    data: insight,
+    loading,
+    error: insightError,
+    reload: reloadInsight,
+  } = useCachedAsync<DailyInsight>(dto ? dailyInsightKey(dto, locale) : null, () =>
+    astrologyApi.getDailyInsight(dto!, locale),
+  );
+  const failed = !!insightError;
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const { state: mascot, refresh: refreshMascot } = useMascot();
 
@@ -80,15 +93,25 @@ export function TodayScreen() {
     if (dto) refreshPlan(dto);
   }, [dto, refreshPlan]);
 
-  // Key sky moments change day to day: the store fetches once per local day,
-  // after first paint so it never competes with the plan and the reading.
-  useEffect(() => {
-    if (!dto) return;
-    const task = runAfterInteractions(() => {
-      loadMoments(dto);
-    });
-    return () => task.cancel();
-  }, [dto, loadMoments]);
+  // Key sky moments change day to day: the store fetches once per local day
+  // (a no-op otherwise), after first paint so it never competes with the plan
+  // and the reading. Checked on every focus and whenever the app comes back to
+  // the foreground, so a session that crosses midnight picks up the new day.
+  useFocusEffect(
+    useCallback(() => {
+      if (!dto) return;
+      const task = runAfterInteractions(() => {
+        loadMoments(dto);
+      });
+      const sub = AppState.addEventListener("change", (next) => {
+        if (next === "active") loadMoments(dto);
+      });
+      return () => {
+        task.cancel();
+        sub.remove();
+      };
+    }, [dto, loadMoments]),
+  );
 
   // The plan follows the server's view of mood and wishes: reload on every
   // focus — after the tab has eased in, so the re-render misses the animation.
@@ -119,30 +142,11 @@ export function TodayScreen() {
     if (orbitStreak >= 3) offerProtect("orbit3", { resting });
   }, [orbitStreak, resting, offerProtect]);
 
+  // Reading the sky ticks a plan anchor server-side — pull the new state once
+  // the day's reading has arrived.
   useEffect(() => {
-    if (!dto) return;
-    let active = true;
-    setLoading(true);
-    setFailed(false);
-    // A failure must end the loading state — a rejected promise used to
-    // leave the guidance card spinning forever.
-    astrologyApi
-      .getDailyInsight(dto, locale)
-      .then((ins) => {
-        if (active) setInsight(ins);
-        // Reading the sky ticks a plan anchor server-side — pull the new state.
-        refreshMascot();
-      })
-      .catch(() => {
-        if (active) setFailed(true);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [dto, locale, attempt, refreshMascot]);
+    if (insight) refreshMascot();
+  }, [insight, refreshMascot]);
 
   // Warm the Future tab's forecast + hydrate device entitlements after first paint.
   useEffect(() => {
@@ -172,7 +176,7 @@ export function TodayScreen() {
 
   return (
     <ScreenWrapper>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <EnterView style={styles.statBar}>
           <PressableScale
             onPress={() => setPointsOpen(true)}
@@ -217,23 +221,27 @@ export function TodayScreen() {
         </EnterView>
 
         {/* 1 — Aster, the heart of Today. */}
-        <EnterView index={1}>
-          <AsterHero state={mascot} onOpenDiscovery={() => setDiscoveryOpen(true)} speech={speech} />
-        </EnterView>
+        <View {...asterTarget}>
+          <EnterView index={1}>
+            <AsterHero state={mascot} onOpenDiscovery={() => setDiscoveryOpen(true)} speech={speech} />
+          </EnterView>
+        </View>
 
         {/* 2 — Today's goals: the plan's next steps as tick rows. */}
-        <EnterView index={2}>
-          <TodayQuests
-            plan={plan}
-            loading={planLoading}
-            error={planError}
-            onRetry={reloadPlan}
-            state={mascot}
-            onSkyCheckIn={() => setSheet("checkin")}
-            onReading={() => router.push("/sky-today" as Href)}
-            onFullPlan={() => router.push("/plan" as Href)}
-          />
-        </EnterView>
+        <View {...questsTarget}>
+          <EnterView index={2}>
+            <TodayQuests
+              plan={plan}
+              loading={planLoading}
+              error={planError}
+              onRetry={reloadPlan}
+              state={mascot}
+              onSkyCheckIn={() => setSheet("checkin")}
+              onReading={() => router.push("/sky-today" as Href)}
+              onFullPlan={() => router.push("/plan" as Href)}
+            />
+          </EnterView>
+        </View>
 
         {/* 3 — A key moment in the user's own sky (returns, stations, eclipses…), when there is one. */}
         {moments && visibleMoments(moments.moments).length ? (
@@ -250,7 +258,7 @@ export function TodayScreen() {
                 kind="error"
                 compact
                 message={t("today.insightError")}
-                onAction={() => setAttempt((n) => n + 1)}
+                onAction={reloadInsight}
               />
             </ChunkyCard>
           ) : loading || !insight ? (

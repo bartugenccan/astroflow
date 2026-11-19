@@ -53,10 +53,16 @@ import type { AstrologyApi } from "./astrologyApi";
 import { Locale } from "../i18n";
 import { API_URL } from "./config";
 import { getDeviceToken, resetDeviceToken } from "./deviceAuth";
+import { AI_FALLBACK_HEADER, markAiFallback } from "./aiFallback";
 
 /** The server's free-tier refusal (402 FREE_LIMIT): show the limit card / paywall, not an error. */
 export function isFreeLimit(e: unknown): boolean {
   return e instanceof ApiError && e.status === 402 && e.code === "FREE_LIMIT";
+}
+
+/** A Premium user passed the daily fair-use cap (429 FAIR_USE): Aster's "see you tomorrow", never the paywall. */
+export function isFairUse(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 429 && e.code === "FAIR_USE";
 }
 
 export class ApiError extends Error {
@@ -175,7 +181,9 @@ export async function request<T>(
   }
   // DELETE / unlock may return empty-ish bodies; tolerate non-JSON.
   const text = await res.text();
-  return (text ? JSON.parse(text) : undefined) as T;
+  const value = (text ? JSON.parse(text) : undefined) as T;
+  if (res.headers.get(AI_FALLBACK_HEADER) === "1") markAiFallback(value);
+  return value;
 }
 
 /** HTTP implementation of AstrologyApi against the NestJS backend. */

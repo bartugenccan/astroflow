@@ -1,4 +1,5 @@
 import { affirmationsTr } from "./affirmations.tr";
+import { tourTr } from "./tour.tr";
 import { wishTr } from "./manifest.tr";
 import { tarotTr } from "./tarot.tr";
 import { screensTr } from "./screens.tr";
@@ -383,6 +384,7 @@ export const tr: TranslationShape = {
     perkCompat: "Sınırsız uyum raporu",
     perkReadings: "Tüm derin harita okumaları",
     perkUnlimited: "Sınırsız tarot ve Aster sohbeti",
+    fairUseNote: "Adil kullanım: günde en fazla 100 Aster mesajı.",
     perkManifests: "İstediğin kadar manifest",
     pointsNote: "Harita bölümleri, açılımlar ve Aster'in büyümesi ücretsiz kalır; onları Işık toplayarak açarsın.",
     unlock: "Kilidi aç",
@@ -426,6 +428,9 @@ export const tr: TranslationShape = {
     emptyChat: "Bana her şeyi sorabilirsin — günün nasıl hissettiriyor, tarttığın bir karar ya da aklındaki biri.",
     limitTitle: "Bugünkü ücretsiz mesajlarını kullandın",
     limitBody: "Aster ile sınırsız konuşmak için Premium'a geç.",
+    fairUseEyebrow: "Ne güzel sohbetti",
+    fairUseTitle: "Bugünlük bu kadar, yarın devam edelim",
+    fairUseBody: "Bugün 100 mesaj konuştuk. Yarın sabah dinlenmiş ve meraklı bir şekilde buradayım.",
     sendFailed: "Aster şu an cevap veremedi. Mesajın kutuya geri kondu; biraz sonra tekrar dene.",
     topics: {
       love: "Aşk",
@@ -643,26 +648,7 @@ export const tr: TranslationShape = {
     Air: "Hava",
     Water: "Su",
   },
-  tour: {
-    skip: "Atla",
-    next: "İleri",
-    start: "AstroFlow'a gir",
-    s1Eyebrow: "Doğum haritan",
-    s1Title: "Doğduğun dakikadaki gökyüzünün haritası",
-    s1Body: "Uygulamadaki her şey ondan yola çıkar. En önemli üç parçası:",
-    s1Sun: "Güneş — özün, seni harekete geçiren şey",
-    s1Moon: "Ay — duyguların ve neye ihtiyaç duyduğun",
-    s1Rising: "Yükselen — bıraktığın ilk izlenim",
-    s2Eyebrow: "Her gün",
-    s2Title: "Gökyüzü hareket etmeye devam eder — ve haritana dokunur",
-    s2Body: "Hareket eden bir gezegen seninkilerden biriyle hizalandığında astrologlar buna transit der. Bugün sekmesi gökyüzünün şu an haritana ne yaptığını gösterir ve bunu günlük rehberliğine çevirir.",
-    s3Eyebrow: "Her doğum gününde",
-    s3Title: "Doğum gününden doğum gününe yılın",
-    s3Body: "Yılda bir kez Güneş, doğduğun andaki yerine tam olarak geri döner. O anın haritası — Solar Return — bütün yılını anlatır. Gelecek sekmesinin en üstünde, haftalık ve aylık öngörünün yanında seni bekliyor.",
-    s4Eyebrow: "Asla kaybolmazsın",
-    s4Title: "Bilmediğin her kelimede ⓘ'ye dokun",
-    s4Body: "Önce tek cümlelik bir cevap, istersen altında tüm detay — ve senin haritanda nasıl göründüğü. Tüm terimler ayrıca Profil'deki Sözlük'te. Haritan, Aster'e soruların, olumlamaların ve uyum Sana Özel sekmesinde.",
-  },
+  tour: tourTr,
   synastry: {
     you: "Sen",
     tapToExplain: "Ne anlama geldiğini görmek için bir bağlantıya dokun.",

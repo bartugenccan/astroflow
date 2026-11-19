@@ -34,6 +34,10 @@ export const posthog: PostHog | null = ANALYTICS_ENABLED
 /** Every event the app sends, with its allowed properties. Add here first. */
 export interface AnalyticsEvents {
   onboarding_completed: Record<string, never>;
+  /** The app tour: a step shown (its key), finished, or skipped at a step. */
+  tour_step_viewed: { step: string };
+  tour_completed: Record<string, never>;
+  tour_skipped: { step: string };
   reading_go_deeper: { open: boolean };
   detail_level_changed: { level: "simple" | "deep" };
   aster_opened: { hinted: boolean };

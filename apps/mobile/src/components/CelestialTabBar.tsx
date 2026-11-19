@@ -28,6 +28,7 @@ import { colors, spacing, motion, typography, fonts, palette, surface, Tone, dep
 import { useUiStore } from "../store/useUiStore";
 import { useTranslation, TranslationKey } from "../i18n";
 import { haptics } from "../lib/haptics";
+import { useTourTarget, type TourTargetId } from "../features/tour/tourTargets";
 
 const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   index: "sunny",
@@ -228,6 +229,7 @@ export function CelestialTabBar({ state, emitter, navigateToTab }: BottomTabBarP
             tone={TONES[route.name] ?? "primary"}
             label={LABELS[route.name] ? t(LABELS[route.name]) : ""}
             featured={route.name === FEATURED}
+            tourId={`tab:${route.name}` as TourTargetId}
             onPress={onTabPress}
           />
         ))}
@@ -245,6 +247,7 @@ const TabButton = React.memo(function TabButton({
   tone,
   label,
   featured,
+  tourId,
   onPress,
 }: {
   index: number;
@@ -259,9 +262,12 @@ const TabButton = React.memo(function TabButton({
   label: string;
   /** Sits on a small tone orb, so the centre tab reads as the main one at rest. */
   featured: boolean;
+  /** The app tour can point at this tab. */
+  tourId: TourTargetId;
   onPress: (index: number) => void;
 }) {
   const reduced = useReducedMotion();
+  const tourTarget = useTourTarget(tourId);
   const toneFace = palette[tone].face;
   const scale = useSharedValue(initiallyFocused ? 1.08 : 1);
   const tint = useSharedValue(initiallyFocused ? 1 : 0);
@@ -299,6 +305,8 @@ const TabButton = React.memo(function TabButton({
 
   return (
     <Pressable
+      ref={tourTarget.ref}
+      collapsable={false}
       onPress={() => onPress(index)}
       style={styles.button}
       hitSlop={6}

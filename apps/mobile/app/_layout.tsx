@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -30,8 +30,13 @@ import { ReminderBridge } from "../src/features/reminders/ReminderBridge";
 import { VaultBridge } from "../src/features/account/VaultBridge";
 import { AiConsentScreen } from "../src/features/consent/AiConsentScreen";
 import { CelebrationHost } from "../src/features/aster/CelebrationHost";
+import { TourHost } from "../src/features/tour/TourHost";
 import { trackScreen } from "../src/services/analytics";
 import { initPurchases } from "../src/services/purchases";
+import { hydrateInterpretationCache } from "../src/services/interpretationCache";
+
+/** Longest the splash waits for the saved readings before showing the app anyway. */
+const READINGS_WAIT_MS = 400;
 
 initSentry();
 initPurchases();
@@ -71,7 +76,22 @@ function RootLayout() {
   const aiConsentCurrent = useAppStore((s) => !!s.aiConsentAt && s.aiConsentVersion >= AI_CONSENT_VERSION);
   const acceptAiConsent = useAppStore((s) => s.acceptAiConsent);
 
-  const ready = (fontsLoaded || fontError) && hasHydrated;
+  // The last good readings on disk, so Today can show the day's reading on the
+  // first frame. Bounded: a slow store never holds the splash screen.
+  const [readingsReady, setReadingsReady] = useState(false);
+  useEffect(() => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      setReadingsReady(true);
+    };
+    hydrateInterpretationCache().then(finish);
+    const timer = setTimeout(finish, READINGS_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const ready = (fontsLoaded || fontError) && hasHydrated && readingsReady;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -159,6 +179,8 @@ function RootLayout() {
         {hasOnboarded ? <VaultBridge /> : null}
         {/* Aster's celebrations (hatching, growing, rewards) over everything. */}
         {hasOnboarded ? <CelebrationHost /> : null}
+        {/* Aster's app tour: once after onboarding, replayable from Profile. */}
+        {hasOnboarded ? <TourHost /> : null}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

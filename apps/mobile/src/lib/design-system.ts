@@ -149,6 +149,8 @@ export const colors = {
     sheen: "rgba(255,210,92,0.08)",
     /** Deep night scrim behind full-screen celebrations (isolates the card). */
     celebration: "rgba(14,9,40,0.6)",
+    /** The app tour's dim around the spotlighted target (dark enough to read the card on). */
+    tour: "rgba(14,9,40,0.78)",
   },
 } as const;
 

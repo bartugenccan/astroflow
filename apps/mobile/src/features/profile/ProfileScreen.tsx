@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { StyleSheet, View, ScrollView, Alert, Linking } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { StyleSheet, View, ScrollView, Alert, Linking, type ScrollViewInstance } from "react-native";
+import { useTourTarget } from "../tour/tourTargets";
+import { useTourStore } from "../../store/useTourStore";
 import Constants from "expo-constants";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -174,6 +176,16 @@ export function ProfileScreen() {
 
   const toggleReminder = useReminderToggle();
 
+  // The app tour scrolls here to point at the reminders; Explore can replay it.
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const notificationsTarget = useTourTarget("profile.notifications", { scrollRef });
+  const queueTour = useTourStore((s) => s.queue);
+  const replayTour = () => {
+    // From the top: the tour starts on Today and comes back here.
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    queueTour();
+  };
+
   const openLegal = (page: LegalPage) => {
     Linking.openURL(legalUrl(page, locale)).catch(() => undefined);
   };
@@ -195,6 +207,7 @@ export function ProfileScreen() {
   return (
     <ScreenWrapper>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -242,6 +255,13 @@ export function ProfileScreen() {
             title={t("reports.title")}
             subtitle={t("reports.navSub")}
             onPress={() => router.push("/reports" as Href)}
+          />
+          <NavCard
+            icon="map-outline"
+            tone="mint"
+            title={t("tour.replayTitle")}
+            subtitle={t("tour.replaySub")}
+            onPress={replayTour}
           />
         </EnterView>
 
@@ -325,69 +345,72 @@ export function ProfileScreen() {
               </AppText>
             </View>
             <View style={styles.sep} />
-            <View style={styles.settingRow}>
-              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
-                {t("profile.reminderDaily")}
-              </AppText>
-              <GoldToggle
-                value={reminders.daily}
-                onChange={(on) => toggleReminder("daily", on)}
-                accessibilityLabel={t("profile.reminderDaily")}
-              />
-            </View>
-            {reminders.daily ? (
-              <>
-                <View style={styles.sep} />
-                <PressableScale
-                  onPress={() => setTimeOpen(true)}
-                  scaleTo={0.98}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t("profile.reminderTime")}: ${reminderTime}`}
-                >
-                  <View style={styles.settingRow}>
-                    <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
-                      {t("profile.reminderTime")}
-                    </AppText>
-                    <AppText variant="heading" color={colors.text.accent}>
-                      {reminderTime}
-                    </AppText>
-                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
-                  </View>
-                </PressableScale>
-              </>
-            ) : null}
-            <View style={styles.sep} />
-            <View style={styles.settingRow}>
-              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
-                {t("profile.reminderIntention")}
-              </AppText>
-              <GoldToggle
-                value={reminders.intention}
-                onChange={(on) => toggleReminder("intention", on)}
-                accessibilityLabel={t("profile.reminderIntention")}
-              />
-            </View>
-            <View style={styles.sep} />
-            <View style={styles.settingRow}>
-              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
-                {t("profile.reminder369")}
-              </AppText>
-              <GoldToggle
-                value={!!reminders.practice369}
-                onChange={(on) => toggleReminder("practice369", on)}
-                accessibilityLabel={t("profile.reminder369")}
-              />
-            </View>
-            <View style={styles.sep} />
-            <View style={styles.settingRow}>
-              <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
-                {t("profile.reminderMoments")}
-              </AppText>
-              <GoldToggle
-                value={!!reminders.skyMoments}
-                onChange={(on) => toggleReminder("skyMoments", on)}
-                accessibilityLabel={t("profile.reminderMoments")}
-              />
+            {/* The app tour points here: every reminder lives in this block. */}
+            <View {...notificationsTarget}>
+              <View style={styles.settingRow}>
+                <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                  {t("profile.reminderDaily")}
+                </AppText>
+                <GoldToggle
+                  value={reminders.daily}
+                  onChange={(on) => toggleReminder("daily", on)}
+                  accessibilityLabel={t("profile.reminderDaily")}
+                />
+              </View>
+              {reminders.daily ? (
+                <>
+                  <View style={styles.sep} />
+                  <PressableScale
+                    onPress={() => setTimeOpen(true)}
+                    scaleTo={0.98}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t("profile.reminderTime")}: ${reminderTime}`}
+                  >
+                    <View style={styles.settingRow}>
+                      <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                        {t("profile.reminderTime")}
+                      </AppText>
+                      <AppText variant="heading" color={colors.text.accent}>
+                        {reminderTime}
+                      </AppText>
+                      <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
+                    </View>
+                  </PressableScale>
+                </>
+              ) : null}
+              <View style={styles.sep} />
+              <View style={styles.settingRow}>
+                <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                  {t("profile.reminderIntention")}
+                </AppText>
+                <GoldToggle
+                  value={reminders.intention}
+                  onChange={(on) => toggleReminder("intention", on)}
+                  accessibilityLabel={t("profile.reminderIntention")}
+                />
+              </View>
+              <View style={styles.sep} />
+              <View style={styles.settingRow}>
+                <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                  {t("profile.reminder369")}
+                </AppText>
+                <GoldToggle
+                  value={!!reminders.practice369}
+                  onChange={(on) => toggleReminder("practice369", on)}
+                  accessibilityLabel={t("profile.reminder369")}
+                />
+              </View>
+              <View style={styles.sep} />
+              <View style={styles.settingRow}>
+                <AppText variant="body" color={colors.text.primary} style={styles.settingLabel}>
+                  {t("profile.reminderMoments")}
+                </AppText>
+                <GoldToggle
+                  value={!!reminders.skyMoments}
+                  onChange={(on) => toggleReminder("skyMoments", on)}
+                  accessibilityLabel={t("profile.reminderMoments")}
+                />
+              </View>
             </View>
             {isPremium && PREMIUM_BETA ? (
               <>

@@ -186,6 +186,10 @@ export function PaywallContent({
         {perks.map((perk) => (
           <PerkRow key={perk.key} perk={perk} label={t(perk.key)} />
         ))}
+        {/* "Unlimited" chat has a fair-use cap: say so where it is promised. */}
+        <AppText variant="bodySmall" color={colors.text.tertiary}>
+          {t("paywall.fairUseNote")}
+        </AppText>
       </EnterView>
 
       <EnterView index={2} style={styles.actions}>

@@ -12,6 +12,7 @@ import { usePlanStore } from "../store/usePlanStore";
 import { useSkyMomentsStore } from "../store/useSkyMomentsStore";
 import { useAccountPromptStore } from "../store/useAccountPromptStore";
 import { useHintStore } from "../store/useHintStore";
+import { useTourStore } from "../store/useTourStore";
 import { resetAnalytics } from "./analytics";
 import { astrologyApi } from "./astrologyApi";
 import { clearInterpretationCache } from "./interpretationCache";
@@ -85,6 +86,7 @@ export async function wipeAllLocalData({ keepIdentity }: { keepIdentity: boolean
   useSkyMomentsStore.getState().reset();
   useAccountPromptStore.getState().reset();
   useHintStore.getState().reset();
+  useTourStore.getState().reset();
   await resetAnalytics();
   useAppStore.getState().reset();
 

@@ -10,7 +10,9 @@ import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { EnterView } from "../../lib/motion";
 import { useTranslation, type TranslationKey } from "../../i18n";
-import { useAppStore } from "../../store/useAppStore";
+import { AI_CONSENT_VERSION, useAppStore } from "../../store/useAppStore";
+import { useBirthDto } from "../../hooks/useBirthDto";
+import { prefetchDailyInsight } from "../../services/interpretationCache";
 import { useOnboardingDraft } from "../../store/useOnboardingDraft";
 import { useReminderToggle } from "../reminders/useReminderToggle";
 import { syncProfileMeta } from "../../services/auth/account";
@@ -102,7 +104,7 @@ export function TourScreen() {
 }
 
 function ReadyPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const router = useRouter();
   const profile = useOnboardingDraft((s) => s.profile);
   const name = useOnboardingDraft((s) => s.name);
@@ -113,12 +115,18 @@ function ReadyPage() {
   const finishing = useRef(false);
   // Optional, one tap; only the enum goes to analytics, once, when onboarding completes.
   const [heardFrom, setHeardFrom] = useState<AcquisitionSource | null>(null);
+  const dto = useBirthDto();
+  const aiConsentCurrent = useAppStore((s) => !!s.aiConsentAt && s.aiConsentVersion >= AI_CONSENT_VERSION);
 
   const finish = (then?: Href) => {
     if (!profile || finishing.current) return;
     finishing.current = true;
     // Flipping `hasOnboarded` swaps the protected stacks; the tabs open on Sky.
     completeOnboarding(name.trim() || "Traveler", profile);
+    // Warm the day's reading now that onboarding is done (it also counts the
+    // day's SKY_READ, which must not land while still onboarding), so Today
+    // opens with it instead of a loader. Only with the AI notice accepted.
+    if (dto && aiConsentCurrent) prefetchDailyInsight(dto, locale);
     track("onboarding_completed");
     if (heardFrom) track("acquisition_source", { source: heardFrom });
     clearDraft();

@@ -105,6 +105,8 @@ export function SpringBottomSheet({
   const from = useSharedValue<SheetOrigin | null>(null);
   const to = useSharedValue<SheetOrigin | null>(null);
   const cardRef = useRef<ViewInstance>(null);
+  /** Origin mode: the card's layout (parent coordinates) when `to` was measured. */
+  const measuredLayout = useRef<SheetOrigin | null>(null);
   const pushSheet = useUiStore((s) => s.pushSheet);
   const popSheet = useUiStore((s) => s.popSheet);
 
@@ -136,6 +138,7 @@ export function SpringBottomSheet({
       offset.value = 0;
       morph.value = 0;
       to.value = null;
+      measuredLayout.current = null;
       from.value = origin ?? null;
       // Never measured (no layout event, zero rect): fall back to the plain rise.
       const fallback = setTimeout(() => {
@@ -153,15 +156,30 @@ export function SpringBottomSheet({
 
   /** Origin mode: measure where the sheet landed, then grow out of the opener. */
   const onCardLayout = useCallback(
-    (_e: LayoutChangeEvent) => {
+    (e: LayoutChangeEvent) => {
       if (!morphing || closing.value || morphMode.value !== 1) return;
-      // Measure only while untransformed: before the first run, or at rest.
-      if (to.value && morph.value !== 1) return;
+      const layout = e.nativeEvent.layout;
+      const target = to.value;
+      const base = measuredLayout.current;
+      if (target && base) {
+        // Already measured and the content changed size (it arrived late, or
+        // grew): follow it by the layout delta, which no transform affects, so
+        // the morph aims at the sheet's real rect even mid-flight.
+        to.value = {
+          x: target.x + layout.x - base.x,
+          y: target.y + layout.y - base.y,
+          width: layout.width,
+          height: layout.height,
+        };
+        measuredLayout.current = layout;
+        return;
+      }
+      // The first measure runs while untransformed (the card hides until then).
       cardRef.current?.measureInWindow((x, y, width, height) => {
-        if (!width || !height || closing.value || morphMode.value !== 1) return;
-        const first = to.value === null;
+        if (!width || !height || closing.value || morphMode.value !== 1 || to.value !== null) return;
+        measuredLayout.current = layout;
         to.value = { x, y, width, height };
-        if (first) morph.value = withSpring(1, springOf("sheet"));
+        morph.value = withSpring(1, springOf("sheet"));
       });
     },
     [morphing, morph, morphMode, closing, to],

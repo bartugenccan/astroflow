@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef } from "react";
 import { StyleSheet, View, type ViewInstance } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
@@ -147,14 +147,13 @@ export function MomentSheet({ moments: all, openId, origin, onSelect, onClose }:
   const router = useRouter();
   const remindersOn = useAppStore((s) => !!s.reminders.skyMoments);
   const toggleReminder = useReminderToggle();
-  // Keep the last moment while the sheet animates out.
-  const [shown, setShown] = useState<SkyMoment | null>(null);
-  useEffect(() => {
-    const m = moments.find((x) => x.id === openId);
-    if (m) setShown(m);
-  }, [openId, moments]);
-
-  const m = shown;
+  // The body is derived in the same render that opens the sheet, so the sheet
+  // is measured (and grows) with its content already in place. The last moment
+  // is kept so the body stays put while the sheet animates out (openId null).
+  const lastShown = useRef<SkyMoment | null>(null);
+  const current = openId ? (moments.find((x) => x.id === openId) ?? all.find((x) => x.id === openId) ?? null) : null;
+  if (current) lastShown.current = current;
+  const m = current ?? lastShown.current;
   const others = m ? moments.filter((x) => x.id !== m.id).slice(0, 4) : [];
   const house = m ? momentHouseLine(t, locale, m) : null;
   const season =

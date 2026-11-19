@@ -25,7 +25,8 @@ import {
 import type { AuthProviderId, LinkResult } from "../../services/types";
 import { colors, depth, fonts, palette, radii, spacing, surface, typography } from "../../lib/design-system";
 
-const RESEND_SECONDS = 30;
+/** Matches the server's one-code-a-minute rule per address (email-otp-rules.ts). */
+const RESEND_SECONDS = 60;
 const CODE_LENGTH = 6;
 
 type Step = "choose" | "email" | "code";

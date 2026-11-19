@@ -1,4 +1,5 @@
 import { affirmationsEn } from "./affirmations.en";
+import { tourEn } from "./tour.en";
 import { wishEn } from "./manifest.en";
 import { tarotEn } from "./tarot.en";
 import { screensEn } from "./screens.en";
@@ -380,6 +381,7 @@ export const en = {
     perkCompat: "Unlimited compatibility reports",
     perkReadings: "All deep chart readings",
     perkUnlimited: "Unlimited tarot and Aster chats",
+    fairUseNote: "Fair use: up to 100 Aster messages a day.",
     perkManifests: "As many manifests as you like",
     pointsNote: "Chart chapters, spreads and Aster's growth stay free — you earn them with Light.",
     unlock: "Unlock",
@@ -423,6 +425,9 @@ export const en = {
     emptyChat: "Ask me anything — how your day feels, a decision you're weighing, or someone on your mind.",
     limitTitle: "You've used today's free messages",
     limitBody: "Go Premium to keep talking with Aster, unlimited.",
+    fairUseEyebrow: "What a talk today",
+    fairUseTitle: "That's all for today — let's pick it up tomorrow",
+    fairUseBody: "We've shared 100 messages today. I'll be here, rested and curious, first thing tomorrow.",
     sendFailed: "Aster couldn’t answer just now. Your message is back in the box — try again in a moment.",
     topics: {
       love: "Love",
@@ -640,26 +645,7 @@ export const en = {
     Air: "Air",
     Water: "Water",
   },
-  tour: {
-    skip: "Skip",
-    next: "Next",
-    start: "Enter AstroFlow",
-    s1Eyebrow: "Your birth chart",
-    s1Title: "A map of the sky the minute you were born",
-    s1Body: "Everything in the app starts from it. Three parts matter most:",
-    s1Sun: "Sun — your core self, what drives you",
-    s1Moon: "Moon — your feelings and what you need",
-    s1Rising: "Rising — the first impression you give",
-    s2Eyebrow: "Every day",
-    s2Title: "The sky keeps moving — and it touches your chart",
-    s2Body: "When a moving planet lines up with one of yours, astrologers call it a transit. The Today tab shows what the sky is doing to your chart right now, then turns it into your daily guidance.",
-    s3Eyebrow: "Every birthday",
-    s3Title: "Your year, from birthday to birthday",
-    s3Body: "Once a year the Sun returns to exactly where it was when you were born. The chart of that moment — the Solar Return — describes your whole year. It's waiting at the top of the Future tab, next to your weekly and monthly forecast.",
-    s4Eyebrow: "Never lost",
-    s4Title: "Tap ⓘ on any word you don't know",
-    s4Body: "You get a one-line answer first, and the full detail underneath when you want it — plus how it shows up in your own chart. Every term also lives in the Glossary under Profile. Your chart, questions for Aster, affirmations and compatibility are all in the For You tab.",
-  },
+  tour: tourEn,
   synastry: {
     you: "You",
     tapToExplain: "Tap a connection to see what it means.",

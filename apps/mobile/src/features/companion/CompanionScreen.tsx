@@ -39,13 +39,13 @@ import { SpotlightCard } from "../../components/ui/SpotlightCard";
 import { astrologyApi } from "../../services/astrologyApi";
 import { ChatMessage } from "../../services/types";
 import { useBirthDto } from "../../hooks/useBirthDto";
-import { useAppStore, FREE_DAILY_MESSAGES } from "../../store/useAppStore";
+import { useAppStore, FREE_DAILY_MESSAGES, PREMIUM_DAILY_MESSAGES } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
 import { colors, depth, spacing, radii, fonts, motion, palette, surface, typography } from "../../lib/design-system";
 import { todayISO } from "../../lib/dates";
 import { track } from "../../services/analytics";
 import { SUPPORT_EMAIL } from "../../services/config";
-import { isFreeLimit } from "../../services/httpAstrologyApi";
+import { isFairUse, isFreeLimit } from "../../services/httpAstrologyApi";
 
 /** Springy rise for a freshly-sent / freshly-received bubble. */
 const bubbleEnter = FadeInDown.springify()
@@ -88,6 +88,11 @@ export function CompanionScreen() {
   // A bought taste (chatPass, +5) adds to today's free messages.
   const chatPasses = mascot?.passesToday?.chat ?? 0;
   const atLimit = !isPremium && (serverLimited || usedToday >= FREE_DAILY_MESSAGES + chatPasses);
+  /** The server said this Premium user reached today's fair-use cap. */
+  const [serverFairUse, setServerFairUse] = useState<string | null>(null);
+  // Premium "unlimited" still rests after PREMIUM_DAILY_MESSAGES a day: a
+  // friendly stop, never the paywall.
+  const atFairUse = isPremium && (serverFairUse === today || usedToday >= PREMIUM_DAILY_MESSAGES);
   // A bought pass or Premium lifts the server's refusal; the next send asks again.
   useEffect(() => {
     setServerLimited(false);
@@ -138,6 +143,7 @@ export function CompanionScreen() {
   const send = async (text: string) => {
     const clean = text.trim();
     if (!clean || sending || !dto) return;
+    if (atFairUse) return;
     if (atLimit) {
       setPaywall(true);
       return;
@@ -175,6 +181,9 @@ export function CompanionScreen() {
         // The server counted today's free messages (another phone, a reinstall): show the limit.
         setServerLimited(true);
         setPaywall(true);
+      } else if (isFairUse(err)) {
+        // Premium, but today's fair use is spent (counted across phones): rest until tomorrow.
+        setServerFairUse(today);
       } else {
         Alert.alert(t("companion.name"), t("companion.sendFailed"));
       }
@@ -322,6 +331,16 @@ export function CompanionScreen() {
           ) : null}
         </ScrollView>
 
+        {atFairUse ? (
+          <SpotlightCard
+            tone="star"
+            icon="moon"
+            eyebrow={t("companion.fairUseEyebrow")}
+            title={t("companion.fairUseTitle")}
+            body={t("companion.fairUseBody")}
+            style={styles.limitCard}
+          />
+        ) : null}
         {atLimit ? (
           <SpotlightCard
             tone="primary"

@@ -106,6 +106,11 @@ export const FREE_PERSON_CHARTS = 2;
 export const FREE_INTENTIONS = 1;
 /** How many companion messages a free user can send per day. */
 export const FREE_DAILY_MESSAGES = 5;
+/**
+ * Premium fair use: Aster messages per day before "see you tomorrow". Mirrors
+ * PREMIUM_DAILY in apps/api/src/modules/billing/free-tier.ts; change both.
+ */
+export const PREMIUM_DAILY_MESSAGES = 100;
 /** How many tarot readings a free user can draw per day. */
 export const FREE_DAILY_TAROT = 1;
 

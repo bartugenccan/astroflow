@@ -12,6 +12,8 @@ import { TransitsContent } from "../transits/TransitsScreen";
 import { astrologyApi } from "../../services/astrologyApi";
 import type { DailyInsight } from "../../services/types";
 import { useBirthDto } from "../../hooks/useBirthDto";
+import { useCachedAsync } from "../../hooks/useCachedAsync";
+import { dailyInsightKey } from "../../services/interpretationCache";
 import { useMascotStore } from "../../store/useMascotStore";
 import { energyLabel } from "../../lib/astroLanguage";
 import { EnterView } from "../../lib/motion";
@@ -28,29 +30,20 @@ export function SkyTodayScreen() {
   const { t, locale } = useTranslation();
   const dto = useBirthDto();
   const refreshMascot = useMascotStore((s) => s.refresh);
-  const [insight, setInsight] = useState<DailyInsight | null>(null);
-  const [failed, setFailed] = useState(false);
-  const [attempt, setAttempt] = useState(0);
   const [share, setShare] = useState<ShareCardData | null>(null);
+  // The same cached reading Today shows: no second request when it is warm.
+  const {
+    data: insight,
+    error,
+    reload,
+  } = useCachedAsync<DailyInsight>(dto ? dailyInsightKey(dto, locale) : null, () =>
+    astrologyApi.getDailyInsight(dto!, locale),
+  );
+  const failed = !!error;
 
   useEffect(() => {
-    if (!dto) return;
-    let active = true;
-    setFailed(false);
-    astrologyApi
-      .getDailyInsight(dto, locale)
-      .then((ins) => {
-        if (!active) return;
-        setInsight(ins);
-        refreshMascot();
-      })
-      .catch(() => {
-        if (active) setFailed(true);
-      });
-    return () => {
-      active = false;
-    };
-  }, [dto, locale, attempt, refreshMascot]);
+    if (insight) refreshMascot();
+  }, [insight, refreshMascot]);
 
   return (
     <ReadingPage
@@ -65,7 +58,7 @@ export function SkyTodayScreen() {
       <EnterView index={1}>
         {failed && !insight ? (
           <ChunkyCard>
-            <StateView kind="error" compact message={t("today.insightError")} onAction={() => setAttempt((n) => n + 1)} />
+            <StateView kind="error" compact message={t("today.insightError")} onAction={reload} />
           </ChunkyCard>
         ) : !insight ? (
           <ChunkyCard style={styles.loading}>
