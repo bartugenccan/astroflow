@@ -30,3 +30,5 @@ google-play-service-account.json
 *.keystore
 
 .vercel
+.env*
+!.env.example
