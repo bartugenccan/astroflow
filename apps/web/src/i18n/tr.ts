@@ -14,6 +14,7 @@ export const tr: Dict = {
     plans: 'Planlar',
     faq: 'SSS',
     cta: 'Bekleme listesine katıl',
+    ctaStore: 'Uygulamayı indir',
     switchTo: 'English',
     menu: 'Menü',
   },
@@ -23,8 +24,10 @@ export const tr: Dict = {
     tagline:
       'Gökyüzün, yakından okunmuş. Doğduğun andan çıkarılan sakin bir günlük rehber — gerçek harita hesabı, sade kelimelerle.',
     primary: 'Bekleme listesine katıl',
+    primaryStore: 'App Store’dan indir',
     secondary: 'İçinde neler var',
     note: 'iOS & Android · Çok yakında · Ücretsiz başla',
+    noteLive: 'App Store’da · Android çok yakında · Ücretsiz başla',
   },
   phone: {
     greeting: 'Günaydın, Deniz',
@@ -262,7 +265,7 @@ export const tr: Dict = {
             'Verilerini ayrı tutmak ve adil kullanım limitlerini uygulamak için anonim bir kurulum kimliği.',
             'Hesap açmayı seçersen: e-posta adresin, Apple ya da Google hesap kimliğin ve bu servislerin paylaştığı ad.',
             'Uygulamadan anonim kullanım istatistikleri: hangi ekranların açıldığı ve birkaç eylem (örneğin karşılamayı bitirmek, bir yorumu tam açmak, Premium ekranını görmek), uygulamaya özel rastgele bir kimlikle. Seninle ilişkilendirilmez; doğum bilgisi, ad, yer ya da yazdığın hiçbir şey içermez ve reklam için kullanılmaz.',
-            'Abone olursan: satın alma ve abonelik durumun; bunu Apple ya da Google ile abonelik sağlayıcımız anonim bir kimlikle yürütür. Ödeme bilgilerini hiçbir zaman görmeyiz.',
+            'Abone olursan: satın alma ve abonelik durumun; bunu Apple ya da Google ile abonelik sağlayıcımız (RevenueCat) yürütür; Premium’un yeni telefonuna da gelmesi için uygulamanın rastgele kimliğine bağlanır. Ödeme bilgilerini hiçbir zaman görmeyiz.',
             'Çökme ve hata raporları (yığın izi, cihaz modeli, işletim sistemi ve uygulama sürümü). Bunlar seninle ilişkilendirilmez; doğum verisi ya da IP adresi içermez.',
             'Bu web sitesinde: bekleme listesine verdiğin e-posta ve çerez kullanmayan, gizlilik dostu sayfa analitiği.',
           ],
@@ -336,7 +339,7 @@ export const tr: Dict = {
         {
           h: 'Abonelikler ve satın almalar',
           p: [
-            'Beta döneminde (TestFlight ve erken erişim) Premium özellikleri herkese ücretsizdir: hiçbir şey satın alınmaz, fatura kesilmez. Ücretli abonelik başlamadan önce uygulamada haber veririz; beta sırasında açılan hiçbir şey kendiliğinden ücretli aboneliğe dönüşmez.',
+            'Premium aylık ya da yıllık abonelik olarak sunulur. Yıllık plan ücretsiz bir denemeyle başlayabilir; fiyat ve deneme süresi onaylamadan önce gösterilir. Deneme bitmeden en az 24 saat önce iptal etmezsen ücretli yıllık aboneliğe dönüşür.',
             'Premium, App Store ya da Google Play üzerinden otomatik yenilenen bir abonelik olarak sunulur ve onlar tarafından faturalandırılır. Dönem bitmeden en az 24 saat önce iptal edilmezse yenilenir; mağaza hesabı ayarlarından yönetebilir ya da iptal edebilirsin. İadeler mağazanın politikalarına tabidir.',
           ],
         },

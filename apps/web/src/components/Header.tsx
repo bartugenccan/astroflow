@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { type Locale, getDict, otherLocale } from '@/i18n';
 import { LogoMark } from './Icons';
+import { site } from '@/lib/site';
 
 /** `path` is the current page below the locale ('' for home, 'privacy/' …) so the switch keeps you in place. */
 export function Header({ locale, path = '' }: { locale: Locale; path?: string }) {
@@ -25,9 +26,15 @@ export function Header({ locale, path = '' }: { locale: Locale; path?: string })
           <Link href={`/${other}/${path}`} className="lang-switch" hrefLang={other} lang={other}>
             {t.switchTo}
           </Link>
-          <a href={`${home}#waitlist`} className="btn btn-sm header-cta">
-            {t.cta}
-          </a>
+          {site.appStoreUrl ? (
+            <a href="/get/?c=site_header" className="btn btn-sm header-cta">
+              {t.ctaStore}
+            </a>
+          ) : (
+            <a href={`${home}#waitlist`} className="btn btn-sm header-cta">
+              {t.cta}
+            </a>
+          )}
         </div>
       </div>
     </header>

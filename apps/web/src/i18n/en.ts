@@ -12,6 +12,7 @@ export const en = {
     plans: 'Plans',
     faq: 'FAQ',
     cta: 'Join the waitlist',
+    ctaStore: 'Get the app',
     switchTo: 'Türkçe',
     menu: 'Menu',
   },
@@ -21,8 +22,10 @@ export const en = {
     tagline:
       'Your sky, read closely. A quiet daily guide drawn from the moment you were born — real chart math, written into plain words.',
     primary: 'Join the waitlist',
+    primaryStore: 'Download on the App Store',
     secondary: "See what's inside",
     note: 'iOS & Android · Coming soon · Free to start',
+    noteLive: 'On the App Store · Android coming soon · Free to start',
   },
   phone: {
     greeting: 'Good morning, Deniz',
@@ -260,7 +263,7 @@ export const en = {
             'An anonymous install identifier, used to keep your data separate and to apply fair-use limits.',
             'If you choose to create an account: your email address, your Apple or Google account identifier, and the name those services share.',
             'Anonymous usage statistics from the app: which screens are opened and a few actions (for example finishing onboarding, opening a reading in full, viewing the Premium screen), with a random app-only identifier. They are not linked to you, never include birth data, names, places or anything you write, and are not used for advertising.',
-            'If you subscribe: your purchase and subscription status, handled by Apple or Google and our subscription provider under an anonymous identifier. We never see your payment details.',
+            'If you subscribe: your purchase and subscription status, handled by Apple or Google and our subscription provider (RevenueCat), linked to your app’s random identifier so Premium follows you to a new phone. We never see your payment details.',
             'Crash and error reports (stack traces, device model, OS and app version). These are not linked to you and contain no birth data or IP address.',
             'On this website: the email you give the waitlist, and privacy-friendly page analytics without cookies.',
           ],
@@ -334,7 +337,7 @@ export const en = {
         {
           h: 'Subscriptions and purchases',
           p: [
-            'During the beta (TestFlight and early access) Premium features are free for everyone: nothing is sold and nothing is billed. We will tell you in the app before paid subscriptions start; nothing you use during the beta turns into a paid subscription on its own.',
+            'Premium comes as a monthly or yearly subscription. The yearly plan can start with a free trial; the price and the trial length are shown before you confirm. If you don’t cancel at least 24 hours before the trial ends, it becomes a paid yearly subscription.',
             'Premium is offered as an auto-renewing subscription through the App Store or Google Play and is billed by them. It renews unless cancelled at least 24 hours before the period ends; manage or cancel it in your store account settings. Refunds follow the store’s policies.',
           ],
         },

@@ -38,14 +38,20 @@ export default async function Home({ params }: { params: Promise<{ locale: strin
               <h1 className="display">{t.hero.title}</h1>
               <p className="lead">{t.hero.tagline}</p>
               <div className="hero-ctas">
-                <a href="#waitlist" className="btn">
-                  {t.hero.primary}
-                </a>
+                {site.appStoreUrl ? (
+                  <a href="/get/?c=site_hero" className="btn">
+                    {t.hero.primaryStore}
+                  </a>
+                ) : (
+                  <a href="#waitlist" className="btn">
+                    {t.hero.primary}
+                  </a>
+                )}
                 <a href="#features" className="btn btn-ghost">
                   {t.hero.secondary}
                 </a>
               </div>
-              <p className="hero-note">{t.hero.note}</p>
+              <p className="hero-note">{site.appStoreUrl ? t.hero.noteLive : t.hero.note}</p>
             </div>
             <PhoneMock t={t.phone} />
           </div>
