@@ -347,6 +347,7 @@ export const tr: Dict = {
           h: 'Adil kullanım',
           p: [
             'Hizmeti güvenilir tutmak için yapay zekâ özelliklerine günlük limitler uygularız. Hizmeti kazımaya, tersine mühendisliğe ya da aşırı yüklemeye çalışma.',
+            'Premium’daki sınırsız Aster sohbeti adil kullanım kapsamında günde en fazla 100 mesajdır; sayım ertesi gün yeniden başlar.',
           ],
         },
         {

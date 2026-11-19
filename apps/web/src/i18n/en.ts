@@ -345,6 +345,7 @@ export const en = {
           h: 'Fair use',
           p: [
             'To keep the service reliable we apply daily limits to AI features. Do not scrape, reverse-engineer or overload the service.',
+            'Premium’s unlimited Aster chat is subject to fair use of up to 100 messages a day; the count starts again the next day.',
           ],
         },
         {
