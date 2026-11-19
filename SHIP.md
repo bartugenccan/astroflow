@@ -78,6 +78,16 @@ Urunun tum guveni bu hesabin dogrulugana dayaniyor. Yayindan once bilinen bir
 dogum haritasi **astro.com ile karsilastirilmali**; en az bir sira disi durum
 (yaz saati gecisi, gece yarisi dogum, yuksek enlem) test edilmeli.
 
+## Preflight (2026-11-19, build 9 oncesi) — submit EDILMEDI
+
+`ship-kit preflight`: 29 gecti / 1 kaldi / 2 uyari. Kalan: hesap silme (bilinen yanlis negatif: uc
+`@Controller('me')` + `@Delete('data')` = `DELETE /me/data`, ship-kit regex'i iki parcali yolu tanimiyor).
+Uyarilar: NODE_ENV/PORT .env.example'da kullanilmiyor gorunuyor (zararsiz), Google Play Data Safety (bu surum yalniz iOS).
+`EXPO_PUBLIC_SUPPORT_EMAIL` mobil .env.example'a eklendi. Elle dogrulama asagidaki listede guncellendi.
+
+Submit edilmeme sebebi: build 9 henuz alinmadi; sandbox satin alma/yenileme/iptal denenmedi (Paid Apps Agreement Processing).
+Web'deki adil kullanim maddesi (Premium sohbet gunde 100 mesaj) canliya alinmadi: web yeniden yayinlanmali.
+
 ## Preflight (2026-11-17) — submit EDILMEDI
 
 `ship-kit preflight`: 27 gecti / 3 kaldi / 2 uyari. Kalanlar: hesap silme (bilinen yanlis negatif, yukarida),
@@ -88,11 +98,11 @@ Elle dogrulama:
 - [x] Gizlilik politikasi aciliyor ve toplanan veriyi anlatiyor (AI saglayicilari, olumlama metni, Sentry, veri silme)
 - [x] App Store Connect App Privacy beyani binary ile tutarli — 2026-11-19 ship.config.json dataTypes.appStore ile dolduruldu (tracking yok)
 - [x] Uygulama icinde hesap silme calisiyor (cihazda denendi)
-- [ ] AI kullanimi ve AI'a giden veri App Privacy'de beyan edildi (5.1.2(i)) — ASC beyaniyla birlikte bekliyor
+- [x] AI kullanimi ve AI'a giden veri App Privacy'de beyan edildi (5.1.2(i)) — 2026-11-19 kullanici dogruladi; Purchase History (Linked) eklendi ve Publish edildi
 - [x] Privacy manifest: app.json `ios.privacyManifests` + SDK'larin kendi manifestleri (ship.config.json envanteri)
-- [ ] Sandbox satin alma/yenileme/iptal — beta'da odeme yok (PREMIUM_BETA), odeme fazinda
-- [ ] Google Play Data Safety formu — gonderilmedi
-- [ ] Ekran goruntuleri — EN 5/5 ve TR 4/5 hazir (`apps/mobile/store/screenshots/out`, 1320x2868); TR 04 (YAZ) icin iPhone'dan manifest yazma ekrani cekilmeli
+- [ ] Sandbox satin alma/yenileme/iptal — 2026-11-19: abonelikler kodlu ama Paid Apps Agreement hala Processing ve build 9 yok; build 9 TestFlight'ta denenmeden SUBMIT YOK
+- [ ] Google Play Data Safety formu — gonderilmedi; 2026-11-19 karari: bu surum yalniz iOS, Android cikisindan once doldurulacak (iOS submit'ini engellemez)
+- [x] Ekran goruntuleri — en+tr 5/5 ASC'ye yuklendi (2026-11-19, 6.3"); kullanici build 9 ile guncel saydi. Abonelik inceleme gorseli build 9 paywall'i ile degistirilecek
 
 Submit edilmeme sebebi: production API (Railway) ayakta degil, `eas.json` iOS submit alanlari bos,
 ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
