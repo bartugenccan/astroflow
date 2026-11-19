@@ -79,14 +79,14 @@ export function mockAffirmation(goalText: string, locale: Locale, variant = 0): 
 export function mockIntentionSuggestions(locale: Locale): IntentionSuggestion[] {
   return locale === "tr"
     ? [
-        { goal: "Her gün 10 dakika kendime ayırmak", why: "Şu an sakinliğe alan açmak sana iyi gelir.", lifeArea: "energy" },
-        { goal: "Bir işi sonuna kadar bitirmek", why: "İstikrarlı çaba bu dönemde ödüllendiriliyor.", lifeArea: "career" },
-        { goal: "Sevdiğim birine ulaşmak", why: "Bir bağı derinleştirmek için uygun bir zaman.", lifeArea: "love" },
+        { goal: "Her gün 10 dakikayı kendime ayırıyorum", why: "Şu an sakinliğe alan açmak sana iyi gelir.", lifeArea: "energy" },
+        { goal: "Başladığım işi sonuna kadar bitiriyorum", why: "İstikrarlı çaba bu dönemde ödüllendiriliyor.", lifeArea: "career" },
+        { goal: "Sevdiğim insanlarla yakın bağlar kuruyorum", why: "Bir bağı derinleştirmek için uygun bir zaman.", lifeArea: "love" },
       ]
     : [
-        { goal: "Take 10 quiet minutes for myself daily", why: "Making room for calm serves you right now.", lifeArea: "energy" },
-        { goal: "Finish one thing I keep putting off", why: "Steady effort is rewarded this stretch.", lifeArea: "career" },
-        { goal: "Reach out to someone I care about", why: "It's a good time to deepen a connection.", lifeArea: "love" },
+        { goal: "I take 10 quiet minutes for myself every day", why: "Making room for calm serves you right now.", lifeArea: "energy" },
+        { goal: "I finish what I start", why: "Steady effort is rewarded this stretch.", lifeArea: "career" },
+        { goal: "I stay close to the people I love", why: "It's a good time to deepen a connection.", lifeArea: "love" },
       ];
 }
 

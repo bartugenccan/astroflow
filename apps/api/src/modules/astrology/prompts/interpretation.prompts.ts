@@ -652,9 +652,9 @@ export function intentionSuggestionsPrompt(
   const user =
     locale === 'tr'
       ? `Güneş ${sun}, Ay ${moon}. Bugünkü transitler kişinin şu an neyle uğraştığını gösteriyor: ${transitLine}.${mem} ` +
-        `Bu ana uygun, sade dille 3 kısa "niyet" (hedef) öner — jargon yok. Her biri için: goal (kısa hedef ifadesi), why (neden şimdi uygun, sade), lifeArea ('love'|'career'|'money'|'energy'). JSON: { "suggestions": [{goal, why, lifeArea}] }.`
+        `Bu ana uygun, sade dille 3 kısa manifest öner — jargon yok. goal, kullanıcının "Olmuş gibi yaz" adımında örnek olarak göreceği cümle: birinci tekil şahıs, şimdiki zaman, zaten gerçekleşmiş gibi, olumlu, en fazla 10 kelime (ör. "Görülen ve değer verilen bir iş yapıyorum"). Emir kipi ("başla", "yap") ya da mastar ("…mak/…mek") kullanma. Her biri için: goal, why (neden şimdi uygun, sade), lifeArea ('love'|'career'|'money'|'energy'). JSON: { "suggestions": [{goal, why, lifeArea}] }.`
       : `Sun ${args.sun}, Moon ${args.moon}. Today's transits show what the person is dealing with now: ${transitLine}.${mem} ` +
-        `Suggest 3 short, plain-language "intentions" (goals) that fit this moment — no jargon. For each: goal (short goal phrase), why (why it fits now, plain), lifeArea ('love'|'career'|'money'|'energy'). JSON: { "suggestions": [{goal, why, lifeArea}] }.`;
+        `Suggest 3 short, plain-language manifestations that fit this moment — no jargon. goal is the sentence the user sees as an example on the "Write it as if it happened" step: first person, present tense, as if already true, positive, at most 10 words (e.g. "I do work that is seen and valued"). No imperatives ("start", "do") and no "to …" goals. For each: goal, why (why it fits now, plain), lifeArea ('love'|'career'|'money'|'energy'). JSON: { "suggestions": [{goal, why, lifeArea}] }.`;
   return {
     user,
     schemaHint:
