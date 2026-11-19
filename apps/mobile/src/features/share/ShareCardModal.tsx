@@ -31,7 +31,7 @@ const PREVIEW_H = CARD_H * SCALE;
  */
 export function ShareCardModal({ visible, onClose, data }: ShareCardModalProps) {
   const { t } = useTranslation();
-  const { ref, share, status } = useShareCard();
+  const { ref, share, status } = useShareCard(data?.variant ?? null);
 
   if (!visible || !data) return null;
 

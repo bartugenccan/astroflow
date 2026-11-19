@@ -48,3 +48,13 @@ export const SUPPORT_EMAIL = (process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? "astroflo
 export function legalUrl(page: LegalPage, locale: "en" | "tr"): string {
   return `${SITE_URL}/${locale}/${page}`;
 }
+
+/**
+ * The short link printed on share cards (e.g. "astroflow-web.vercel.app/s").
+ * apps/web serves /s as a redirect to the store tagged with campaign "share",
+ * falling back to the waitlist where the app isn't available. Follows
+ * EXPO_PUBLIC_SITE_URL, so it switches by itself once the real domain exists.
+ */
+export function shareLinkLabel(): string {
+  return `${SITE_URL.replace(/^https?:\/\//, "")}/s`;
+}

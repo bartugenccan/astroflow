@@ -5,6 +5,7 @@ import { captureRef, releaseCapture } from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
 import * as Haptics from "expo-haptics";
 import { CARD_W, CARD_H } from "./ShareableCard";
+import { track, type ShareCardVariant } from "../../services/analytics";
 
 export type ShareStatus = "idle" | "capturing" | "sharing" | "error" | "unavailable";
 
@@ -12,7 +13,7 @@ export type ShareStatus = "idle" | "capturing" | "sharing" | "error" | "unavaila
  * Captures the referenced off-screen card at 3× (→ 1080×1920 PNG) and opens the
  * OS share sheet. The ref must point at a mounted, laid-out ShareableCard.
  */
-export function useShareCard() {
+export function useShareCard(variant: ShareCardVariant | null) {
   const ref = useRef<ViewInstance>(null);
   const [status, setStatus] = useState<ShareStatus>("idle");
 
@@ -35,6 +36,7 @@ export function useShareCard() {
       });
       setStatus("sharing");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      if (variant) track("share_sheet_opened", { variant });
       await Sharing.shareAsync(uri, {
         mimeType: "image/png",
         UTI: "public.png",
@@ -47,7 +49,7 @@ export function useShareCard() {
       // The card shows a name and chart details — don't leave the image behind in the cache.
       if (uri) releaseCapture(uri);
     }
-  }, []);
+  }, [variant]);
 
   return { ref, share, status };
 }

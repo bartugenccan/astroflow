@@ -93,6 +93,8 @@ export const skypathEn = {
     remindAsk: "Shall I remind you to read your sky each day?",
     remindOn: "Daily reminder is on.",
     remindCta: "Remind me",
+    heardAsk: "How did you hear about us?",
+    heard: { tiktok: "TikTok", instagram: "Instagram", friend: "A friend", app_store: "App Store", other: "Other" },
     toSky: "Go to my sky",
     toManifest: "Write my first manifest",
   },

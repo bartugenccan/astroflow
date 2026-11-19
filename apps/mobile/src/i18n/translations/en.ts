@@ -359,7 +359,6 @@ export const en = {
     cta: "Share",
     close: "Close",
     watermark: "AstroFlow",
-    tagline: "astroflow.app",
     dailyEyebrow: "Today's Guidance",
     bigThreeTitle: "The Big Three",
     preparing: "Preparing your card…",

@@ -83,6 +83,12 @@
     "privacyManifest": "gerekli"
    },
    {
+    "name": "expo-store-review",
+    "purpose": "Sistem puanlama istegi (SKStoreReviewController); Aster buyudugunde veya manifest gerceklestiginde, cihaz basina en fazla 120 gunde bir. Son istek zamani yalnizca cihazda (AsyncStorage)",
+    "dataSent": "yok",
+    "privacyManifest": "gerekmez"
+   },
+   {
     "name": "Open-Meteo Geocoding API",
     "purpose": "Dogum yeri / etkinlik yeri sehir aramasi",
     "dataSent": "Yazilan sehir arama metni, dil kodu ve cihaz IP adresi (HTTPS, anahtarsiz, cihaz kimligi yok)",

@@ -28,6 +28,15 @@ import { unlockLines } from "./unlockCopy";
 import { DiscoveryContent, constellationName } from "./JourneyDiscovery";
 import { ProtectAsterSheet } from "./ProtectAsterSheet";
 import { safeInAppLink } from "../../lib/safeLink";
+import { maybeAskForReview } from "../../lib/reviewPrompt";
+
+/** Lets the celebration finish leaving before the system sheet may appear. */
+const REVIEW_DELAY_MS = 700;
+/**
+ * Only from "glimmer" (500 Işık) on: "starling" (150) can arrive on day one,
+ * and the one ask per 120 days shouldn't be spent on a brand-new user.
+ */
+const REVIEW_MIN_STAGE = 3;
 
 /**
  * App-wide celebrations, fed by useMascotStore's queue, one at a time, in
@@ -58,6 +67,13 @@ export function CelebrationHost() {
     if (item?.type === "hatch") {
       const resting = useMascotStore.getState().state?.eclipse?.active ?? false;
       offer("hatch", { resting });
+    } else if ((item?.type === "levelUp" && (item.delta?.stage ?? 0) >= REVIEW_MIN_STAGE) || item?.type === "manifested") {
+      // Right after a happy beat, once the queue is clear and no account prompt is up.
+      setTimeout(() => {
+        if (useMascotStore.getState().queue.length === 0 && !useAccountPromptStore.getState().open) {
+          void maybeAskForReview();
+        }
+      }, REVIEW_DELAY_MS);
     }
   }, [dismiss, offer]);
 

@@ -362,7 +362,6 @@ export const tr: TranslationShape = {
     cta: "Paylaş",
     close: "Kapat",
     watermark: "AstroFlow",
-    tagline: "astroflow.app",
     dailyEyebrow: "Günün Rehberliği",
     bigThreeTitle: "Büyük Üçlü",
     preparing: "Kartın hazırlanıyor…",

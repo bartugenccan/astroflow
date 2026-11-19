@@ -95,6 +95,8 @@ export const skypathTr: typeof skypathEn = {
     remindAsk: "Her gün gökyüzünü okumayı hatırlatayım mı?",
     remindOn: "Günlük hatırlatma açık.",
     remindCta: "Hatırlat",
+    heardAsk: "Bizi nereden duydun?",
+    heard: { tiktok: "TikTok", instagram: "Instagram", friend: "Arkadaş", app_store: "App Store", other: "Diğer" },
     toSky: "Gökyüzüme git",
     toManifest: "İlk manifestimi yaz",
   },

@@ -46,7 +46,16 @@ export interface AnalyticsEvents {
   purchase_completed: { product: string };
   purchase_failed: { reason: string };
   purchases_restored: { active: boolean };
+  /** The OS share sheet was opened for a card (iOS can't tell us whether it was actually sent). */
+  share_sheet_opened: { variant: ShareCardVariant };
+  /** Onboarding "where did you hear about us?" — one tap from a fixed list, never free text. */
+  acquisition_source: { source: AcquisitionSource };
 }
+
+export type ShareCardVariant = "daily" | "bigThree" | "compatibility";
+
+export const ACQUISITION_SOURCES = ["tiktok", "instagram", "friend", "app_store", "other"] as const;
+export type AcquisitionSource = (typeof ACQUISITION_SOURCES)[number];
 
 export function track<E extends keyof AnalyticsEvents>(event: E, ...props: AnalyticsEvents[E] extends Record<string, never> ? [] : [AnalyticsEvents[E]]): void {
   if (!posthog) return;

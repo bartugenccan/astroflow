@@ -9,6 +9,7 @@ import { StarDivider } from "../../components/ui/StarDivider";
 import { ScoreRing } from "../../components/ScoreRing";
 import { useTranslation } from "../../i18n";
 import { DailyInsight } from "../../services/types";
+import { shareLinkLabel } from "../../services/config";
 import { colors, gradients, fonts, spacing, radii, surface } from "../../lib/design-system";
 
 // Logical card size (9:16). Captured at 3× → 1080×1920 PNG.
@@ -75,7 +76,7 @@ export const ShareableCard = forwardRef<ViewInstance, { data: ShareCardData }>(
             {t("share.watermark")}
           </AppText>
           <AppText style={styles.tagline} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-            {t("share.tagline")}
+            {shareLinkLabel()}
           </AppText>
         </View>
       </View>

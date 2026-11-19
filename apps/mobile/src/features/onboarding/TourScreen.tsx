@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
@@ -18,13 +18,23 @@ import { colors, layout, palette, radii, spacing, type Tone } from "../../lib/de
 import { LessonFlow } from "../skypath/LessonFlow";
 import { clearTourCheckpoint, readTourCheckpoint, writeTourCheckpoint } from "./tourCheckpoint";
 import { clearDraftCheckpoint } from "./draftCheckpoint";
-import { track } from "../../services/analytics";
+import { track, ACQUISITION_SOURCES, type AcquisitionSource } from "../../services/analytics";
+import { Chip } from "../../components/ui/Chip";
 
 /** Checkpointed pages: the first lesson, then "you're ready". */
 const LESSON = 0;
 const READY = 1;
 
 const EGG_STAGE = 0;
+
+/** Typed keys (no cast) so a missing label fails tsc instead of showing a raw key. */
+const HEARD_LABEL: Record<AcquisitionSource, TranslationKey> = {
+  tiktok: "skypath.ready.heard.tiktok",
+  instagram: "skypath.ready.heard.instagram",
+  friend: "skypath.ready.heard.friend",
+  app_store: "skypath.ready.heard.app_store",
+  other: "skypath.ready.heard.other",
+};
 
 const PROMISES: { icon: keyof typeof Ionicons.glyphMap; tone: Tone; key: "p1" | "p2" | "p3" }[] = [
   { icon: "map", tone: "sky", key: "p1" },
@@ -101,6 +111,8 @@ function ReadyPage() {
   const dailyOn = useAppStore((s) => s.reminders.daily);
   const toggleReminder = useReminderToggle();
   const finishing = useRef(false);
+  // Optional, one tap; only the enum goes to analytics, once, when onboarding completes.
+  const [heardFrom, setHeardFrom] = useState<AcquisitionSource | null>(null);
 
   const finish = (then?: Href) => {
     if (!profile || finishing.current) return;
@@ -108,6 +120,7 @@ function ReadyPage() {
     // Flipping `hasOnboarded` swaps the protected stacks; the tabs open on Sky.
     completeOnboarding(name.trim() || "Traveler", profile);
     track("onboarding_completed");
+    if (heardFrom) track("acquisition_source", { source: heardFrom });
     clearDraft();
     clearTourCheckpoint();
     clearDraftCheckpoint();
@@ -119,7 +132,7 @@ function ReadyPage() {
   return (
     <ScreenWrapper variant="dense" edges={["top", "bottom"]}>
       <View style={styles.root}>
-        <View style={styles.body}>
+        <ScrollView style={styles.flex} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
           <EnterView>
             <AsterCameo text={t("skypath.ready.aster")} stage={EGG_STAGE} size={84} action="cheer" />
           </EnterView>
@@ -163,7 +176,24 @@ function ReadyPage() {
               )}
             </ChunkyCard>
           </EnterView>
-        </View>
+          <EnterView index={6} style={styles.heard}>
+            <AppText variant="label" color={colors.text.secondary}>
+              {t("skypath.ready.heardAsk")}
+            </AppText>
+            <View style={styles.heardRow}>
+              {ACQUISITION_SOURCES.map((source) => (
+                <Chip
+                  key={source}
+                  label={t(HEARD_LABEL[source])}
+                  tone="primary"
+                  selected={heardFrom === source}
+                  onPress={() => setHeardFrom((cur) => (cur === source ? null : source))}
+                  style={styles.heardChip}
+                />
+              ))}
+            </View>
+          </EnterView>
+        </ScrollView>
         <View style={styles.footer}>
           <ChunkyButton label={t("skypath.ready.toSky")} onPress={() => finish()} size="lg" variant="sky" />
           <ChunkyButton
@@ -180,7 +210,10 @@ function ReadyPage() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, paddingHorizontal: layout.gutter, paddingTop: spacing.lg },
-  body: { flex: 1, gap: spacing.lg },
+  body: { flexGrow: 1, gap: spacing.lg, paddingBottom: spacing.lg },
+  heard: { gap: spacing.sm },
+  heardRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  heardChip: { minHeight: 44 },
   flex: { flex: 1, minWidth: 0 },
   promises: { gap: spacing.md },
   promise: { flexDirection: "row", alignItems: "center", gap: spacing.md },
