@@ -42,6 +42,9 @@ const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL ?? "https://astroflow-web.ver
 
 export type LegalPage = "privacy" | "terms" | "support";
 
+/** Where in-app reports (e.g. a harmful AI answer) go. Same address as the website's support page. */
+export const SUPPORT_EMAIL = (process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? "astroflowhq@gmail.com").trim();
+
 export function legalUrl(page: LegalPage, locale: "en" | "tr"): string {
   return `${SITE_URL}/${locale}/${page}`;
 }

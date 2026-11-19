@@ -22,6 +22,7 @@ import { primaryHouseTag } from "../reading/houseThemes";
 import { formatDayMonthYear, formatMonthYear } from "../../lib/dates";
 import { useTranslation, TranslationKey, TFunction, Locale } from "../../i18n";
 import { colors, spacing, radii } from "../../lib/design-system";
+import { DeepText } from "../../components/ui/DeepText";
 
 /**
  * "Your Birthday Chart" — the Solar Return, written for someone who has never
@@ -148,7 +149,7 @@ function Reading({ data, locale, t, whyOpen, onToggleWhy }: ReadingProps) {
           <AppText variant="lead" color={colors.text.primary}>
             {data.headline}
           </AppText>
-          <AppText variant="body">{data.overview}</AppText>
+          <DeepText variant="body" text={data.overview} />
         </ChunkyCard>
       </EnterView>
 

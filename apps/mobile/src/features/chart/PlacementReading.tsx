@@ -9,6 +9,7 @@ import { Glyph } from "../../components/Glyph";
 import { PlacementInterpretation } from "../../services/types";
 import { useTranslation } from "../../i18n";
 import { colors, spacing, radii } from "../../lib/design-system";
+import { DeepText } from "../../components/ui/DeepText";
 
 interface Props {
   reading?: PlacementInterpretation;
@@ -17,10 +18,12 @@ interface Props {
   onRetry: () => void;
   /** Show the plain-language retrograde note above the reading. */
   retrograde?: boolean;
+  /** Centred suits a short line under a glyph; a reading inside a card reads better left-aligned. */
+  align?: "center" | "left";
 }
 
 /** The AI paragraph shown in the chart's planet detail sheet. */
-export function PlacementReading({ reading, loading, error, onRetry, retrograde }: Props) {
+export function PlacementReading({ reading, loading, error, onRetry, retrograde, align = "center" }: Props) {
   const { t } = useTranslation();
 
   // Keep one stable outer container across all three states so the loaded text
@@ -55,9 +58,12 @@ export function PlacementReading({ reading, loading, error, onRetry, retrograde 
       ) : error && !reading ? (
         <StateView kind="error" compact message={t("reading.error")} onAction={onRetry} />
       ) : (
-        <AppText variant="lead" style={styles.text}>
-          {reading?.text ?? ""}
-        </AppText>
+        <DeepText
+          variant="lead"
+          text={reading?.text ?? ""}
+          style={[styles.text, align === "left" && styles.textLeft]}
+          align={align}
+        />
       )}
     </View>
   );
@@ -99,5 +105,8 @@ const styles = StyleSheet.create({
   text: {
     textAlign: "center",
     marginTop: spacing.sm,
+  },
+  textLeft: {
+    textAlign: "left",
   },
 });

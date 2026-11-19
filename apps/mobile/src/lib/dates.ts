@@ -38,6 +38,30 @@ export function formatMonthYear(locale: Locale, ym: string): string {
   return `${monthShort(locale, +m[2])} ${m[1]}`;
 }
 
+/**
+ * Formats a calendar day (`"YYYY-MM-DD"`, no time, no zone) with Intl.
+ *
+ * Built as UTC noon and formatted with `timeZone: "UTC"`, so the day printed is
+ * the day stored whatever the device zone is. A local-midnight `Date` is not
+ * safe: in Türkiye (UTC+3) 24 Sep 00:00 is 23 Sep 21:00 UTC, and a Hermes Intl
+ * that formats in UTC prints "23 Eyl" for a birthday picked as the 24th.
+ * Returns `null` for anything that is not a calendar day.
+ */
+export function formatCalendarDate(
+  iso: string | null | undefined,
+  locale: Locale | string,
+  options: Intl.DateTimeFormatOptions,
+): string | null {
+  const m = iso ? /^(\d{4})-(\d{2})-(\d{2})/.exec(iso) : null;
+  if (!m) return null;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12));
+  try {
+    return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { ...options, timeZone: "UTC" });
+  } catch {
+    return null;
+  }
+}
+
 /** `"2026-03-14"` → `"14 Mar 2026"`. Returns the input if unparseable. */
 export function formatDayMonthYear(locale: Locale, iso: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
@@ -78,17 +102,13 @@ export function addDaysISO(iso: string, n: number): string {
 /** `"2026-09-27"` → `"Sunday, 27 September 2026"` / `"27 Eylül 2026 Pazar"`. Non-ISO strings pass through. */
 export function formatLongDay(iso: string | undefined, locale: Locale, withWeekday = true): string {
   if (!iso) return "";
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!m) return iso;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
-  try {
-    return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  return (
+    formatCalendarDate(iso, locale, {
       ...(withWeekday ? { weekday: "long" as const } : {}),
       day: "numeric",
       month: "long",
       year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
+    }) ?? iso
+  );
 }

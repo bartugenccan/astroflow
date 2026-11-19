@@ -8,6 +8,7 @@ import {
   Keyboard,
   Platform,
   Alert,
+  Linking,
 } from "react-native";
 import type { ScrollViewInstance } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -41,6 +42,9 @@ import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore, FREE_DAILY_MESSAGES } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
 import { colors, depth, spacing, radii, fonts, motion, palette, surface, typography } from "../../lib/design-system";
+import { todayISO } from "../../lib/dates";
+import { track } from "../../services/analytics";
+import { SUPPORT_EMAIL } from "../../services/config";
 
 /** Springy rise for a freshly-sent / freshly-received bubble. */
 const bubbleEnter = FadeInDown.springify()
@@ -63,6 +67,12 @@ export function CompanionScreen() {
   const [sending, setSending] = useState(false);
   const mascot = useMascotStore((s) => s.state);
   const [whyOpen, setWhyOpen] = useState<Record<string, boolean>>({});
+
+  const reportAnswer = (id: string) => {
+    const subject = encodeURIComponent(t("companion.reportSubject"));
+    const body = encodeURIComponent(t("companion.reportBody", { id }));
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`).catch(() => undefined);
+  };
   const [paywall, setPaywall] = useState(false);
   const [kbShown, setKbShown] = useState(false);
   const [history, setHistory] = useState<"loading" | "ready" | "error">("loading");
@@ -70,7 +80,7 @@ export function CompanionScreen() {
   // History loaded on open appears in place; only new bubbles spring in.
   const historyIds = useRef<Set<string>>(new Set());
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
   const usedToday = msgDate === today ? msgCount : 0;
   // A bought taste (chatPass, +5) adds to today's free messages.
   const chatPasses = mascot?.passesToday?.chat ?? 0;
@@ -138,6 +148,7 @@ export function CompanionScreen() {
       const reply = await astrologyApi.sendMessage(dto, clean, locale);
       // Only an answered message counts against the free daily allowance.
       recordMessage();
+      track("companion_message_sent");
       setMessages((m) => [
         ...m,
         {
@@ -264,6 +275,22 @@ export function CompanionScreen() {
                         </Animated.View>
                       ) : null}
                     </>
+                  ) : null}
+                  {!isUser ? (
+                    // Generated content can be reported (App Review 1.2 / 4.7): opens a mail to support.
+                    <PressableScale
+                      onPress={() => reportAnswer(m.id)}
+                      scaleTo={0.94}
+                      hitSlop={12}
+                      style={styles.reportToggle}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("companion.reportA11y")}
+                    >
+                      <Ionicons name="flag-outline" size={12} color={colors.text.tertiary} />
+                      <AppText variant="labelLong" color={colors.text.tertiary}>
+                        {t("companion.report")}
+                      </AppText>
+                    </PressableScale>
                   ) : null}
                 </View>
               </Animated.View>
@@ -444,6 +471,14 @@ const styles = StyleSheet.create({
   },
   dotStatic: {
     opacity: 0.7,
+  },
+  reportToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-end",
+    gap: spacing.xs,
+    marginTop: spacing.xs,
+    minHeight: 32,
   },
   whyToggle: {
     flexDirection: "row",

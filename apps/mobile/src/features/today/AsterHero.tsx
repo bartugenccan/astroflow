@@ -3,6 +3,9 @@ import { StyleSheet, View } from "react-native";
 import { useRouter, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { AsterMascot } from "../../components/aster/AsterMascot";
+import { AsterTapHint } from "../../components/aster/AsterTapHint";
+import { useHintStore, useShowHint } from "../../store/useHintStore";
+import { formatCalendarDate } from "../../lib/dates";
 import { faceLonging } from "../aster/asterCopy";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { AppText } from "../../components/ui/AppText";
@@ -19,6 +22,7 @@ import { useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
 import { useAccountPromptStore } from "../../store/useAccountPromptStore";
 import { asterA11y } from "../aster/asterCopy";
 import { countdown } from "./planCopy";
+import { track } from "../../services/analytics";
 
 /** Aster is the heart of Today (Finch-style): big, centred, on a soft stage. */
 const ASTER_SIZE = 150;
@@ -26,10 +30,7 @@ const ASTER_SIZE = 150;
 /** "2026-11-14" → "14 November" in the reader's language (a local calendar day). */
 export function formatDay(day: string | null, locale: string): string {
   if (!day) return "";
-  const [y, m, d] = day.slice(0, 10).split("-").map(Number);
-  if (!y) return day;
-  const date = new Date(y, (m ?? 1) - 1, d ?? 1);
-  return date.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { day: "numeric", month: "long" });
+  return formatCalendarDate(day, locale, { day: "numeric", month: "long" }) ?? day;
 }
 
 /**
@@ -63,6 +64,9 @@ export function AsterHero({
   const endEclipse = useMascotStore((s) => s.endEclipse);
   const refresh = useMascotStore((s) => s.refresh);
   const offer = useAccountPromptStore((s) => s.offer);
+  const showTapHint = useShowHint("asterTap");
+  const markHintSeen = useHintStore((s) => s.markSeen);
+  const screenActive = useScreenActive();
 
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
@@ -235,7 +239,11 @@ export function AsterHero({
       ) : null}
 
       <PressableScale
-        onPress={() => router.push("/aster" as Href)}
+        onPress={() => {
+          track("aster_opened", { hinted: showTapHint });
+          markHintSeen("asterTap");
+          router.push("/aster" as Href);
+        }}
         scaleTo={0.95}
         haptic="light"
         accessibilityRole="button"
@@ -244,6 +252,9 @@ export function AsterHero({
         style={styles.stage}
       >
         <View style={styles.floor} />
+        {showTapHint && !away ? (
+          <AsterTapHint part="ring" size={ASTER_SIZE} label={t("aster.tapHint")} active={screenActive} />
+        ) : null}
         {away ? (
           <View style={styles.emptySlot}>
             <Ionicons name="telescope" size={40} color={colors.text.tertiary} />
@@ -258,6 +269,9 @@ export function AsterHero({
             size={ASTER_SIZE}
           />
         )}
+        {showTapHint && !away ? (
+          <AsterTapHint part="pill" size={ASTER_SIZE} label={t("aster.tapHint")} active={screenActive} />
+        ) : null}
       </PressableScale>
 
       {state?.hatched ? (

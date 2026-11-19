@@ -12,6 +12,7 @@ import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { PaywallSheet } from "../../components/PaywallSheet";
 import { BackButton } from "../../components/ui/BackButton";
 import { EnterView } from "../../lib/motion";
+import { formatCalendarDate } from "../../lib/dates";
 import { ChartScreen } from "../chart/ChartScreen";
 import { TransitsScreen } from "../transits/TransitsScreen";
 import { savedPersonToDto, usePerson, usePersonChartAccess } from "./savedPerson";
@@ -19,12 +20,7 @@ import { useTranslation } from "../../i18n";
 import { palette, spacing, radii } from "../../lib/design-system";
 
 function formatDate(iso: string, locale: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatCalendarDate(iso, locale, { day: "numeric", month: "short", year: "numeric" }) ?? iso;
 }
 
 /**

@@ -259,6 +259,8 @@ export const en = {
             'What you write in the app: messages to Aster, short memory notes Aster keeps, manifestations and practice notes, tarot questions, affirmation text, people you save for compatibility, and event descriptions for electional searches.',
             'An anonymous install identifier, used to keep your data separate and to apply fair-use limits.',
             'If you choose to create an account: your email address, your Apple or Google account identifier, and the name those services share.',
+            'Anonymous usage statistics from the app: which screens are opened and a few actions (for example finishing onboarding, opening a reading in full, viewing the Premium screen), with a random app-only identifier. They are not linked to you, never include birth data, names, places or anything you write, and are not used for advertising.',
+            'If you subscribe: your purchase and subscription status, handled by Apple or Google and our subscription provider under an anonymous identifier. We never see your payment details.',
             'Crash and error reports (stack traces, device model, OS and app version). These are not linked to you and contain no birth data or IP address.',
             'On this website: the email you give the waitlist, and privacy-friendly page analytics without cookies.',
           ],
@@ -279,7 +281,7 @@ export const en = {
         {
           h: 'Service providers',
           p: [
-            'Hosting and database (our cloud provider); Anthropic and DeepSeek (text generation); Sentry (crash reports); Resend (sign-in codes by email); Apple and Google (optional sign-in); Open-Meteo (city search — receives the city name you type); Vercel (this website and its cookie-free analytics).',
+            'Hosting and database (our cloud provider); Anthropic and DeepSeek (text generation); Sentry (crash reports); PostHog (anonymous usage statistics, EU hosting); RevenueCat (subscription status); Resend (sign-in codes by email); Apple and Google (optional sign-in); Open-Meteo (city search — receives the city name you type); Vercel (this website and its cookie-free analytics).',
           ],
         },
         {

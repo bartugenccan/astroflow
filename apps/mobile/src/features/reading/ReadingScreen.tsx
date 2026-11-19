@@ -37,6 +37,7 @@ import { GlossaryTermId } from "../../lib/glossary";
 import { EnterView } from "../../lib/motion";
 import { useTranslation } from "../../i18n";
 import { colors, spacing, radii, motion } from "../../lib/design-system";
+import { DeepText } from "../../components/ui/DeepText";
 
 interface ReadingScreenProps {
   /** Rendered right under the title, inside the scroll (e.g. the "see your
@@ -152,7 +153,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
               onRetry={bigThree.reload}
               retryLabel={t("reading.retry")}
             >
-              <AppText variant="lead">{bigThree.data?.text}</AppText>
+              <DeepText variant="lead" text={bigThree.data?.text ?? ""} />
             </Section>
           </ChunkyCard>
         </EnterView>
@@ -185,7 +186,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
               onRetry={context.reload}
               retryLabel={t("reading.retry")}
             >
-              <AppText variant="lead">{context.data?.text}</AppText>
+              <DeepText variant="lead" text={context.data?.text ?? ""} />
             </Section>
           </ChunkyCard>
         </EnterView>
@@ -200,7 +201,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
               onRetry={overview.reload}
               retryLabel={t("reading.retry")}
             >
-              <AppText variant="lead">{overview.data?.text}</AppText>
+              <DeepText variant="lead" text={overview.data?.text ?? ""} />
             </Section>
           </ChunkyCard>
         </EnterView>
@@ -298,7 +299,7 @@ export function ReadingScreen({ headerSlot }: ReadingScreenProps = {}) {
               onRetry={nodes.reload}
               retryLabel={t("reading.retry")}
             >
-              <AppText variant="lead">{nodes.data?.text}</AppText>
+              <DeepText variant="lead" text={nodes.data?.text ?? ""} />
             </Section>
           </ChunkyCard>
         </View>

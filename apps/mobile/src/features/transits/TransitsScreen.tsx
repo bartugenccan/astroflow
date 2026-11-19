@@ -40,6 +40,8 @@ import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useTranslation } from "../../i18n";
 import { colors, spacing, gradients } from "../../lib/design-system";
+import { todayISO } from "../../lib/dates";
+import { DeepText } from "../../components/ui/DeepText";
 
 const { width: W } = Dimensions.get("window");
 
@@ -84,7 +86,7 @@ export const TransitsContent = React.memo(function TransitsContent({
   const ownDto = useBirthDto();
   const dto = dtoProp ?? ownDto;
   const key = dto ? dtoKey(dto) : null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
 
   const report = useCachedAsync<TransitReport>(
     key && `report|${key}|${today}`,
@@ -212,7 +214,7 @@ export const TransitsContent = React.memo(function TransitsContent({
             onRetry={overview.reload}
             retryLabel={t("reading.retry")}
           >
-            <AppText variant="lead">{overview.data?.text}</AppText>
+            <DeepText variant="lead" text={overview.data?.text ?? ""} />
           </Loader>
         </ChunkyCard>
       </EnterView>

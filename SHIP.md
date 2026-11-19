@@ -15,7 +15,7 @@ yazilmis kod. Asagidakiler denetimle **dogrulanmis** eksiklerdir.
 | i18n (en + tr) | ✅ |
 | Paylasilabilir kart (`features/share/`) | ✅ dagitim motoru kodda |
 | 5 Prisma migration | ✅ |
-| Auth / JWT, hesap silme ucu | ✅ `DELETE /users/account` |
+| Auth / JWT, hesap silme ucu | ✅ `DELETE /api/v1/me/data` (`privacy.controller.ts`; Profil > Verilerimi sil) |
 | CI, eas.json, Dockerfile, biome, .env.example | ✅ ship-kit apply ile kuruldu |
 
 ## TestFlight beta hazirligi (2026-10-30)
@@ -52,6 +52,7 @@ Dogrulama: scratch API + PGlite + sahte Anthropic ile 17/17 e2e + 4 OTP kontrolu
 - `expo-router` -> `query-string@7` -> `decode-uri-component@0.2` (DoS, yalnizca kendi deep link'lerimiz) ve expo CLI'daki `zod@3` (build araci). `npm audit`'in "duzeltmesi" expo@51'e dusurmek; expo SDK guncellemesinde kapanacak.
 - Device token revocation cache instance basina 60 sn; Railway'de tek instance (`numReplicas: 1`).
 - Tarot 1/gun, companion 5/gun, niyet ve kisi haritasi limitleri hala istemcide — odeme fazinda `daily_quotas` ile sunucuya tasinacak.
+- `npm audit --omit=dev` (2026-11-19): 7 orta, hepsi build araclarinda (`glob`/`minimatch` via expo CLI ve @sentry/bundler-plugins); uygulamaya gitmez.
 - ship-kit "hesap silme ucu bulunamadi" yanlis negatif: regex `@Delete('me')` ariyor; gercek uc `@Controller('me')` + `@Delete('data')` (e2e ile dogrulandi).
 
 ### Railway env (API)
@@ -91,7 +92,7 @@ Elle dogrulama:
 - [x] Privacy manifest: app.json `ios.privacyManifests` + SDK'larin kendi manifestleri (ship.config.json envanteri)
 - [ ] Sandbox satin alma/yenileme/iptal — beta'da odeme yok (PREMIUM_BETA), odeme fazinda
 - [ ] Google Play Data Safety formu — gonderilmedi
-- [ ] Ekran goruntuleri — hazir degil (TestFlight icin sart degil, App Store icin sart)
+- [ ] Ekran goruntuleri — EN 5/5 ve TR 4/5 hazir (`apps/mobile/store/screenshots/out`, 1320x2868); TR 04 (YAZ) icin iPhone'dan manifest yazma ekrani cekilmeli
 
 Submit edilmeme sebebi: production API (Railway) ayakta degil, `eas.json` iOS submit alanlari bos,
 ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
@@ -104,13 +105,13 @@ ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
 | Gizlilik + destek URL yayinda | ✅ (2026-11-17, astroflowhq@gmail.com) |
 | `ship.config.json` URL alanlari dolduruldu | ✅ (astroflow-web.vercel.app, yayinda) |
 | Mock katmani release build disinda, gercek API bagli | ✅ (API URL EAS env ile verilecek) |
-| Odeme SDK entegre, sandbox'ta satin alma calisti | ☐ |
-| Sentry kuruldu | ◐ kod hazir; DSN + EAS SENTRY_AUTH_TOKEN bekleniyor |
+| Odeme SDK entegre, sandbox'ta satin alma calisti | ◐ RevenueCat kodu hazir (2026-11-19, `services/purchases.ts`, `PremiumPlans`, geri yukleme); anahtarlar + urunler + sandbox testi bekleniyor. Sunucu tarafi dogrulama yok (bkz. docs/premium-flow.md) |
+| Sentry kuruldu | ◐ 2026-11-19: projeler `astroflow-mobile` / `astroflow-api` (org bartus-organization), API test hatasi lokalde dogrulandi, EAS env'de DSN var. Bekleyen: Railway `SENTRY_DSN`, EAS `SENTRY_AUTH_TOKEN` (source map) |
 | Yerel hatirlaticilar + AI onayi + yasal linkler | ✅ |
 | Guvenlik denetimi (2026-10-30) | ✅ e2e dogrulandi |
 | Opsiyonel hesap (Apple / Google / e-posta kodu) | ◐ kod hazir; Apple key, Google client id, Resend domain bekleniyor |
 | Odullu reklam (AdMob + SSV) | ☐ |
-| PostHog kuruldu | ☐ |
+| PostHog kuruldu | ◐ 2026-11-19: mobil (anonim, kisi profili yok, GeoIP kapali) + API `$ai_generation` (metin yok). EAS env'de anahtar var; Railway `POSTHOG_API_KEY` bekleniyor |
 | Efemeris astro.com'a karsi dogrulandi | ☐ |
 | Kritik modul testleri yazildi | ☐ |
 | API production'da, `/health` yesil | ✅ (2026-11-17, Railway EU West, astroflowapi-production.up.railway.app; e2e: cihaz kaydi, DeepSeek okuma, veri silme) |

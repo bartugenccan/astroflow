@@ -33,6 +33,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { MomentSheet, SkyMomentCard } from "./SkyMomentCard";
 import { visibleMoments } from "./momentCopy";
 import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
+import { safeInAppLink } from "../../lib/safeLink";
 
 function greetingKey():
   | "today.greetingMorning"
@@ -317,7 +318,10 @@ export function TodayScreen() {
         onClose={() => setDiscoveryOpen(false)}
         discovery={mascot?.journey?.discovery ?? null}
         constellationKey={mascot?.journey?.constellationKey ?? null}
-        onSeeInChart={(link) => router.push(link as Href)}
+        onSeeInChart={(link) => {
+          const href = safeInAppLink(link);
+          if (href) router.push(href);
+        }}
       />
     </ScreenWrapper>
   );

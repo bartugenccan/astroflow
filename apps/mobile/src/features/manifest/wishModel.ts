@@ -9,6 +9,7 @@ import type {
 } from "../../services/types";
 import { daysBetween, lunarProgress, lunarWindow, nextLunarPeak, type LunarWindow } from "../../lib/mascotRules";
 import { LIFE_AREA_HOUSES } from "../../lib/intentionRules";
+import { formatCalendarDate } from "../../lib/dates";
 import { localDay } from "../../store/useAffirmationStore";
 import { useMascotStore } from "../../store/useMascotStore";
 import { moonPhaseKey, type MoonPhaseKey } from "../../components/MoonPhase";
@@ -214,16 +215,16 @@ export function planAffirmationCategory(plan: DailyPlan | null): AffirmationCate
 /** A short local date ("Nov 10" / "10 Kas"); tolerates "YYYY-MM-DD" and ISO stamps. */
 export function shortDate(locale: Locale, value: string | null | undefined): string {
   if (!value) return "";
-  const d = /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ? new Date(Number(value.slice(0, 4)), Number(value.slice(5, 7)) - 1, Number(value.slice(8, 10)))
-    : new Date(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return formatCalendarDate(value, locale, { month: "short", day: "numeric" }) ?? "";
+  }
+  const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "";
   return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { month: "short", day: "numeric" });
 }
 
 export function weekdayShort(locale: Locale, day: string): string {
-  const d = new Date(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)));
-  return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { weekday: "short" });
+  return formatCalendarDate(day, locale, { weekday: "short" }) ?? "";
 }
 
 export function isDoneToday(it: Pick<Intention, "progress">): boolean {

@@ -4,6 +4,7 @@ import type { asterEn, manifestEn } from "./aster.en";
 export const asterTr: typeof asterEn = {
   name: "Aster",
   a11y: "Aster, {{stage}}, {{mood}}",
+  tapHint: "Bana dokun",
   stages: {
     egg: "Kozmik Yumurta",
     spark: "Kıvılcım",

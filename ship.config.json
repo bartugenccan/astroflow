@@ -123,10 +123,28 @@
     "purpose": "E-posta giris kodunun gonderimi (sunucu tarafi)",
     "dataSent": "Alici e-posta adresi ve 6 haneli kod",
     "privacyManifest": "n/a (sunucu tarafi HTTP cagrisi)"
+   },
+   {
+    "name": "posthog-react-native",
+    "purpose": "Urun analitigi (mobil): ekran gorunumleri ve az sayida olay (or. onboarding_completed, reading_go_deeper, paywall_viewed)",
+    "dataSent": "Rastgele anonim kimlik (uygulamaya ozel), olay adi + kucuk enum ozellikler, cihaz modeli/OS/uygulama surumu. identify() cagrilmaz, kisi profili yok (personProfiles never), GeoIP kapali, dogum verisi/ad/yer/kullanici metni GONDERILMEZ. __DEV__'de kapali. Tracking yok.",
+    "privacyManifest": "SDK kendi manifestini getirir; app.json'da ProductInteraction + DeviceID (Analytics) beyan edildi"
+   },
+   {
+    "name": "posthog-node",
+    "purpose": "Sunucu AI cagrisi olcumu ($ai_generation)",
+    "dataSent": "Saglayici, model, ozellik (controller adi), sure, basari/hata turu, girdi/cikti karakter sayisi. Prompt, yanit, kullanici metni GONDERILMEZ. distinct_id = cihaz id'sinin tek yonlu hash'i, kisi profili yok.",
+    "privacyManifest": "n/a (sunucu tarafi)"
+   },
+   {
+    "name": "react-native-purchases (RevenueCat)",
+    "purpose": "Uygulama ici abonelik (Premium), satin alma geri yukleme",
+    "dataSent": "RevenueCat'e: anonim RevenueCat kullanici id'si, satin alma makbuzu/gecmisi, uygulama surumu. Cihaz/hesap kimligimiz GONDERILMEZ. Anahtar yoksa SDK baslatilmaz.",
+    "privacyManifest": "SDK kendi manifestini getirir; app.json'da PurchaseHistory (linked:false) beyan edildi"
    }
   ],
   "dataSafetySubmitted": false,
-  "$note": "PostHog, RevenueCat ve AdMob kurulunca bu envantere EKLENMELIDIR. App Privacy: Contact Info > Email Address ve Identifiers > User ID (linked, App Functionality), Name (linked, App Functionality) eklenmeli. Aster: Usage Data > Product Interaction (linked, App Functionality) - yalnizca olay turu ve gun (or. CHECKIN, AFFIRMATION), kullanici metni yok. Gokyuzu check-in (mood etiketi + 1-5 enerji): sunucuda saklanir ve companion icin AI'ya gider; ihtiyatli beyan Health & Fitness > Health (App Store) ve Health and fitness > Health info (Play), linked, App Functionality. Not yedegi (yalnizca hesapli): User Content > Other User Content (linked, App Functionality), sunucuda sifreli.",
+  "$note": "PostHog ve RevenueCat envantere eklendi (2026-11-19); AdMob kurulursa eklenmeli. App Privacy: Contact Info > Email Address ve Identifiers > User ID (linked, App Functionality), Name (linked, App Functionality) eklenmeli. Aster: Usage Data > Product Interaction (linked, App Functionality) - yalnizca olay turu ve gun (or. CHECKIN, AFFIRMATION), kullanici metni yok. Gokyuzu check-in (mood etiketi + 1-5 enerji): sunucuda saklanir ve companion icin AI'ya gider; ihtiyatli beyan Health & Fitness > Health (App Store) ve Health and fitness > Health info (Play), linked, App Functionality. Not yedegi (yalnizca hesapli): User Content > Other User Content (linked, App Functionality), sunucuda sifreli.",
   "localDataProtection": {
    "keychain": "Cihaz token'i ve useAppStore (dogum tarihi/saati/yeri) expo-secure-store ile, AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY",
    "secureStoreOther": "Tarot okumasi, eleksiyon sorulari, olumlamalar, Gun Kapanisi ve Ay Rituali notlari Keychain/Keystore'da. Hesapsiz kullanicida bu notlar sunucuya gitmez (yalnizca 'yapildi' olayi Aster'a raporlanir). Hesapla giris yapmis kullanicida ayni notlar sifreli yedek olarak sunucuya da yazilir (user_vaults, AES-256-GCM, sunucu anahtari - uctan uca degil; AI'ya gonderilmez; DELETE /me/data ile silinir). (eski AsyncStorage kopyasi ilk acilista tasinip silinir)",
@@ -196,9 +214,10 @@
      "category": "Usage Data > Product Interaction",
      "linked": true,
      "purposes": [
-      "App Functionality"
+      "App Functionality",
+      "Analytics"
      ],
-     "source": "Aster olaylari (mascot_events: tur + gun), yolculuklar, takimyildiz albumu, gunluk plan"
+     "source": "Aster olaylari (mascot_events: tur + gun), yolculuklar, takimyildiz albumu, gunluk plan; PostHog urun analitigi (anonim, kisi profili yok)"
     },
     {
      "category": "Diagnostics > Crash Data",
@@ -215,6 +234,22 @@
       "App Functionality"
      ],
      "source": "Sentry tracing (SENTRY_TRACES_SAMPLE_RATE)"
+    },
+    {
+     "category": "Identifiers > Device ID",
+     "linked": false,
+     "purposes": [
+      "Analytics"
+     ],
+     "source": "PostHog anonim kimligi (uygulamaya ozel rastgele UUID; IDFA degil)"
+    },
+    {
+     "category": "Purchases > Purchase History",
+     "linked": false,
+     "purposes": [
+      "App Functionality"
+     ],
+     "source": "RevenueCat abonelik durumu (anonim RevenueCat id)"
     }
    ],
    "notCollected": [
@@ -299,7 +334,8 @@
      "shared": false,
      "optional": false,
      "purposes": [
-      "App functionality"
+      "App functionality",
+      "Analytics"
      ]
     },
     {
@@ -319,6 +355,16 @@
      "purposes": [
       "App functionality"
      ]
+    },
+    {
+     "category": "Financial info > Purchase history",
+     "collected": true,
+     "shared": false,
+     "optional": false,
+     "purposes": [
+      "App functionality"
+     ],
+     "note": "RevenueCat abonelik durumu"
     }
    ],
    "playSecurity": {

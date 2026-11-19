@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,6 +12,9 @@ import { useTranslation } from "../i18n";
 import { useAppStore } from "../store/useAppStore";
 import { astrologyApi } from "../services/astrologyApi";
 import { PREMIUM_BETA } from "../services/config";
+import { PURCHASES_ENABLED } from "../services/purchases";
+import { track } from "../services/analytics";
+import { PremiumPlans } from "./PremiumPlans";
 import { colors, palette, radii, spacing } from "../lib/design-system";
 
 export type PaywallVariant = "compat" | "forecast" | "premium";
@@ -53,6 +56,10 @@ export function PaywallContent({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
+  useEffect(() => {
+    track("paywall_viewed", { source: variant });
+  }, [variant]);
+
   const title =
     variant === "compat"
       ? t("paywall.compatTitle")
@@ -80,9 +87,16 @@ export function PaywallContent({
 
   const cta = variant === "compat" ? t("paywall.unlock") : t("paywall.unlockPremium");
 
-  // No real payments yet: only dev builds can flip the stub. During the beta
-  // release builds explain that Premium is open; otherwise they say "coming soon".
-  const canStubUnlock = __DEV__;
+  // Dev builds without a RevenueCat key can flip the stub. While Premium is
+  // free for everyone (PREMIUM_BETA) release builds say so; after that they
+  // sell the store's plans, or say "coming soon" when no store key is set.
+  const canStubUnlock = __DEV__ && !PURCHASES_ENABLED;
+  const sellsPlans = PURCHASES_ENABLED && !PREMIUM_BETA && variant !== "compat";
+
+  const purchased = () => {
+    onUnlocked?.();
+    onClose();
+  };
 
   const continueBeta = () => {
     // Subscription features are client-gated: make sure they're open. Compatibility
@@ -178,6 +192,8 @@ export function PaywallContent({
             />
           ) : PREMIUM_BETA ? (
             <ChunkyButton label={t("paywall.betaCta")} onPress={continueBeta} variant="star" size="lg" />
+          ) : sellsPlans ? (
+            <PremiumPlans onPurchased={purchased} />
           ) : (
             <AppText variant="body" center color={colors.text.accent}>
               {t("paywall.comingSoon")}

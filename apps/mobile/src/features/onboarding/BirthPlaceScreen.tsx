@@ -1,6 +1,6 @@
 import { mt } from "../../lib/motion";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, TextInput, ScrollView } from "react-native";
+import { StyleSheet, View, TextInput, ScrollView, Keyboard } from "react-native";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -63,6 +63,8 @@ export function BirthPlaceScreen() {
   }, [query, manual, locale, city]);
 
   const selectCity = (c: City) => {
+    // Picking a city ends the search: drop the keyboard so Continue is visible.
+    Keyboard.dismiss();
     setCity(c);
     setQuery(cityLabel(c));
   };
@@ -108,6 +110,11 @@ export function BirthPlaceScreen() {
               placeholderTextColor={colors.text.tertiary}
               style={styles.searchInput}
               autoCorrect={false}
+              returnKeyType="search"
+              submitBehavior="blurAndSubmit"
+              onSubmitEditing={() => {
+                if (results.length === 1) selectCity(results[0]);
+              }}
               accessibilityLabel={t("onboarding.placeQuestion")}
             />
           </View>
@@ -121,6 +128,7 @@ export function BirthPlaceScreen() {
           <ScrollView
             style={styles.results}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
           >
             {searching ? (
@@ -183,6 +191,7 @@ export function BirthPlaceScreen() {
               placeholder="41.0082"
               placeholderTextColor={colors.text.tertiary}
               keyboardType="numbers-and-punctuation"
+              returnKeyType="done"
               style={styles.coordInput}
               accessibilityLabel={t("onboarding.latitude")}
             />
@@ -197,6 +206,7 @@ export function BirthPlaceScreen() {
               placeholder="28.9784"
               placeholderTextColor={colors.text.tertiary}
               keyboardType="numbers-and-punctuation"
+              returnKeyType="done"
               style={styles.coordInput}
               accessibilityLabel={t("onboarding.longitude")}
             />

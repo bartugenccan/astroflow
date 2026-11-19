@@ -261,6 +261,8 @@ export const tr: Dict = {
             'Uygulamada yazdıkların: Aster’e mesajların, Aster’in tuttuğu kısa hafıza notları, manifestler ve check-in’ler, tarot soruları, olumlama metinleri, uyum için kaydettiğin kişiler ve eleksiyon aramaları için olay açıklamaları.',
             'Verilerini ayrı tutmak ve adil kullanım limitlerini uygulamak için anonim bir kurulum kimliği.',
             'Hesap açmayı seçersen: e-posta adresin, Apple ya da Google hesap kimliğin ve bu servislerin paylaştığı ad.',
+            'Uygulamadan anonim kullanım istatistikleri: hangi ekranların açıldığı ve birkaç eylem (örneğin karşılamayı bitirmek, bir yorumu tam açmak, Premium ekranını görmek), uygulamaya özel rastgele bir kimlikle. Seninle ilişkilendirilmez; doğum bilgisi, ad, yer ya da yazdığın hiçbir şey içermez ve reklam için kullanılmaz.',
+            'Abone olursan: satın alma ve abonelik durumun; bunu Apple ya da Google ile abonelik sağlayıcımız anonim bir kimlikle yürütür. Ödeme bilgilerini hiçbir zaman görmeyiz.',
             'Çökme ve hata raporları (yığın izi, cihaz modeli, işletim sistemi ve uygulama sürümü). Bunlar seninle ilişkilendirilmez; doğum verisi ya da IP adresi içermez.',
             'Bu web sitesinde: bekleme listesine verdiğin e-posta ve çerez kullanmayan, gizlilik dostu sayfa analitiği.',
           ],
@@ -281,7 +283,7 @@ export const tr: Dict = {
         {
           h: 'Hizmet sağlayıcılar',
           p: [
-            'Barındırma ve veritabanı (bulut sağlayıcımız); Anthropic ve DeepSeek (metin üretimi); Sentry (çökme raporları); Resend (e-postayla giriş kodları); Apple ve Google (isteğe bağlı giriş); Open-Meteo (şehir arama — yazdığın şehir adını alır); Vercel (bu web sitesi ve çerezsiz analitiği).',
+            'Barındırma ve veritabanı (bulut sağlayıcımız); Anthropic ve DeepSeek (metin üretimi); Sentry (çökme raporları); PostHog (anonim kullanım istatistikleri, AB’de barındırılır); RevenueCat (abonelik durumu); Resend (e-postayla giriş kodları); Apple ve Google (isteğe bağlı giriş); Open-Meteo (şehir arama — yazdığın şehir adını alır); Vercel (bu web sitesi ve çerezsiz analitiği).',
           ],
         },
         {

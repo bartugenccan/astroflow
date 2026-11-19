@@ -21,7 +21,7 @@ export const navigationIntegration = Sentry.reactNavigationIntegration({
 });
 
 const SENSITIVE_KEY =
-  /birth|latitude|longitude|^lat$|^lng$|^lon$|place|city|coord|message|content|question|text|body|affirmation|memory|displayname|personname|email|^code$|token|authorization/i;
+  /birth|latitude|longitude|^lat$|^lng$|^lon$|place|city|coord|message|content|question|text|body|affirmation|memory|displayname|personname|^name$|label|relationship|query|note|email|^code$|token|authorization/i;
 
 const REDACTED = "[redacted]";
 
@@ -51,6 +51,20 @@ function scrubUrlData(data: Record<string, unknown> | undefined): void {
   if (!data) return;
   for (const k of QUERY_KEYS) delete data[k];
   for (const k of URL_KEYS) if (typeof data[k] === "string") data[k] = stripQuery(data[k] as string);
+}
+
+/**
+ * Error messages can quote what they choked on (a typed question, a city, an
+ * email, coordinates). Keep the shape, drop the payload: quoted text, emails
+ * and long numbers become [redacted], and the message is capped.
+ */
+function scrubMessage(msg: string): string {
+  return msg
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, REDACTED)
+    .replace(/"[^"]{2,}"|'[^']{2,}'|“[^”]{2,}”|‘[^’]{2,}’/g, REDACTED)
+    .replace(/-?\d+\.\d{3,}/g, REDACTED)
+    .replace(/\d{5,}/g, REDACTED)
+    .slice(0, 300);
 }
 
 function scrub(value: unknown, depth = 0): unknown {
@@ -105,6 +119,10 @@ export function initSentry(): void {
         delete event.request.data;
         if (event.request.url) event.request.url = stripQuery(event.request.url);
       }
+      for (const ex of event.exception?.values ?? []) {
+        if (ex.value) ex.value = scrubMessage(ex.value);
+      }
+      if (event.message) event.message = scrubMessage(event.message);
       if (event.extra) event.extra = scrub(event.extra) as typeof event.extra;
       if (event.contexts) {
         // SDK-owned contexts (os, device, app…) drive Sentry's UI; only scrub ours.

@@ -48,6 +48,12 @@ export const screensEn = {
     signEmpty: "None of your planets sit in {{sign}} — its themes still colour the part of life it rules.",
     dismiss: "Hide this note",
     error: "I couldn't draw your chart this time.",
+    sheetEyebrow: "In your chart",
+    sheetIn: "in {{sign}}",
+    factElement: "Element",
+    factHouse: "House",
+    factDegree: "Degree",
+    readingEyebrow: "What it means for you",
   },
   states: {
     transitsError: "I couldn't read today's sky this time.",

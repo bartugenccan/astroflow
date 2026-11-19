@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
@@ -18,6 +18,7 @@ import type { TarotCategory } from "../../services/types";
 import type { SavedTarotReading } from "../../store/useTarotStore";
 import { TAROT_CATEGORIES, tarotCardInfo } from "./deck";
 import { TarotCardFace } from "./TarotCardFace";
+import { track } from "../../services/analytics";
 
 const CATEGORY_ICON: Record<TarotCategory, keyof typeof Ionicons.glyphMap> = {
   general: "sparkles-outline",
@@ -76,6 +77,8 @@ export function CategoryStep({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      automaticallyAdjustKeyboardInsets
     >
       <EnterView style={styles.header}>
         <AppText variant="label" color={colors.text.accent}>
@@ -135,7 +138,10 @@ export function CategoryStep({
           return (
             <EnterView key={c} index={3 + i} style={styles.cell}>
               <PressableScale
-                onPress={() => setCategory(c)}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  setCategory(c);
+                }}
                 scaleTo={0.96}
                 haptic={active ? "none" : "selection"}
                 style={[styles.tile, active && styles.tileActive]}
@@ -175,6 +181,9 @@ export function CategoryStep({
           placeholderTextColor={colors.text.tertiary}
           maxLength={200}
           multiline
+          // A question is one line of intent: Return closes the keyboard instead of adding a newline.
+          returnKeyType="done"
+          submitBehavior="blurAndSubmit"
           style={[styles.input, prefilled && question ? styles.inputPrefilled : null]}
           accessibilityLabel={t("tarot.questionLabel")}
         />
@@ -201,7 +210,14 @@ export function CategoryStep({
                 icon={open ? (k === "three" ? "albums" : "git-branch") : "lock-closed"}
                 tone={k === "three" ? "primary" : "star"}
                 selected={spread === k}
-                onPress={open ? () => setSpread(k) : undefined}
+                onPress={
+                  open
+                    ? () => {
+                        Keyboard.dismiss();
+                        setSpread(k);
+                      }
+                    : undefined
+                }
               />
             );
           })}
@@ -233,7 +249,12 @@ export function CategoryStep({
         <ChunkyButton
           label={t("tarot.start")}
           disabled={!category}
-          onPress={() => category && onStart(category, question.trim(), spread)}
+          onPress={() => {
+            Keyboard.dismiss();
+            if (!category) return;
+            track("tarot_started", { category, spread, asked: question.trim().length > 0 });
+            onStart(category, question.trim(), spread);
+          }}
         />
       )}
     </ScrollView>

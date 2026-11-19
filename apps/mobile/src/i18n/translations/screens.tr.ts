@@ -47,6 +47,12 @@ export const screensTr: typeof screensEn = {
     signEmpty: "Hiçbir gezegenin {{sign}} burcunda değil — yine de bu burcun temaları yönettiği hayat alanına renk katar.",
     dismiss: "Bu notu gizle",
     error: "Bu sefer haritanı çizemedim.",
+    sheetEyebrow: "Haritanda",
+    sheetIn: "{{sign}} burcunda",
+    factElement: "Element",
+    factHouse: "Ev",
+    factDegree: "Derece",
+    readingEyebrow: "Senin için anlamı",
   },
   states: {
     transitsError: "Bu sefer bugünün gökyüzünü okuyamadım.",

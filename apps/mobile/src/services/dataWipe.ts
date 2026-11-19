@@ -11,6 +11,8 @@ import { useReflectionStore } from "../store/useReflectionStore";
 import { usePlanStore } from "../store/usePlanStore";
 import { useSkyMomentsStore } from "../store/useSkyMomentsStore";
 import { useAccountPromptStore } from "../store/useAccountPromptStore";
+import { useHintStore } from "../store/useHintStore";
+import { resetAnalytics } from "./analytics";
 import { astrologyApi } from "./astrologyApi";
 import { clearInterpretationCache } from "./interpretationCache";
 import { resetDeviceToken } from "./deviceAuth";
@@ -82,6 +84,8 @@ export async function wipeAllLocalData({ keepIdentity }: { keepIdentity: boolean
   usePlanStore.getState().reset();
   useSkyMomentsStore.getState().reset();
   useAccountPromptStore.getState().reset();
+  useHintStore.getState().reset();
+  await resetAnalytics();
   useAppStore.getState().reset();
 
   // Last, so the stores' own persistence writes above can't restore anything.

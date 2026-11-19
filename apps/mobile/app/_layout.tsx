@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { Stack, SplashScreen, useNavigationContainerRef } from "expo-router";
+import { Stack, SplashScreen, useNavigationContainerRef, useSegments } from "expo-router";
 import { useFonts } from "expo-font";
 import {
   Nunito_700Bold,
@@ -30,8 +30,11 @@ import { ReminderBridge } from "../src/features/reminders/ReminderBridge";
 import { VaultBridge } from "../src/features/account/VaultBridge";
 import { AiConsentScreen } from "../src/features/consent/AiConsentScreen";
 import { CelebrationHost } from "../src/features/aster/CelebrationHost";
+import { trackScreen } from "../src/services/analytics";
+import { initPurchases } from "../src/services/purchases";
 
 initSentry();
+initPurchases();
 SplashScreen.preventAutoHideAsync();
 
 /** Any render error below the root lands here (and in Sentry) instead of a white screen. */
@@ -42,6 +45,13 @@ function RootLayout() {
   useEffect(() => {
     if (navigationRef) navigationIntegration.registerNavigationContainer(navigationRef);
   }, [navigationRef]);
+
+  // Screen views by route pattern ("(tabs)/today", "lesson/[key]") — never the ids in the URL.
+  const segments = useSegments();
+  const route = segments.join("/");
+  useEffect(() => {
+    trackScreen(route);
+  }, [route]);
 
   const [fontsLoaded, fontError] = useFonts({
     Nunito_700Bold,

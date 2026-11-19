@@ -17,8 +17,9 @@ import { AstroMap } from "../../components/AstroMap";
 import { Glyph } from "../../components/Glyph";
 import { TermInfo } from "../../components/TermInfo";
 import { EnterView } from "../../lib/motion";
+import { formatCalendarDate } from "../../lib/dates";
 import { PlacementRow } from "./PlacementRow";
-import { PlacementReading } from "./PlacementReading";
+import { PlanetDetail } from "./PlanetDetail";
 import { astrologyApi } from "../../services/astrologyApi";
 import {
   CreateBirthProfileDto,
@@ -30,10 +31,10 @@ import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
 import { useCachedAsync } from "../../hooks/useCachedAsync";
 import { dtoKey } from "../../services/interpretationCache";
-import { houseLabel } from "../../lib/astroLanguage";
 import { SIGNS } from "../../lib/zodiac";
 import { useTranslation, type TFunction, type TranslationKey } from "../../i18n";
 import { colors, spacing, gradients, motion } from "../../lib/design-system";
+import { track } from "../../services/analytics";
 
 const { width: W } = Dimensions.get("window");
 
@@ -93,6 +94,10 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp, foc
   const approx = !dtoProp && !!profile?.unknownTime;
 
   const [selected, setSelected] = useState<PlanetPlacement | null>(null);
+  const selectedName = selected?.name;
+  useEffect(() => {
+    if (selectedName) track("planet_opened", { planet: selectedName });
+  }, [selectedName]);
 
   // Cached like every other section, so switching back to "In a picture"
   // renders the wheel instantly instead of re-fetching behind a loader.
@@ -305,40 +310,16 @@ export function ChartScreen({ dto: dtoProp, title, birthLine: birthLineProp, foc
       <SpringBottomSheet
         visible={!!selected}
         onClose={() => setSelected(null)}
-        title={
-          selected
-            ? `${t(`planets.${selected.name}` as "planets.Sun")} · ${t(
-                `signs.${selected.sign}` as "signs.Aries",
-              )}`
-            : undefined
-        }
+        title={selected ? t(`planets.${selected.name}` as "planets.Sun") : undefined}
       >
         {selected ? (
-          <View style={styles.sheetBody}>
-            <SheetReveal delay={0}>
-              <View style={styles.sheetGlyph}>
-                <Glyph name={selected.name} size={44} color={colors.star[200]} />
-              </View>
-            </SheetReveal>
-            <SheetReveal delay={motion.stagger}>
-              <View style={styles.sheetMeta}>
-                <AppText variant="numeric" color={colors.text.secondary} style={styles.shrink}>
-                  {houseLabel(t, locale, selected.house)} · {selected.degree}°
-                  {String(selected.minute).padStart(2, "0")}′
-                </AppText>
-                <TermInfo term="house" size={14} />
-              </View>
-            </SheetReveal>
-            <SheetReveal delay={motion.stagger * 2}>
-              <PlacementReading
-                reading={selectedReading}
-                loading={placementsLoading}
-                error={placementsError}
-                onRetry={placementsQ.reload}
-                retrograde={selected.retrograde}
-              />
-            </SheetReveal>
-          </View>
+          <PlanetDetail
+            placement={selected}
+            reading={selectedReading}
+            loading={placementsLoading}
+            error={placementsError}
+            onRetry={placementsQ.reload}
+          />
         ) : null}
       </SpringBottomSheet>
     </ScreenWrapper>
@@ -390,32 +371,8 @@ function FocusBanner({
   );
 }
 
-/** One staggered block inside the planet sheet — rises + fades as the sheet
- *  materializes, so the content feels summoned rather than dumped in. */
-function SheetReveal({
-  delay,
-  children,
-}: {
-  delay: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <EnterView delay={120 + delay} distance={8} style={styles.sheetBlock}>
-      {children}
-    </EnterView>
-  );
-}
-
 function formatDate(iso: string, locale: string): string {
-  // Build from components (local midnight) — avoids Hermes parsing the string
-  // as UTC, which shifts the date back a day in negative-offset timezones.
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  return dt.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatCalendarDate(iso, locale, { day: "numeric", month: "short", year: "numeric" }) ?? iso;
 }
 
 const styles = StyleSheet.create({
@@ -477,28 +434,5 @@ const styles = StyleSheet.create({
   sep: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.border.hairline,
-  },
-  sheetBody: {
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  sheetBlock: {
-    alignSelf: "stretch",
-    alignItems: "center",
-  },
-  sheetMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    flexWrap: "wrap",
-    gap: spacing.xs,
-  },
-  sheetGlyph: {
-    alignItems: "center",
-    marginBottom: spacing.xs,
-  },
-  sheetText: {
-    textAlign: "center",
-    marginTop: spacing.sm,
   },
 });

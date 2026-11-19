@@ -18,6 +18,7 @@ import { colors, layout, palette, radii, spacing, type Tone } from "../../lib/de
 import { LessonFlow } from "../skypath/LessonFlow";
 import { clearTourCheckpoint, readTourCheckpoint, writeTourCheckpoint } from "./tourCheckpoint";
 import { clearDraftCheckpoint } from "./draftCheckpoint";
+import { track } from "../../services/analytics";
 
 /** Checkpointed pages: the first lesson, then "you're ready". */
 const LESSON = 0;
@@ -106,6 +107,7 @@ function ReadyPage() {
     finishing.current = true;
     // Flipping `hasOnboarded` swaps the protected stacks; the tabs open on Sky.
     completeOnboarding(name.trim() || "Traveler", profile);
+    track("onboarding_completed");
     clearDraft();
     clearTourCheckpoint();
     clearDraftCheckpoint();

@@ -16,6 +16,7 @@ import { PaywallSheet } from "../../components/PaywallSheet";
 import { PremiumGate } from "../../components/PremiumGate";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { EnterView } from "../../lib/motion";
+import { formatCalendarDate } from "../../lib/dates";
 import { BestDaysGrid } from "./BestDaysGrid";
 import { ScoreBar } from "./ScoreBar";
 import { astrologyApi } from "../../services/astrologyApi";
@@ -26,6 +27,7 @@ import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
 import { useTranslation, TranslationKey, Locale } from "../../i18n";
 import { areaTone, colors, spacing, radii, motion } from "../../lib/design-system";
+import { DeepText } from "../../components/ui/DeepText";
 
 const AREAS: LifeArea[] = ["love", "career", "money", "energy"];
 
@@ -34,13 +36,14 @@ function formatDay(iso: string | undefined, locale: Locale, withWeekday = true):
   if (!iso) return "";
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
   if (!m) return iso;
-  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12);
   try {
-    return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
-      ...(withWeekday ? { weekday: "long" as const } : {}),
-      day: "numeric",
-      month: "long",
-    });
+    return (
+      formatCalendarDate(iso, locale, {
+        ...(withWeekday ? { weekday: "long" as const } : {}),
+        day: "numeric",
+        month: "long",
+      }) ?? iso
+    );
   } catch {
     return iso;
   }
@@ -172,7 +175,7 @@ export function ForecastScreen({ headerSlot }: ForecastScreenProps = {}) {
             <>
               <EnterView>
                 <ChunkyCard>
-                  <AppText variant="lead">{forecast.data.overview}</AppText>
+                  <DeepText variant="lead" text={forecast.data.overview} />
                 </ChunkyCard>
               </EnterView>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { Keyboard, ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { PressableScale } from "../../components/ui/PressableScale";
@@ -52,6 +52,7 @@ export function PlaceSheet({ visible, birthPlace, onClose, onPick }: Props) {
   }, [query, locale]);
 
   const pick = (place: ElectionPlace) => {
+    Keyboard.dismiss();
     onPick(place);
     setQuery("");
     onClose();
@@ -69,12 +70,14 @@ export function PlaceSheet({ visible, birthPlace, onClose, onPick }: Props) {
             placeholderTextColor={colors.text.tertiary}
             style={styles.input}
             autoCorrect={false}
+            returnKeyType="search"
+            submitBehavior="blurAndSubmit"
             accessibilityLabel={t("election.placeSearch")}
           />
           {searching ? <CelestialLoader size="sm" /> : null}
         </View>
 
-        <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.list} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {birthPlace ? (
             <PressableScale
               onPress={() => pick(birthPlace)}

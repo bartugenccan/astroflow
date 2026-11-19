@@ -11,6 +11,7 @@ import { cachedCall, guidanceKey } from "../../services/interpretationCache";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { EnterView } from "../../lib/motion";
 import { colors, spacing } from "../../lib/design-system";
+import { todayISO } from "../../lib/dates";
 
 interface GuidanceSheetProps {
   topic: GuidanceTopic | null;
@@ -38,7 +39,7 @@ export function GuidanceSheet({ topic, dto, onClose }: GuidanceSheetProps) {
     setWhyOpen(false);
     setFailed(false);
     setLoading(true);
-    const date = new Date().toISOString().slice(0, 10);
+    const date = todayISO();
     cachedCall(guidanceKey(dto, topic, date, locale), () =>
       astrologyApi.getGuidance(dto, topic, locale),
     )

@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import { secureStorage } from "../services/secureStorage";
 import type { Locale } from "../i18n";
 import { TarotCardReading, TarotSpread, TarotSynthesis } from "../services/types";
+import { todayISO } from "../lib/dates";
 
 /** The day's spread and whatever of its reading has arrived — reopened from the tab. */
 export interface SavedTarotReading {
@@ -24,7 +25,7 @@ interface TarotState {
   reset: () => void;
 }
 
-export const tarotToday = () => new Date().toISOString().slice(0, 10);
+export const tarotToday = () => todayISO();
 
 export const useTarotStore = create<TarotState>()(
   persist(

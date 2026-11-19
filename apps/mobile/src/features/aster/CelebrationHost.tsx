@@ -27,6 +27,7 @@ import { milestoneLabel, stageName } from "./asterCopy";
 import { unlockLines } from "./unlockCopy";
 import { DiscoveryContent, constellationName } from "./JourneyDiscovery";
 import { ProtectAsterSheet } from "./ProtectAsterSheet";
+import { safeInAppLink } from "../../lib/safeLink";
 
 /**
  * App-wide celebrations, fed by useMascotStore's queue, one at a time, in
@@ -73,7 +74,8 @@ export function CelebrationHost() {
           onDone={done}
           onSeeInChart={(link) => {
             done();
-            router.push(link as Href);
+            const href = safeInAppLink(link);
+            if (href) router.push(href);
           }}
         />
       ) : null}

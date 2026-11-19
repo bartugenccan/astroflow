@@ -5,6 +5,7 @@ import type { Locale } from "../i18n";
 import { AccountInfo, BirthProfileResponse } from "../services/types";
 import { PREMIUM_BETA } from "../services/config";
 import { secureStorage } from "../services/secureStorage";
+import { todayISO } from "../lib/dates";
 
 /** Persist key. Lives in the Keychain/Keystore: it holds birth date, time and place. */
 export const APP_STORE_KEY = "astroflow-app";
@@ -45,6 +46,11 @@ interface AppState {
   aiConsentAt: string | null;
   /** Which version of the notice they accepted (0 = before versions existed). */
   aiConsentVersion: number;
+  /**
+   * How much reading text to show up front. "simple": the first sentences and a
+   * "Go deeper" link; "deep": every reading opens in full.
+   */
+  detailLevel: DetailLevel;
 
   setLocale: (locale: Locale) => void;
   setDisplayName: (name: string) => void;
@@ -59,9 +65,12 @@ interface AppState {
   recordTarotReading: () => void;
   setReminders: (patch: Partial<ReminderSettings>) => void;
   acceptAiConsent: () => void;
+  setDetailLevel: (level: DetailLevel) => void;
   reset: () => void;
   setHasHydrated: (v: boolean) => void;
 }
+
+export type DetailLevel = "simple" | "deep";
 
 export interface ReminderSettings {
   /** Daily nudge to open today's reading, at hour:minute local time. */
@@ -122,6 +131,7 @@ export const useAppStore = create<AppState>()(
       reminders: DEFAULT_REMINDERS,
       aiConsentAt: null,
       aiConsentVersion: 0,
+      detailLevel: "simple",
 
       setLocale: (locale) => set({ locale }),
       setDisplayName: (displayName) => set({ displayName }),
@@ -145,14 +155,14 @@ export const useAppStore = create<AppState>()(
         ),
       recordCompanionMessage: () =>
         set((s) => {
-          const today = new Date().toISOString().slice(0, 10);
+          const today = todayISO();
           return s.companionMsgDate === today
             ? { companionMsgCount: s.companionMsgCount + 1 }
             : { companionMsgDate: today, companionMsgCount: 1 };
         }),
       recordTarotReading: () =>
         set((s) => {
-          const today = new Date().toISOString().slice(0, 10);
+          const today = todayISO();
           return s.tarotDate === today
             ? { tarotCount: s.tarotCount + 1 }
             : { tarotDate: today, tarotCount: 1 };
@@ -160,6 +170,7 @@ export const useAppStore = create<AppState>()(
       setReminders: (patch) => set((s) => ({ reminders: { ...s.reminders, ...patch } })),
       acceptAiConsent: () =>
         set({ aiConsentAt: new Date().toISOString(), aiConsentVersion: AI_CONSENT_VERSION }),
+      setDetailLevel: (detailLevel) => set({ detailLevel }),
       reset: () =>
         set({
           hasOnboarded: false,
@@ -176,6 +187,7 @@ export const useAppStore = create<AppState>()(
           reminders: DEFAULT_REMINDERS,
           aiConsentAt: null,
           aiConsentVersion: 0,
+          detailLevel: "simple",
         }),
       setHasHydrated: (v) => set({ _hasHydrated: v }),
     }),
@@ -198,10 +210,13 @@ export const useAppStore = create<AppState>()(
         reminders: state.reminders,
         aiConsentAt: state.aiConsentAt,
         aiConsentVersion: state.aiConsentVersion,
+        detailLevel: state.detailLevel,
       }),
       onRehydrateStorage: () => (state) => {
-        // Beta: Premium for everyone, whatever an older build persisted.
-        if (PREMIUM_BETA && state && !state.isPremium) state.setPremium(true);
+        // Beta: Premium for everyone, whatever an older build persisted. After the
+        // beta a persisted `true` is not proof of a subscription: start from false
+        // and let services/purchases set it from the store's entitlement.
+        if (state && state.isPremium !== PREMIUM_BETA) state.setPremium(PREMIUM_BETA);
         state?.setHasHydrated(true);
       },
     },

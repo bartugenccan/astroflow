@@ -15,6 +15,7 @@ import { PressableScale } from "../../components/ui/PressableScale";
 import { StateView } from "../../components/ui/StateView";
 import { StarBurst } from "../intentions/StarBurst";
 import { EVENT_RULES } from "../../lib/mascotRules";
+import { formatCalendarDate } from "../../lib/dates";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { areaTone, colors, motion, palette, radii, spacing, surface } from "../../lib/design-system";
 import type { DailyPlan, LifeArea, MascotState, PlanStep } from "../../services/types";
@@ -234,11 +235,7 @@ function StepRow({
 function WeekStrip({ week, today }: { week: DailyPlan["week"]; today: string }) {
   const { t, locale } = useTranslation();
   const router = useRouter();
-  const loc = locale === "tr" ? "tr-TR" : "en-US";
-  const dayLabel = (iso: string) => {
-    const [y, m, d] = iso.split("-").map(Number);
-    return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString(loc, { weekday: "short" });
-  };
+  const dayLabel = (iso: string) => formatCalendarDate(iso, locale, { weekday: "short" }) ?? "";
 
   return (
     <PressableScale

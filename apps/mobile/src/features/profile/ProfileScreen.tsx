@@ -18,10 +18,12 @@ import { BirthDetailsSheet } from "./BirthDetailsSheet";
 import { AccountSheet } from "../account/AccountSheet";
 import { ACCOUNTS_ENABLED, refreshAccount } from "../../services/auth/account";
 import { astrologyApi } from "../../services/astrologyApi";
-import { useAppStore } from "../../store/useAppStore";
+import { useAppStore, type DetailLevel } from "../../store/useAppStore";
+import { Segmented } from "../../components/ui/Segmented";
 import { useMascotStore } from "../../store/useMascotStore";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
+import { formatCalendarDate } from "../../lib/dates";
 import { deleteMyData, wipeAllLocalData } from "../../services/dataWipe";
 import { useReminderToggle } from "../reminders/useReminderToggle";
 import { colors, palette, radii, spacing, type Tone } from "../../lib/design-system";
@@ -33,6 +35,7 @@ import { PremiumBetaSheet } from "./PremiumBetaSheet";
 import { asterA11y, stageName } from "../aster/asterCopy";
 import type { TranslationKey } from "../../i18n";
 import type { AccountInfo, AuthProviderId } from "../../services/types";
+import { track } from "../../services/analytics";
 
 const APP_VERSION = Constants.expoConfig?.version ?? "1.0.0";
 
@@ -62,6 +65,8 @@ export function ProfileScreen() {
   const profile = useAppStore((s) => s.birthProfile);
   const isPremium = useAppStore((s) => s.isPremium);
   const setLocale = useAppStore((s) => s.setLocale);
+  const detailLevel = useAppStore((s) => s.detailLevel);
+  const setDetailLevel = useAppStore((s) => s.setDetailLevel);
   const setBirthProfile = useAppStore((s) => s.setBirthProfile);
 
   const account = useAppStore((s) => s.account);
@@ -271,6 +276,26 @@ export function ProfileScreen() {
                 {t("profile.language")}
               </AppText>
               <LangSwitch value={locale} onChange={setLocale} />
+            </View>
+            <View style={styles.sep} />
+            <View style={styles.detailBlock}>
+              <AppText variant="body" color={colors.text.primary}>
+                {t("profile.detailLevel")}
+              </AppText>
+              <Segmented<DetailLevel>
+                value={detailLevel}
+                onChange={(level) => {
+                  setDetailLevel(level);
+                  track("detail_level_changed", { level });
+                }}
+                options={[
+                  { key: "simple", label: t("profile.detailSimple") },
+                  { key: "deep", label: t("profile.detailDeep") },
+                ]}
+              />
+              <AppText variant="bodySmall" color={colors.text.tertiary}>
+                {t("profile.detailHint")}
+              </AppText>
             </View>
             <View style={styles.sep} />
             <View style={styles.settingRow}>
@@ -685,15 +710,7 @@ function NavCard({
 }
 
 function formatDate(iso: string, locale: string): string {
-  // Build from components (local midnight) — avoids Hermes parsing the string
-  // as UTC, which shifts the date back a day in negative-offset timezones.
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  return dt.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatCalendarDate(iso, locale, { day: "numeric", month: "short", year: "numeric" }) ?? iso;
 }
 
 const styles = StyleSheet.create({
@@ -782,6 +799,10 @@ const styles = StyleSheet.create({
   dataValue: {
     flexShrink: 1,
     textAlign: "right",
+  },
+  detailBlock: {
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   settingRow: {
     flexDirection: "row",

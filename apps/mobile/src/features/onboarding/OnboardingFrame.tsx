@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View, KeyboardAvoidingView, Platform } from "react-native";
+import { StyleSheet, View, Keyboard, KeyboardAvoidingView, Platform, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { ConstellationProgress } from "../../components/ConstellationProgress";
@@ -55,6 +55,8 @@ export function OnboardingFrame({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <View style={styles.container}>
+          {/* Tapping anywhere above the body (header, Aster, question) closes the keyboard. */}
+          <Pressable onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.topBar}>
             <View style={styles.side}>{canGoBack ? <BackButton /> : null}</View>
             {step !== undefined ? (
@@ -86,13 +88,21 @@ export function OnboardingFrame({
               </AppText>
             ) : null}
           </EnterView>
+          </Pressable>
 
           <View style={[styles.body, bodyAlign === "top" && styles.bodyTop]}>
             {children}
           </View>
 
           <EnterView index={2}>
-            <ChunkyButton label={ctaLabel} onPress={onNext} disabled={nextDisabled} />
+            <ChunkyButton
+              label={ctaLabel}
+              onPress={() => {
+                Keyboard.dismiss();
+                onNext();
+              }}
+              disabled={nextDisabled}
+            />
           </EnterView>
         </View>
       </KeyboardAvoidingView>

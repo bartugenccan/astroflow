@@ -5,6 +5,7 @@
 export const asterEn = {
   name: "Aster",
   a11y: "Aster, {{stage}}, {{mood}}",
+  tapHint: "Tap me",
   stages: {
     egg: "Cosmic Egg",
     spark: "Spark",

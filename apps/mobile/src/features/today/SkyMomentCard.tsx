@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, type Href } from "expo-router";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
+import { TwinkleSky } from "../../components/ui/TwinkleSky";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { Chip } from "../../components/ui/Chip";
 import { PressableScale } from "../../components/ui/PressableScale";
@@ -16,6 +17,7 @@ import { useAppStore } from "../../store/useAppStore";
 import { useMascotStore } from "../../store/useMascotStore";
 import { useReminderToggle } from "../reminders/useReminderToggle";
 import type { SkyMoment } from "../../services/types";
+import { track } from "../../services/analytics";
 import {
   isSoftNote,
   momentBody,
@@ -58,6 +60,7 @@ export function SkyMomentCard({ moments, open = false, onOpen }: SkyMomentCardPr
   const others = visible.length - 1;
 
   const openSheet = () => {
+    track("sky_moment_opened");
     // Reading a key moment feeds Aster (once a day; the server caps it).
     if (!useMascotStore.getState().state?.today?.SKY_MOMENT) report("SKY_MOMENT");
     const frame = frameRef.current;
@@ -82,6 +85,7 @@ export function SkyMomentCard({ moments, open = false, onOpen }: SkyMomentCardPr
         accessibilityLabel={`${t("moments.cardLabel")}. ${title}. ${when}`}
         accessibilityHint={t("moments.open")}
       >
+        <TwinkleSky color={palette[tone].face} seed={top.id} />
         <View style={styles.top}>
           <IconBadge moment={top} />
           <AppText variant="label" color={palette[tone].face} style={styles.flex} numberOfLines={1}>
@@ -108,11 +112,17 @@ export function SkyMomentCard({ moments, open = false, onOpen }: SkyMomentCardPr
   );
 }
 
+/** A solid candy coin with its own slab — the moment's sigil, not a flat outline. */
 function IconBadge({ moment, size = 36 }: { moment: SkyMoment; size?: number }) {
   const p = palette[momentTone(moment)];
   return (
-    <View style={[styles.badge, { width: size, height: size, backgroundColor: p.soft, borderColor: p.face }]}>
-      <Ionicons name={momentIcon(moment)} size={Math.round(size * 0.55)} color={p.face} />
+    <View
+      style={[
+        styles.badge,
+        { width: size, height: size, backgroundColor: p.face, borderColor: p.face, borderBottomColor: p.slab },
+      ]}
+    >
+      <Ionicons name={momentIcon(moment)} size={Math.round(size * 0.52)} color={p.on} />
     </View>
   );
 }
@@ -281,13 +291,15 @@ function Fact({ label, value }: { label: string; value?: string }) {
 
 const styles = StyleSheet.create({
   away: { opacity: 0 },
-  card: { gap: spacing.sm },
+  // overflow hidden clips the TwinkleSky backdrop to the rounded card.
+  card: { gap: spacing.sm, overflow: "hidden" },
   flex: { flex: 1, minWidth: 0 },
   top: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   bottom: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   badge: {
     borderRadius: radii.pill,
     borderWidth: 2,
+    borderBottomWidth: 4,
     alignItems: "center",
     justifyContent: "center",
   },
