@@ -11,6 +11,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { bodyParser: false });
+  // SIGTERM (Railway redeploys) runs onApplicationShutdown, so queued analytics events are flushed.
+  app.enableShutdownHooks();
   const config = app.get(ConfigService);
   const production = config.get<string>('NODE_ENV') === 'production';
 

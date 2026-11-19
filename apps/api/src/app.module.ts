@@ -20,12 +20,14 @@ import { PrivacyModule } from './modules/privacy/privacy.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { WaitlistModule } from './modules/waitlist/waitlist.module';
 import { HealthController } from './common/health/health.controller';
+import { AnalyticsModule } from './common/analytics/analytics.module';
 
 const MINUTE = 60_000;
 
 @Module({
   imports: [
     AppConfigModule,
+    AnalyticsModule,
     PrismaModule,
     QuotaModule,
     /**

@@ -11,12 +11,19 @@ interface RequestContext {
   deviceId?: string;
   /** The client's IANA time zone (`x-tz` header), when it sent a valid one. */
   timeZone?: string;
+  /** Which feature the request belongs to ("tarot", "companion"…), from the controller name. */
+  feature?: string;
 }
 
 const store = new AsyncLocalStorage<RequestContext>();
 
 export function currentDeviceId(): string | undefined {
   return store.getStore()?.deviceId;
+}
+
+/** The feature (controller) the current request belongs to, for analytics. */
+export function currentFeature(): string | undefined {
+  return store.getStore()?.feature;
 }
 
 /**
@@ -56,7 +63,11 @@ export class RequestContextInterceptor implements NestInterceptor {
       deviceId?: string;
       headers?: Record<string, string | string[] | undefined>;
     }>();
-    const ctx: RequestContext = { deviceId: req?.deviceId, timeZone: validTimeZone(req?.headers?.['x-tz']) };
+    const ctx: RequestContext = {
+      deviceId: req?.deviceId,
+      timeZone: validTimeZone(req?.headers?.['x-tz']),
+      feature: context.getClass()?.name?.replace(/Controller$/, '').toLowerCase() || undefined,
+    };
     return new Observable((subscriber) => store.run(ctx, () => next.handle().subscribe(subscriber)));
   }
 }

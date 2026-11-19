@@ -53,6 +53,9 @@ import * as Joi from "joi";
         SENTRY_DSN: Joi.string().uri().allow("").optional(),
         SENTRY_ENVIRONMENT: Joi.string().allow("").optional(),
         SENTRY_TRACES_SAMPLE_RATE: Joi.number().min(0).max(1).default(0.1),
+        // PostHog (product analytics). Empty key = off. See common/analytics.
+        POSTHOG_API_KEY: Joi.string().allow("").optional(),
+        POSTHOG_HOST: Joi.string().uri().allow("").default("https://eu.i.posthog.com"),
         // Accounts (optional). A missing provider config turns that route into a 503.
         APPLE_BUNDLE_ID: Joi.string().default("com.astroflow.app"),
         APPLE_TEAM_ID: Joi.string().allow("").optional(),

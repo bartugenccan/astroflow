@@ -1,9 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { AI_VENDOR, AiTextProvider, GenerateJsonParams, GenerateTextParams } from './ai-text-provider';
+import { ConfigService } from '@nestjs/config';
+import { AI_VENDOR, AiTextProvider, AiVendorName, GenerateJsonParams, GenerateTextParams } from './ai-text-provider';
 import { AiBudgetService } from './ai-budget.service';
 import { DeepSeekBalanceService } from './deepseek-balance.service';
-import { currentDeviceId } from '../../common/context/request-context';
+import { currentDeviceId, currentFeature } from '../../common/context/request-context';
 import { noteAiFailure } from '../../common/ai/ai-call-tracker';
+import { AnalyticsService } from '../../common/analytics/analytics.service';
 
 export class AiPaused extends Error {
   constructor() {
@@ -18,14 +20,23 @@ export class AiPaused extends Error {
  * billed against the Console's spend limits) and charges the daily budget
  * for the current device. A refused call throws like any AI failure, so the
  * caller serves its stub — and `noteAiFailure` keeps that stub out of caches.
+ *
+ * Every vendor call is also reported to PostHog as an `$ai_generation`
+ * (provider, model, feature, latency, success; never the prompt or answer).
  */
 @Injectable()
 export class GuardedAiProvider implements AiTextProvider {
+  private readonly provider: AiVendorName;
+
   constructor(
     @Inject(AI_VENDOR) private readonly inner: AiTextProvider,
     private readonly budget: AiBudgetService,
     private readonly balance: DeepSeekBalanceService,
-  ) {}
+    private readonly analytics: AnalyticsService,
+    config: ConfigService,
+  ) {
+    this.provider = config.get<AiVendorName>('AI_PROVIDER', 'anthropic') === 'deepseek' ? 'deepseek' : 'anthropic';
+  }
 
   get available(): boolean {
     return this.inner.available;
@@ -37,12 +48,40 @@ export class GuardedAiProvider implements AiTextProvider {
 
   async generateText(params: GenerateTextParams): Promise<string> {
     await this.admit();
-    return this.inner.generateText(params);
+    return this.measured(params, () => this.inner.generateText(params), (out) => out.length);
   }
 
   async generateJson<T>(params: GenerateJsonParams): Promise<T> {
     await this.admit();
-    return this.inner.generateJson<T>(params);
+    return this.measured(params, () => this.inner.generateJson<T>(params), (out) => JSON.stringify(out ?? null).length);
+  }
+
+  private async measured<T>(params: GenerateTextParams, call: () => Promise<T>, size: (out: T) => number): Promise<T> {
+    const started = Date.now();
+    const base = {
+      provider: this.provider,
+      model: this.inner.model,
+      feature: currentFeature(),
+      inputChars: params.system.length + params.user.length,
+    };
+    try {
+      const out = await call();
+      this.analytics.captureAiGeneration(currentDeviceId(), {
+        ...base,
+        latencyMs: Date.now() - started,
+        ok: true,
+        outputChars: size(out),
+      });
+      return out;
+    } catch (err) {
+      this.analytics.captureAiGeneration(currentDeviceId(), {
+        ...base,
+        latencyMs: Date.now() - started,
+        ok: false,
+        errorType: err instanceof Error ? err.name : 'unknown',
+      });
+      throw err;
+    }
   }
 
   private async admit(): Promise<void> {
