@@ -27,8 +27,7 @@
       },
       "env": {
         "EXPO_PUBLIC_PREMIUM_BETA": "true",
-        "EXPO_PUBLIC_APP_ENV": "preview",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "EXPO_PUBLIC_APP_ENV": "preview"
       },
       "environment": "preview"
     },
@@ -40,8 +39,7 @@
       },
       "env": {
         "EXPO_PUBLIC_PREMIUM_BETA": "true",
-        "EXPO_PUBLIC_APP_ENV": "production",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "EXPO_PUBLIC_APP_ENV": "production"
       },
       "environment": "production"
     }

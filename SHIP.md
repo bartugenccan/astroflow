@@ -29,7 +29,7 @@ Kodda yapilanlar:
 - AI / eglence bildirimi + onay (dogum verisi girilmeden once; eski kurulumlar ve hesapla girenler icin root'ta bir kez). Profil > Yardim ve yasal: gizlilik, sartlar, destek, AI notu. Aster'da "AI ile yazildi" dipnotu.
 - Niyet check-in'leri kullanicinin yerel gunune gore (`x-tz` basligi).
 - `supportsTablet: false` (iPad ekran goruntusu gerekmez).
-- preview/production profillerinde `SENTRY_DISABLE_AUTO_UPLOAD=true`. **`SENTRY_ALLOW_FAILURE` kullanma:** Sentry'nin Xcode betigi JS paketlemeyi `sentry-cli` icinden calistirir; org/token yokken sentry-cli paketlemeden once duser, ALLOW_FAILURE hatayi yutar ve IPA `main.jsbundle` olmadan cikar → uygulama acilista coker (build 5, 2026-11-17). Sourcemap yuklemesi istendiginde once `SENTRY_ORG`, `SENTRY_PROJECT` ve `SENTRY_AUTH_TOKEN` EAS env'e eklenir, sonra bu bayrak kaldirilir.
+- Source map yuklemesi preview/production'da acik (2026-11-19): EAS env'de `SENTRY_AUTH_TOKEN` (secret, org token), `SENTRY_ORG=bartus-organization`, `SENTRY_PROJECT=astroflow-mobile`. Yalnizca development profilinde `SENTRY_DISABLE_AUTO_UPLOAD=true`. **`SENTRY_ALLOW_FAILURE` kullanma:** Sentry'nin Xcode betigi JS paketlemeyi `sentry-cli` icinden calistirir; org/token yokken sentry-cli paketlemeden once duser, ALLOW_FAILURE hatayi yutar ve IPA `main.jsbundle` olmadan cikar → uygulama acilista coker (build 5, 2026-11-17). Sourcemap yuklemesi istendiginde once `SENTRY_ORG`, `SENTRY_PROJECT` ve `SENTRY_AUTH_TOKEN` EAS env'e eklenir, sonra bu bayrak kaldirilir.
 - Eski `users`/`gamification`/`workers` modulleri ve kullanilmayan bagimliliklar (bullmq, ioredis, passport, bcrypt, @nestjs/schedule) kaldirildi; `nest build` temiz.
 - `railway.json` + Dockerfile: prisma CLI artik runtime bagimliligi, migration'lar `preDeployCommand` ile.
 
@@ -106,7 +106,7 @@ ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
 | `ship.config.json` URL alanlari dolduruldu | ✅ (astroflow-web.vercel.app, yayinda) |
 | Mock katmani release build disinda, gercek API bagli | ✅ (API URL EAS env ile verilecek) |
 | Odeme SDK entegre, sandbox'ta satin alma calisti | ◐ RevenueCat kodu hazir (2026-11-19, `services/purchases.ts`, `PremiumPlans`, geri yukleme); anahtarlar + urunler + sandbox testi bekleniyor. Sunucu tarafi dogrulama yok (bkz. docs/premium-flow.md) |
-| Sentry kuruldu | ◐ 2026-11-19: projeler `astroflow-mobile` / `astroflow-api` (org bartus-organization), API test hatasi lokalde dogrulandi, EAS env'de DSN var. Bekleyen: Railway `SENTRY_DSN`, EAS `SENTRY_AUTH_TOKEN` (source map) |
+| Sentry kuruldu | ◐ 2026-11-19: projeler `astroflow-mobile` / `astroflow-api` (org bartus-organization), API test hatasi lokalde dogrulandi, EAS env'de DSN var. EAS `SENTRY_AUTH_TOKEN` eklendi, source map yuklemesi acik. Bekleyen: Railway `SENTRY_DSN` |
 | Yerel hatirlaticilar + AI onayi + yasal linkler | ✅ |
 | Guvenlik denetimi (2026-10-30) | ✅ e2e dogrulandi |
 | Opsiyonel hesap (Apple / Google / e-posta kodu) | ◐ kod hazir; Apple key, Google client id, Resend domain bekleniyor |
