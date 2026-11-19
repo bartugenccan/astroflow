@@ -41,6 +41,7 @@ import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore, FREE_DAILY_MESSAGES } from "../../store/useAppStore";
 import { useTranslation } from "../../i18n";
 import { colors, depth, spacing, radii, fonts, motion, palette, surface, typography } from "../../lib/design-system";
+import { posthog } from "../../services/posthog";
 
 /** Springy rise for a freshly-sent / freshly-received bubble. */
 const bubbleEnter = FadeInDown.springify()
@@ -138,6 +139,7 @@ export function CompanionScreen() {
       const reply = await astrologyApi.sendMessage(dto, clean, locale);
       // Only an answered message counts against the free daily allowance.
       recordMessage();
+      posthog?.capture("companion_message_answered");
       setMessages((m) => [
         ...m,
         {

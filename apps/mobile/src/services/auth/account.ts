@@ -14,6 +14,7 @@ import { useMascotStore } from "../../store/useMascotStore";
 import { usePlanStore } from "../../store/usePlanStore";
 import { clearDraftCheckpoint } from "../../features/onboarding/draftCheckpoint";
 import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
+import { identifyAccount } from "../posthog";
 import type { AccountInfo, AuthProviderId, BirthProfileResponse, LinkResult, SavedProfile } from "../types";
 
 /**
@@ -143,6 +144,9 @@ function toBirthProfile(p: SavedProfile): BirthProfileResponse {
 
 async function finish(result: LinkResult): Promise<LinkResult> {
   const store = useAppStore.getState();
+  // The API-returned account id is stable across its linked sign-in methods.
+  // Identify before any post-auth work so its errors inherit this person too.
+  identifyAccount(result.account);
   if (result.token) {
     // Signed in to an existing account: switch this install to its data.
     await setDeviceToken(result.token);

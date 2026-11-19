@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { Stack, SplashScreen, useNavigationContainerRef } from "expo-router";
+import { Stack, SplashScreen, useNavigationContainerRef, usePathname } from "expo-router";
 import { useFonts } from "expo-font";
 import {
   Nunito_700Bold,
@@ -30,6 +30,8 @@ import { ReminderBridge } from "../src/features/reminders/ReminderBridge";
 import { VaultBridge } from "../src/features/account/VaultBridge";
 import { AiConsentScreen } from "../src/features/consent/AiConsentScreen";
 import { CelebrationHost } from "../src/features/aster/CelebrationHost";
+import { PostHogProvider } from "posthog-react-native";
+import { identifyAccount, posthog } from "../src/services/posthog";
 
 initSentry();
 SplashScreen.preventAutoHideAsync();
@@ -39,6 +41,8 @@ export { AppErrorBoundary as ErrorBoundary };
 
 function RootLayout() {
   const navigationRef = useNavigationContainerRef();
+  const pathname = usePathname();
+  const previousScreen = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (navigationRef) navigationIntegration.registerNavigationContainer(navigationRef);
   }, [navigationRef]);
@@ -58,6 +62,7 @@ function RootLayout() {
 
   const hasHydrated = useAppStore((s) => s._hasHydrated);
   const hasOnboarded = useAppStore((s) => s.hasOnboarded);
+  const account = useAppStore((s) => s.account);
   const aiConsentCurrent = useAppStore((s) => !!s.aiConsentAt && s.aiConsentVersion >= AI_CONSENT_VERSION);
   const acceptAiConsent = useAppStore((s) => s.acceptAiConsent);
 
@@ -66,6 +71,18 @@ function RootLayout() {
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
+
+  // PostHog retains identity between launches; this covers accounts that predate
+  // its installation or whose persisted SDK state was cleared independently.
+  useEffect(() => {
+    if (ready && account) identifyAccount(account);
+  }, [account, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    posthog?.screen(pathname, previousScreen.current ? { previous_screen: previousScreen.current } : undefined);
+    previousScreen.current = pathname;
+  }, [pathname, ready]);
 
   // Entering or leaving the app proper never carries a glossary sheet across.
   useEffect(() => {
@@ -77,7 +94,7 @@ function RootLayout() {
   // Onboarded without the current AI notice (signed in on a new phone, a build
   // from before it existed, or the notice grew since): show it once first.
   if (hasOnboarded && !aiConsentCurrent) {
-    return (
+    const content = (
       <GestureHandlerRootView style={styles.root}>
         <SafeAreaProvider>
           <StatusBar style="light" />
@@ -85,9 +102,11 @@ function RootLayout() {
         </SafeAreaProvider>
       </GestureHandlerRootView>
     );
+
+    return posthog ? <PostHogProvider client={posthog}>{content}</PostHogProvider> : content;
   }
 
-  return (
+  const content = (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
         <StatusBar style="light" />
@@ -152,6 +171,8 @@ function RootLayout() {
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
+
+  return posthog ? <PostHogProvider client={posthog}>{content}</PostHogProvider> : content;
 }
 
 export default Sentry.wrap(RootLayout);

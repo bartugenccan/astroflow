@@ -14,6 +14,7 @@ import { useAccountPromptStore } from "../store/useAccountPromptStore";
 import { astrologyApi } from "./astrologyApi";
 import { clearInterpretationCache } from "./interpretationCache";
 import { resetDeviceToken } from "./deviceAuth";
+import { resetPostHog } from "./posthog";
 import { secureStorage } from "./secureStorage";
 import { cancelAllReminders } from "./notifications";
 import { resetVaultSync } from "./vaultSync";
@@ -70,7 +71,10 @@ export async function wipeAllLocalData({ keepIdentity }: { keepIdentity: boolean
   await resetVaultSync();
   clearInterpretationCache();
   await cancelAllReminders();
-  if (!keepIdentity) await resetDeviceToken();
+  if (!keepIdentity) {
+    resetPostHog();
+    await resetDeviceToken();
+  }
 
   useOnboardingDraft.getState().clear();
   useAffirmationStore.setState({ customs: [], removedIds: [], days: {}, recordings: {} });

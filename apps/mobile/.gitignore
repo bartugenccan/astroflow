@@ -11,3 +11,4 @@ expo-env.d.ts
 
 # Raw iPhone captures for the store screenshots (inputs to store/screenshots/make_set.py)
 /assets/screenshots/
+.env

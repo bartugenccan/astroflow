@@ -20,6 +20,7 @@ import { useElectionStore } from "../../store/useElectionStore";
 import { TranslationKey, useTranslation } from "../../i18n";
 import { colors, depth, fonts, palette, radii, spacing, surface, typography } from "../../lib/design-system";
 import { PlaceSheet } from "./PlaceSheet";
+import { posthog } from "../../services/posthog";
 
 type Mode = "check" | "search";
 
@@ -103,6 +104,10 @@ export function ElectionFormScreen() {
       setPaywall(true);
       return;
     }
+    posthog?.capture("election_requested", {
+      mode: query.mode,
+      event_type: query.eventId ?? "custom",
+    });
     ask(query);
     router.push("/election/result" as Href);
   };
