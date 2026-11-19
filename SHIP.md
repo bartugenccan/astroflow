@@ -86,7 +86,7 @@ odeme SDK (beta: herkes Premium, bilincli), analytics (faz 2). `JOURNEY_MINUTES`
 Elle dogrulama:
 - [x] Destek URL'si tarayicida aciliyor (en/tr 200, astroflowhq@gmail.com)
 - [x] Gizlilik politikasi aciliyor ve toplanan veriyi anlatiyor (AI saglayicilari, olumlama metni, Sentry, veri silme)
-- [ ] App Store Connect App Privacy beyani binary ile tutarli — henuz yapilmadi
+- [x] App Store Connect App Privacy beyani binary ile tutarli — 2026-11-19 ship.config.json dataTypes.appStore ile dolduruldu (tracking yok)
 - [x] Uygulama icinde hesap silme calisiyor (cihazda denendi)
 - [ ] AI kullanimi ve AI'a giden veri App Privacy'de beyan edildi (5.1.2(i)) — ASC beyaniyla birlikte bekliyor
 - [x] Privacy manifest: app.json `ios.privacyManifests` + SDK'larin kendi manifestleri (ship.config.json envanteri)
