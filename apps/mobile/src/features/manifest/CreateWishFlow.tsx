@@ -24,6 +24,7 @@ import { WishStarGlyph } from "./WishStarGlyph";
 import { PracticeShell } from "./practice/PracticeShell";
 import { AffirmStep, AreaStep, WhenStep, WriteStep, type Plant } from "./create/CreateSteps";
 import { isLifeArea, lunarInfo } from "./wishModel";
+import { posthog } from "../../services/posthog";
 
 const TOTAL = 4;
 
@@ -169,6 +170,11 @@ export function CreateWishFlow() {
         ),
         minShow,
       ]);
+      posthog?.capture("wish_created", {
+        life_area: area,
+        daily_target: target,
+        planting_time: atNewMoon ? "now" : plant,
+      });
       // The first one hatches Aster — that moment (or a small reward pill) plays over the Manifest tab.
       useMascotStore.getState().applyDelta(created.mascot);
       usePlanStore.getState().refresh(dto);

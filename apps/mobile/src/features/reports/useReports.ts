@@ -7,6 +7,7 @@ import { useReportsStore } from "../../store/useReportsStore";
 import { useBirthDto } from "../../hooks/useBirthDto";
 import { useTranslation } from "../../i18n";
 import { deleteReportPdf, renderReportPdf, reportPdfExists, shareReportPdf } from "./pdf/exportPdf";
+import { posthog } from "../../services/posthog";
 
 /** Mirrors REPORTS_DAILY_PER_DEVICE on the API (shown in the limit message). */
 export const REPORTS_PER_DAY = 3;
@@ -157,6 +158,7 @@ export function useReports() {
         }
         upsert(meta);
         useReportsStore.getState().addPending(meta.id, meta.kind);
+        posthog?.capture("report_requested", { report_kind: meta.kind });
       } catch (err) {
         setError(errorOf(err));
       } finally {
@@ -173,6 +175,7 @@ export function useReports() {
         const saved = useReportsStore.getState().files.find((f) => f.reportId === meta.id);
         const uri = saved && reportPdfExists(saved.uri) ? saved.uri : await makePdf(meta);
         await shareReportPdf(uri, meta.kind === "natal" ? t("reports.pdf.natalTitle") : t("reports.pdf.transitTitle"));
+        posthog?.capture("report_shared", { report_kind: meta.kind });
       } catch (err) {
         setError(errorOf(err));
       }

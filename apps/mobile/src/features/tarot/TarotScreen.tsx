@@ -15,6 +15,7 @@ import { CategoryStep } from "./CategoryStep";
 import { ReadingStep } from "./ReadingStep";
 import { TarotTable } from "./TarotTable";
 import { useTarotSounds } from "./useTarotSounds";
+import { posthog } from "../../services/posthog";
 
 type Phase = "category" | "table" | "reading";
 
@@ -101,6 +102,11 @@ export function TarotScreen() {
         locale,
       );
       recordTarotReading();
+      posthog?.capture("tarot_reading_completed", {
+        category,
+        spread: spreadKey,
+        card_count: cards.length,
+      });
       setFreshDraw(true);
       setPhase("reading");
     },

@@ -7,6 +7,11 @@ module.exports = ({ config }) => {
   const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
   return {
     ...config,
+    extra: {
+      ...(config.extra ?? {}),
+      posthogProjectToken: process.env.EXPO_PUBLIC_POSTHOG_KEY,
+      posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+    },
     plugins: [
       ...(config.plugins ?? []),
       ...(googleIosUrlScheme

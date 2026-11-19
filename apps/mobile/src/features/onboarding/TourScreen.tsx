@@ -18,6 +18,7 @@ import { colors, layout, palette, radii, spacing, type Tone } from "../../lib/de
 import { LessonFlow } from "../skypath/LessonFlow";
 import { clearTourCheckpoint, readTourCheckpoint, writeTourCheckpoint } from "./tourCheckpoint";
 import { clearDraftCheckpoint } from "./draftCheckpoint";
+import { posthog } from "../../services/posthog";
 
 /** Checkpointed pages: the first lesson, then "you're ready". */
 const LESSON = 0;
@@ -104,6 +105,7 @@ function ReadyPage() {
   const finish = (then?: Href) => {
     if (!profile || finishing.current) return;
     finishing.current = true;
+    posthog?.capture("onboarding_completed", { destination: then ? "manifest" : "sky" });
     // Flipping `hasOnboarded` swaps the protected stacks; the tabs open on Sky.
     completeOnboarding(name.trim() || "Traveler", profile);
     clearDraft();

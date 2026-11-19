@@ -52,6 +52,7 @@ import type { AstrologyApi } from "./astrologyApi";
 import { Locale } from "../i18n";
 import { API_URL } from "./config";
 import { getDeviceToken, resetDeviceToken } from "./deviceAuth";
+import { posthogLogger } from "./posthog";
 
 export class ApiError extends Error {
   constructor(
@@ -134,42 +135,62 @@ export async function request<T>(
   body?: unknown,
   query?: Record<string, string | number>,
 ): Promise<T> {
-  const params = new URLSearchParams();
-  if (query) for (const [k, v] of Object.entries(query)) params.set(k, String(v));
-  const qs = params.toString();
-  const url = `${API_URL}/api/v1/${path}${qs ? `?${qs}` : ""}`;
-  const send = async () =>
-    fetchWithTimeout(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${await getDeviceToken()}`,
-        // The server counts daily things (check-ins) by the user's local day.
-        ...(DEVICE_TIME_ZONE ? { "x-tz": DEVICE_TIME_ZONE } : {}),
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
+  const startedAt = Date.now();
+  // Keep log dimensions categorical: route params, query values, and bodies can contain user data.
+  const apiArea = path.split("/", 1)[0] ?? "unknown";
 
-  let res = await send();
-  if (res.status === 401) {
-    await resetDeviceToken();
-    res = await send();
-  }
-  if (!res.ok) {
-    let code: string | undefined;
-    let errorBody: unknown;
-    try {
-      errorBody = await res.json();
-      const c = (errorBody as { code?: unknown })?.code;
-      if (typeof c === "string") code = c;
-    } catch {
-      // Non-JSON error body.
+  try {
+    const params = new URLSearchParams();
+    if (query) for (const [k, v] of Object.entries(query)) params.set(k, String(v));
+    const qs = params.toString();
+    const url = `${API_URL}/api/v1/${path}${qs ? `?${qs}` : ""}`;
+    const send = async () =>
+      fetchWithTimeout(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${await getDeviceToken()}`,
+          // The server counts daily things (check-ins) by the user's local day.
+          ...(DEVICE_TIME_ZONE ? { "x-tz": DEVICE_TIME_ZONE } : {}),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+
+    let res = await send();
+    if (res.status === 401) {
+      await resetDeviceToken();
+      res = await send();
     }
-    throw new ApiError(`Request failed (${res.status})`, res.status, code, errorBody);
+    if (!res.ok) {
+      let code: string | undefined;
+      let errorBody: unknown;
+      try {
+        errorBody = await res.json();
+        const c = (errorBody as { code?: unknown })?.code;
+        if (typeof c === "string") code = c;
+      } catch {
+        // Non-JSON error body.
+      }
+      throw new ApiError(`Request failed (${res.status})`, res.status, code, errorBody);
+    }
+    // DELETE / unlock may return empty-ish bodies; tolerate non-JSON.
+    const text = await res.text();
+    posthogLogger.apiRequestCompleted({
+      method,
+      api_area: apiArea,
+      duration_ms: Date.now() - startedAt,
+      status_code: res.status,
+    });
+    return (text ? JSON.parse(text) : undefined) as T;
+  } catch (error) {
+    posthogLogger.apiRequestFailed({
+      method,
+      api_area: apiArea,
+      duration_ms: Date.now() - startedAt,
+      status_code: error instanceof ApiError ? error.status : 0,
+    });
+    throw error;
   }
-  // DELETE / unlock may return empty-ish bodies; tolerate non-JSON.
-  const text = await res.text();
-  return (text ? JSON.parse(text) : undefined) as T;
 }
 
 /** HTTP implementation of AstrologyApi against the NestJS backend. */
