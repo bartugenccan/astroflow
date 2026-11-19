@@ -168,7 +168,7 @@
    "notes": "Kayit zorunlu degil (Guideline 5.1.1). Google oldugu icin Sign in with Apple da var (4.8). Hesaplar e-postaya gore birlestirilmez. Uygulama ici hesap silme: Profil > Verilerimi sil."
   },
   "dataTypes": {
-   "$note": "Koddan cikarilan beyan haritasi (2026-11-10). App Store Connect App Privacy ve Play Data Safety formlari bu listeyle birebir doldurulmali. Tracking yok (ATT gerekmez), reklam yok, veri satisi yok, tum trafik HTTPS.",
+   "$note": "Koddan cikarilan beyan haritasi (2026-11-10). App Store Connect App Privacy ve Play Data Safety formlari bu listeyle birebir doldurulmali. Tracking yok (ATT gerekmez), reklam yok, veri satisi yok, tum trafik HTTPS. App Store Connect App Privacy bu listeyle 2026-11-19'da dolduruldu.",
    "appStore": [
     {
      "category": "Contact Info > Email Address",
@@ -237,11 +237,12 @@
     },
     {
      "category": "Identifiers > Device ID",
-     "linked": false,
+     "linked": true,
      "purposes": [
+      "App Functionality",
       "Analytics"
      ],
-     "source": "PostHog anonim kimligi (uygulamaya ozel rastgele UUID; IDFA degil)"
+     "source": "Cihaz token'i (sunucu verisiyle eslesir) ve PostHog anonim kimligi (uygulamaya ozel UUID; IDFA degil). app.json privacy manifest ile ayni: linked."
     },
     {
      "category": "Purchases > Purchase History",
