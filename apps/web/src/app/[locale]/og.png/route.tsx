@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { getDict, isLocale, locales } from '@/i18n';
-import { palette, surface, text } from '@/lib/tokens';
+import { art, palette, stageBody, surface, text } from '@/lib/tokens';
+import { BODY_PATH } from '@/components/Aster';
 
 /** Served as /{locale}/og.png — a real .png path so static hosting sends image/png. */
 export const dynamic = 'force-static';
@@ -29,10 +30,16 @@ export async function GET(_req: Request, { params }: { params: Promise<{ locale:
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 40 }}>
-          <svg width="72" height="72" viewBox="0 0 64 64">
-            <circle cx="32" cy="32" r="29" fill="none" stroke={palette.star.face} strokeWidth="3" />
-            <path d="M28.5 15.5a17 17 0 1 0 9.5 31.1A14.6 14.6 0 0 1 28.5 15.5z" fill={palette.star.face} />
-            <path d="M40 21.5l1.5 5.5 5.5 1.3-5.5 1.3-1.5 5.6-1.5-5.6-5.5-1.3 5.5-1.3z" fill={palette.cloud.face} />
+          <svg width="96" height="96" viewBox="0 30 200 170">
+            <path d={BODY_PATH} transform="translate(0 7)" fill={stageBody[2].slab} />
+            <path d={BODY_PATH} fill={stageBody[2].bottom} />
+            <ellipse cx="81" cy="106" rx="7" ry="9" fill={art.ink} />
+            <ellipse cx="119" cy="106" rx="7" ry="9" fill={art.ink} />
+            <circle cx="78.5" cy="102.5" r="2.6" fill={art.sparkle} />
+            <circle cx="116.5" cy="102.5" r="2.6" fill={art.sparkle} />
+            <ellipse cx="68" cy="121" rx="8" ry="5" fill={art.blush} />
+            <ellipse cx="132" cy="121" rx="8" ry="5" fill={art.blush} />
+            <path d="M 91 122 Q 100 132 109 122" stroke={art.ink} strokeWidth="4" strokeLinecap="round" fill="none" />
           </svg>
           <div style={{ fontSize: 44, fontWeight: 900, color: palette.star.face }}>AstroFlow</div>
         </div>

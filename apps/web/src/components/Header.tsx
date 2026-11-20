@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { type Locale, getDict, otherLocale } from '@/i18n';
-import { LogoMark } from './Icons';
+import { Aster } from './Aster';
 import { site } from '@/lib/site';
 
 /** `path` is the current page below the locale ('' for home, 'privacy/' …) so the switch keeps you in place. */
@@ -12,7 +12,7 @@ export function Header({ locale, path = '' }: { locale: Locale; path?: string })
     <header className="site-header">
       <div className="container">
         <Link href={home} className="brand" aria-label="AstroFlow">
-          <LogoMark />
+          <Aster id="brand-header" stage={2} size={44} className="brand-aster" />
           AstroFlow
         </Link>
         <nav className="nav-links" aria-label="Primary">

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { type Locale, getDict } from '@/i18n';
 import { site } from '@/lib/site';
-import { LogoMark } from './Icons';
+import { Aster } from './Aster';
 
 export function Footer({ locale }: { locale: Locale }) {
   const d = getDict(locale);
@@ -13,7 +13,7 @@ export function Footer({ locale }: { locale: Locale }) {
         <div className="footer-grid">
           <div>
             <Link href={base} className="brand" aria-label="AstroFlow">
-              <LogoMark />
+              <Aster id="brand-footer" stage={2} size={44} className="brand-aster" />
               AstroFlow
             </Link>
             <p>{t.tagline}</p>

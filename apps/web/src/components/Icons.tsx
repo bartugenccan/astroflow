@@ -10,18 +10,6 @@ const stroke = {
   strokeLinejoin: 'round' as const,
 };
 
-/** The app icon's mark: ring, crescent and two four-point stars. */
-export function LogoMark(props: IconProps) {
-  return (
-    <svg viewBox="0 0 64 64" aria-hidden="true" className="logo-mark" {...props}>
-      <circle cx="32" cy="32" r="29" className="logo-ring" fill="none" strokeWidth="3" />
-      <path d="M28.5 15.5a17 17 0 1 0 9.5 31.1A14.6 14.6 0 0 1 28.5 15.5z" className="logo-moon" />
-      <path d="M40 21.5l1.5 5.5 5.5 1.3-5.5 1.3-1.5 5.6-1.5-5.6-5.5-1.3 5.5-1.3z" className="logo-star logo-twinkle" />
-      <path d="M44 36l.7 2.4 2.3.6-2.3.6-.7 2.4-.7-2.4-2.3-.6 2.3-.6z" className="logo-star logo-twinkle late" />
-    </svg>
-  );
-}
-
 export function CheckIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" {...stroke} strokeWidth={2} {...props}>

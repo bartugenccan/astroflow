@@ -50,7 +50,8 @@ export function sparklePath(x: number, y: number, r: number): string {
   return `M ${x} ${y - r} Q ${x + k} ${y - k} ${x + r} ${y} Q ${x + k} ${y + k} ${x} ${y + r} Q ${x - k} ${y + k} ${x - r} ${y} Q ${x - k} ${y - k} ${x} ${y - r} Z`;
 }
 
-const BODY_PATH = roundedStarPath(CX, CY, OUTER_R, INNER_R);
+/** Aster's body outline on the 200×200 artboard (also drawn by the OG image). */
+export const BODY_PATH = roundedStarPath(CX, CY, OUTER_R, INNER_R);
 const EGG_PATH =
   'M100 34 C 136 34 156 92 156 126 C 156 160 132 180 100 180 C 68 180 44 160 44 126 C 44 92 64 34 100 34 Z';
 const EGG_CRACK = 'M52 118 L66 110 L76 122 L90 108 L102 122 L114 108 L126 122 L138 110 L148 118';

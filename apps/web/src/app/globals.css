@@ -462,36 +462,16 @@ html.scrolled .site-header {
   text-decoration: none;
 }
 
-.brand .logo-mark {
-  width: 36px;
-  height: 36px;
+.brand .brand-aster {
+  flex: none;
+  width: 60px;
+  height: 60px;
+  margin: -12px -4px -12px -10px;
   transition: transform 0.5s var(--spring);
 }
 
-.brand:hover .logo-mark {
-  transform: rotate(-18deg) scale(1.1);
-}
-
-.logo-ring {
-  stroke: var(--star-face);
-}
-
-.logo-moon {
-  fill: var(--star-face);
-}
-
-.logo-star {
-  fill: var(--art-star100);
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.logo-twinkle {
-  animation: twinkle 2.8s ease-in-out infinite;
-}
-
-.logo-twinkle.late {
-  animation-delay: 1.2s;
+.brand:hover .brand-aster {
+  transform: rotate(-14deg) scale(1.12);
 }
 
 .nav-links {
