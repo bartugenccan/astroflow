@@ -89,7 +89,16 @@ export function ChunkyCard({
     <PressableChunkyCard
       c={c}
       d={d}
-      style={[styles.card, { backgroundColor: c.bg, borderColor: c.border }, padded && styles.padded, style]}
+      // A tinted fill is see-through, and the slab sits right under the face:
+      // on its own it would show through as a dark band that shifts on press.
+      // The face gets an opaque night base with the tint laid over it.
+      tint={tinted && tone !== "night" && tone !== "raised" ? c.bg : null}
+      style={[
+        styles.card,
+        { backgroundColor: tinted && tone !== "night" && tone !== "raised" ? surface.base : c.bg, borderColor: c.border },
+        padded && styles.padded,
+        style,
+      ]}
       containerStyle={containerStyle}
       onPress={onPress}
       accessibilityLabel={accessibilityLabel}
@@ -104,6 +113,7 @@ export function ChunkyCard({
 function PressableChunkyCard({
   c,
   d,
+  tint,
   style,
   containerStyle,
   onPress,
@@ -114,6 +124,8 @@ function PressableChunkyCard({
 }: {
   c: { bg: string; border: string; slab: string };
   d: number;
+  /** A see-through tint drawn over the face's opaque base (tinted cards). */
+  tint: string | null;
   style: StyleProp<ViewStyle>;
   containerStyle?: StyleProp<ViewStyle>;
   onPress: () => void;
@@ -146,7 +158,10 @@ function PressableChunkyCard({
       style={[{ paddingBottom: d }, disabled && styles.disabled, containerStyle]}
     >
       <View style={[styles.slab, { top: d, backgroundColor: c.slab }]} />
-      <Animated.View style={[style, faceStyle]}>{children}</Animated.View>
+      <Animated.View style={[style, faceStyle]}>
+        {tint ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: tint }]} /> : null}
+        {children}
+      </Animated.View>
     </Pressable>
   );
 }

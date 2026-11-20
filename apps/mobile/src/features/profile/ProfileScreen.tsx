@@ -8,7 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { RunningLightBorder } from "../../components/ui/RunningLightBorder";
+import { RunningEdgeLight } from "../../components/ui/RunningLightBorder";
 import { TwinkleSky } from "../../components/ui/TwinkleSky";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { Chip } from "../../components/ui/Chip";
@@ -644,60 +644,59 @@ function AsterSummaryCard({ onPress }: { onPress: () => void }) {
 
   return (
     // Aster's own card glows in Aster's violet, with a small sky behind it.
-    <RunningLightBorder tone="primary" radius={radii.xl} cardStyle={styles.asterFrame}>
-      <ChunkyCard
-        tone="primary"
-        tinted
-        depth="lg"
-        onPress={onPress}
-        accessibilityLabel={label}
-        accessibilityHint={t("profileUi.profile.asterOpen")}
-        style={styles.asterCard}
-      >
-        <TwinkleSky color={palette.primary.face} seed="aster-summary" intensity="bright" stars={8} />
-        <View style={styles.asterRow}>
-          <View style={styles.asterArt}>
-            <AsterMascot
-              stage={state.stage}
-              mood={state.mood}
-              accessories={state.equipped}
-              size={76}
-              action={state.eclipse.active ? "sleep" : "idle"}
-            />
-          </View>
-          <View style={styles.asterText}>
-            <AppText variant="label" color={colors.text.violet}>
-              {t("profileUi.profile.asterEyebrow")}
-            </AppText>
-            <AppText variant="title" numberOfLines={1}>
-              {stage}
-            </AppText>
-            <StatRow style={styles.asterStats}>
-              <StatPill
-                icon="planet"
-                tone="sky"
-                value={orbit}
-                muted={orbit === 0}
-                accessibilityLabel={t("profileUi.profile.asterOrbitA11y", { n: orbit })}
-              />
-              <StatPill
-                icon="star"
-                tone="star"
-                value={t("profileUi.profile.asterConstellations", { found, total })}
-                accessibilityLabel={t("profileUi.profile.asterConstellationsA11y", { found, total })}
-              />
-              <StatPill
-                icon="sparkles"
-                tone="candy"
-                value={state.stardust}
-                accessibilityLabel={t("profileUi.profile.asterStardustA11y", { n: state.stardust })}
-              />
-            </StatRow>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.text.violet} />
+    <ChunkyCard
+      tone="primary"
+      tinted
+      depth="lg"
+      onPress={onPress}
+      accessibilityLabel={label}
+      accessibilityHint={t("profileUi.profile.asterOpen")}
+      style={styles.asterCard}
+    >
+      <TwinkleSky color={palette.primary.face} seed="aster-summary" intensity="bright" stars={8} />
+      <RunningEdgeLight tone="primary" />
+      <View style={styles.asterRow}>
+        <View style={styles.asterArt}>
+          <AsterMascot
+            stage={state.stage}
+            mood={state.mood}
+            accessories={state.equipped}
+            size={76}
+            action={state.eclipse.active ? "sleep" : "idle"}
+          />
         </View>
-      </ChunkyCard>
-    </RunningLightBorder>
+        <View style={styles.asterText}>
+          <AppText variant="label" color={colors.text.violet}>
+            {t("profileUi.profile.asterEyebrow")}
+          </AppText>
+          <AppText variant="title" numberOfLines={1}>
+            {stage}
+          </AppText>
+          <StatRow style={styles.asterStats}>
+            <StatPill
+              icon="planet"
+              tone="sky"
+              value={orbit}
+              muted={orbit === 0}
+              accessibilityLabel={t("profileUi.profile.asterOrbitA11y", { n: orbit })}
+            />
+            <StatPill
+              icon="star"
+              tone="star"
+              value={t("profileUi.profile.asterConstellations", { found, total })}
+              accessibilityLabel={t("profileUi.profile.asterConstellationsA11y", { found, total })}
+            />
+            <StatPill
+              icon="sparkles"
+              tone="candy"
+              value={state.stardust}
+              accessibilityLabel={t("profileUi.profile.asterStardustA11y", { n: state.stardust })}
+            />
+          </StatRow>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.text.violet} />
+      </View>
+    </ChunkyCard>
   );
 }
 
@@ -842,7 +841,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: 2,
   },
-  asterFrame: { margin: 3, backgroundColor: "transparent" },
   // overflow hidden clips the TwinkleSky backdrop to the rounded card.
   asterCard: { overflow: "hidden" },
   asterRow: {

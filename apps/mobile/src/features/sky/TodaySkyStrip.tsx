@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { ShimmerLines } from "../../components/ui/Shimmer";
-import { RunningLightBorder } from "../../components/ui/RunningLightBorder";
+import { RunningEdgeLight } from "../../components/ui/RunningLightBorder";
 import { TwinkleSky } from "../../components/ui/TwinkleSky";
 import { StateView } from "../../components/ui/StateView";
 import { usePlanStore } from "../../store/usePlanStore";
@@ -42,59 +42,57 @@ export function TodaySkyStrip() {
   const headline = why ?? focus ?? t("skypath.sky.todayFallback");
 
   return (
-    <RunningLightBorder tone="sky" radius={radii.xl} cardStyle={styles.frame}>
-      <ChunkyCard
-        tone="sky"
-        tinted
-        depth="lg"
-        onPress={() => router.push("/sky-today" as Href)}
-        accessibilityLabel={`${t("skypath.sky.todayEyebrow")}. ${headline}`}
-        accessibilityHint={t("skypath.sky.todayDetail")}
-        style={styles.card}
-      >
-        <TwinkleSky color={palette.sky.face} seed="sky-strip" intensity="bright" />
-        <View style={styles.top}>
-          <AppText variant="label" color={palette.sky.face} style={styles.flex} numberOfLines={1}>
-            {t("skypath.sky.todayEyebrow")}
-            {moonSign ? ` · ${t("skypath.sky.moonIn", { sign: moonSign })}` : ""}
+    <ChunkyCard
+      tone="sky"
+      tinted
+      depth="lg"
+      onPress={() => router.push("/sky-today" as Href)}
+      accessibilityLabel={`${t("skypath.sky.todayEyebrow")}. ${headline}`}
+      accessibilityHint={t("skypath.sky.todayDetail")}
+      style={styles.card}
+    >
+      <TwinkleSky color={palette.sky.face} seed="sky-strip" intensity="bright" />
+      <RunningEdgeLight tone="sky" />
+      <View style={styles.top}>
+        <AppText variant="label" color={palette.sky.face} style={styles.flex} numberOfLines={1}>
+          {t("skypath.sky.todayEyebrow")}
+          {moonSign ? ` · ${t("skypath.sky.moonIn", { sign: moonSign })}` : ""}
+        </AppText>
+        <View style={styles.detail}>
+          <AppText variant="labelLong" color={palette.sky.face}>
+            {t("skypath.sky.todayDetail")}
           </AppText>
-          <View style={styles.detail}>
-            <AppText variant="labelLong" color={palette.sky.face}>
-              {t("skypath.sky.todayDetail")}
-            </AppText>
-            <Ionicons name="chevron-forward" size={14} color={palette.sky.face} />
+          <Ionicons name="chevron-forward" size={14} color={palette.sky.face} />
+        </View>
+      </View>
+      {loading && !plan ? (
+        <ShimmerLines lines={2} />
+      ) : failed && !plan ? (
+        // No plan to read the day from: say so (and offer a retry) rather than
+        // claiming "your sky is ready" over nothing.
+        <StateView kind="error" compact message={t("plan.loadError")} onAction={() => dto && refresh(dto)} />
+      ) : (
+        <View style={styles.body}>
+          {plan ? (
+            <View style={[styles.icon, { backgroundColor: palette[tone].face }]}>
+              <Ionicons name={AREA_ICON[plan.focusArea]} size={20} color={palette[tone].on} />
+            </View>
+          ) : null}
+          <View style={styles.flex}>
+            <AppText variant="heading">{headline}</AppText>
+            {why && focus ? (
+              <AppText variant="bodySmall" color={colors.text.secondary}>
+                {moon ? `${focus} · ${moon}` : focus}
+              </AppText>
+            ) : null}
           </View>
         </View>
-        {loading && !plan ? (
-          <ShimmerLines lines={2} />
-        ) : failed && !plan ? (
-          // No plan to read the day from: say so (and offer a retry) rather than
-          // claiming "your sky is ready" over nothing.
-          <StateView kind="error" compact message={t("plan.loadError")} onAction={() => dto && refresh(dto)} />
-        ) : (
-          <View style={styles.body}>
-            {plan ? (
-              <View style={[styles.icon, { backgroundColor: palette[tone].face }]}>
-                <Ionicons name={AREA_ICON[plan.focusArea]} size={20} color={palette[tone].on} />
-              </View>
-            ) : null}
-            <View style={styles.flex}>
-              <AppText variant="heading">{headline}</AppText>
-              {why && focus ? (
-                <AppText variant="bodySmall" color={colors.text.secondary}>
-                  {moon ? `${focus} · ${moon}` : focus}
-                </AppText>
-              ) : null}
-            </View>
-          </View>
-        )}
-      </ChunkyCard>
-    </RunningLightBorder>
+      )}
+    </ChunkyCard>
   );
 }
 
 const styles = StyleSheet.create({
-  frame: { margin: 3, backgroundColor: "transparent" },
   // overflow hidden clips the TwinkleSky backdrop to the rounded card.
   card: { gap: spacing.sm, overflow: "hidden" },
   top: { flexDirection: "row", alignItems: "center", gap: spacing.sm },

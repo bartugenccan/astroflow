@@ -44,7 +44,7 @@ import { useTranslation } from "../../i18n";
 import { colors, depth, spacing, radii, fonts, motion, palette, surface, typography } from "../../lib/design-system";
 import { todayISO } from "../../lib/dates";
 import { track } from "../../services/analytics";
-import { SUPPORT_EMAIL } from "../../services/config";
+import { supportEmail } from "../../services/config";
 import { isFairUse, isFreeLimit } from "../../services/httpAstrologyApi";
 
 /** Springy rise for a freshly-sent / freshly-received bubble. */
@@ -72,7 +72,7 @@ export function CompanionScreen() {
   const reportAnswer = (id: string) => {
     const subject = encodeURIComponent(t("companion.reportSubject"));
     const body = encodeURIComponent(t("companion.reportBody", { id }));
-    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`).catch(() => undefined);
+    Linking.openURL(`mailto:${supportEmail(locale)}?subject=${subject}&body=${body}`).catch(() => undefined);
   };
   const [paywall, setPaywall] = useState(false);
   /** The server said today's free messages are used up (counts across phones and reinstalls). */

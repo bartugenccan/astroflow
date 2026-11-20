@@ -36,14 +36,23 @@ export const PREMIUM_BETA = (process.env.EXPO_PUBLIC_PREMIUM_BETA ?? "true") !==
 /**
  * Public website with the privacy policy, terms and support pages
  * (apps/web, one page per language: /{locale}/privacy, /terms, /support).
- * Served from Vercel until the getastroflow.com domain exists (F25).
+ * Hosted on Vercel at getastroflow.com (the old astroflow-web.vercel.app
+ * address keeps working for older builds).
  */
-const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL ?? "https://astroflow-web.vercel.app").trim().replace(/\/+$/, "");
+const SITE_URL = (process.env.EXPO_PUBLIC_SITE_URL || "https://getastroflow.com").trim().replace(/\/+$/, "");
 
 export type LegalPage = "privacy" | "terms" | "support";
 
-/** Where in-app reports (e.g. a harmful AI answer) go. Same address as the website's support page. */
-export const SUPPORT_EMAIL = (process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? "astroflowhq@gmail.com").trim();
+/**
+ * Where in-app reports (e.g. a harmful AI answer) go: the same address as the
+ * website's support page in that language. Both forward to the team inbox
+ * (Cloudflare Email Routing); EXPO_PUBLIC_SUPPORT_EMAIL overrides both.
+ */
+export function supportEmail(locale: "en" | "tr"): string {
+  const override = (process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? "").trim();
+  if (override) return override;
+  return locale === "tr" ? "destek@getastroflow.com" : "support@getastroflow.com";
+}
 
 export function legalUrl(page: LegalPage, locale: "en" | "tr"): string {
   return `${SITE_URL}/${locale}/${page}`;

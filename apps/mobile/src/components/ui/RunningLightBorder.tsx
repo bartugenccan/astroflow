@@ -43,20 +43,12 @@ interface Props {
 }
 
 /**
- * The headline-feature frame: a gold light runs around the card's border
- * (a Skia sweep gradient on a rounded-rect stroke, plus a soft glow that
- * follows it). Holds still at a fixed angle under Reduce Motion, and rests
- * while its screen or pane isn't the one on view.
- *
- * The glow is two wide, faint strokes rather than a `BlurMask`: a blur under a
- * rotating shader had to be re-rasterised on every frame of the lap.
+ * The light's lap: one turn every 6 s (3.2 s when intense). Holds at a fixed
+ * angle under Reduce Motion and rests while its screen isn't the one on view.
  */
-export function RunningLightBorder({ children, intense = false, radius = radii.lg, tone, cardStyle }: Props) {
-  const ring = ringColors(tone);
+function useLap(intense: boolean) {
   const reduced = useReducedMotion();
   const active = useScreenActive();
-  const [size, setSize] = useState({ w: 0, h: 0 });
-
   const angle = useSharedValue(0);
   useEffect(() => {
     if (reduced) {
@@ -78,7 +70,62 @@ export function RunningLightBorder({ children, intense = false, radius = radii.l
     );
     return () => cancelAnimation(angle);
   }, [reduced, active, intense, angle]);
-  const shaderTransform = useDerivedValue(() => [{ rotate: angle.value }]);
+  return useDerivedValue(() => [{ rotate: angle.value }]);
+}
+
+/**
+ * The same running light, drawn inside a card instead of around it: put it
+ * right after the card's backdrop (it fills the card absolutely and ignores
+ * touches). The light runs along the inner edge of the card's own border and
+ * glows inward, so there is no gap around the card and it moves with the card
+ * when it is pressed. `radius` is the card's corner radius.
+ */
+export function RunningEdgeLight({ tone, radius = radii.xl, intense = false }: { tone?: Tone; radius?: number; intense?: boolean }) {
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const shaderTransform = useLap(intense);
+  const ring = ringColors(tone);
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width !== size.w || height !== size.h) setSize({ w: width, h: height });
+  };
+  // Inside a 2pt border the inner corners are 2pt tighter.
+  const r = Math.max(0, radius - 2);
+  const center = vec(size.w / 2, size.h / 2);
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} onLayout={onLayout}>
+      {size.w > 0 ? (
+        <Canvas style={StyleSheet.absoluteFill}>
+          {/* Wide, faint strokes centred on the edge: only their inner half
+              shows, as a glow that follows the light into the card. */}
+          <RoundedRect x={0} y={0} width={size.w} height={size.h} r={r} style="stroke" strokeWidth={intense ? 18 : 14} opacity={intense ? 0.24 : 0.16}>
+            <SweepGradient c={center} colors={ring} origin={center} transform={shaderTransform} />
+          </RoundedRect>
+          <RoundedRect x={0} y={0} width={size.w} height={size.h} r={r} style="stroke" strokeWidth={6} opacity={intense ? 0.6 : 0.42}>
+            <SweepGradient c={center} colors={ring} origin={center} transform={shaderTransform} />
+          </RoundedRect>
+          {/* The crisp light itself, hugging the border. */}
+          <RoundedRect x={1} y={1} width={size.w - 2} height={size.h - 2} r={Math.max(0, r - 1)} style="stroke" strokeWidth={2}>
+            <SweepGradient c={center} colors={ring} origin={center} transform={shaderTransform} />
+          </RoundedRect>
+        </Canvas>
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * The headline-feature frame: a gold light runs around the card's border
+ * (a Skia sweep gradient on a rounded-rect stroke, plus a soft glow that
+ * follows it). Holds still at a fixed angle under Reduce Motion, and rests
+ * while its screen or pane isn't the one on view.
+ *
+ * The glow is two wide, faint strokes rather than a `BlurMask`: a blur under a
+ * rotating shader had to be re-rasterised on every frame of the lap.
+ */
+export function RunningLightBorder({ children, intense = false, radius = radii.lg, tone, cardStyle }: Props) {
+  const ring = ringColors(tone);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const shaderTransform = useLap(intense);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;

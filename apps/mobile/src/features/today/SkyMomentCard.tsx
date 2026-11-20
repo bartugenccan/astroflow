@@ -5,7 +5,7 @@ import { useRouter, type Href } from "expo-router";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
 import { TwinkleSky } from "../../components/ui/TwinkleSky";
-import { RunningLightBorder } from "../../components/ui/RunningLightBorder";
+import { RunningEdgeLight } from "../../components/ui/RunningLightBorder";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { Chip } from "../../components/ui/Chip";
 import { PressableScale } from "../../components/ui/PressableScale";
@@ -65,39 +65,38 @@ export function SkyMomentCard({ moments, onOpen }: SkyMomentCardProps) {
   return (
     // A light runs around the card in the moment's own colour: it is the one
     // thing in the sky worth a look today.
-    <RunningLightBorder tone={tone} radius={radii.xl} cardStyle={styles.frame}>
-      <ChunkyCard
-        tone={tone}
-        tinted
-        style={styles.card}
-        onPress={openSheet}
-        accessibilityLabel={`${t("moments.cardLabel")}. ${title}. ${when}`}
-        accessibilityHint={t("moments.open")}
-      >
-        <TwinkleSky color={palette[tone].face} seed={top.id} intensity="bright" />
-        <View style={styles.top}>
-          <IconBadge moment={top} />
-          <AppText variant="label" color={palette[tone].face} style={styles.flex} numberOfLines={1}>
-            {t("moments.cardLabel")}
-          </AppText>
-          {top.certainty === "possible" ? <Chip label={t("moments.possibleChip")} tone="cloud" /> : null}
-        </View>
-        <AppText variant="heading">{title}</AppText>
-        <AppText variant="body" color={colors.text.secondary} numberOfLines={2}>
-          {momentBody(t, locale, top)}
+    <ChunkyCard
+      tone={tone}
+      tinted
+      style={styles.card}
+      onPress={openSheet}
+      accessibilityLabel={`${t("moments.cardLabel")}. ${title}. ${when}`}
+      accessibilityHint={t("moments.open")}
+    >
+      <TwinkleSky color={palette[tone].face} seed={top.id} intensity="bright" />
+      <RunningEdgeLight tone={tone} />
+      <View style={styles.top}>
+        <IconBadge moment={top} />
+        <AppText variant="label" color={palette[tone].face} style={styles.flex} numberOfLines={1}>
+          {t("moments.cardLabel")}
         </AppText>
-        <View style={styles.bottom}>
-          <AppText variant="labelLong" color={colors.text.accent} style={styles.flex} numberOfLines={1}>
-            {when}
+        {top.certainty === "possible" ? <Chip label={t("moments.possibleChip")} tone="cloud" /> : null}
+      </View>
+      <AppText variant="heading">{title}</AppText>
+      <AppText variant="body" color={colors.text.secondary} numberOfLines={2}>
+        {momentBody(t, locale, top)}
+      </AppText>
+      <View style={styles.bottom}>
+        <AppText variant="labelLong" color={colors.text.accent} style={styles.flex} numberOfLines={1}>
+          {when}
+        </AppText>
+        {others > 0 ? (
+          <AppText variant="labelLong" color={colors.text.tertiary}>
+            {t("moments.more", { n: others })}
           </AppText>
-          {others > 0 ? (
-            <AppText variant="labelLong" color={colors.text.tertiary}>
-              {t("moments.more", { n: others })}
-            </AppText>
-          ) : null}
-        </View>
-      </ChunkyCard>
-    </RunningLightBorder>
+        ) : null}
+      </View>
+    </ChunkyCard>
   );
 }
 
@@ -275,7 +274,6 @@ function Fact({ label, value }: { label: string; value?: string }) {
 }
 
 const styles = StyleSheet.create({
-  frame: { margin: 3, backgroundColor: "transparent" },
   // overflow hidden clips the TwinkleSky backdrop to the rounded card.
   card: { gap: spacing.sm, overflow: "hidden" },
   flex: { flex: 1, minWidth: 0 },
