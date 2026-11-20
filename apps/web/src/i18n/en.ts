@@ -42,6 +42,11 @@ export const en = {
       'A good day to say the kind thing out loud. Conversations soften — let someone meet you halfway.',
     score: 'Day energy',
     aster: 'Ask Aster',
+    questsTitle: "Today's goals",
+    quests: ['Read your sky', 'Pull a tarot card', 'Practice a manifestation'],
+    reward: '+15 Light',
+    rewardBody: 'Aster loved that',
+    streak: '7-day orbit',
   },
   trust: [
     'Computed from real planetary positions',
@@ -121,6 +126,7 @@ export const en = {
   },
   aster: {
     eyebrow: 'Meet Aster',
+    status: 'here for you',
     title: 'A companion that knows your chart',
     body: 'Aster is a conversational guide built into AstroFlow. It answers from your placements and today’s transits — and keeps short notes so you never have to explain yourself twice.',
     points: [
@@ -139,6 +145,17 @@ export const en = {
         from: 'aster',
         text: 'Your Moon in Pisces feels the room first. Breathe out longer than you breathe in, then answer the question that was asked — not the one you fear.',
       },
+    ],
+  },
+  grow: {
+    eyebrow: 'Aster grows with you',
+    title: 'From a cosmic egg to Nova',
+    body: 'Every reading, card and practice feeds Aster with Light. Keep your daily orbit going and watch a sleepy egg hatch into a star that shines brighter every week.',
+    stages: ['Cosmic Egg', 'Spark', 'Starling', 'Glimmer', 'Constellation', 'Nova'],
+    points: [
+      { title: 'Daily goals', body: 'Three small things a day keep your orbit going.' },
+      { title: 'Light for every step', body: 'Readings, tarot, breath and manifestations all count.' },
+      { title: 'Stardust to spend', body: 'Dress Aster up with what you earn along the way.' },
     ],
   },
   privacy: {
@@ -180,7 +197,7 @@ export const en = {
     premium: {
       name: 'Premium',
       tagline: 'The whole sky',
-      badge: 'Weekly · Monthly · Yearly',
+      badge: 'Monthly · Yearly',
       items: [
         'Unlimited Aster',
         'Weekly & monthly forecasts',
@@ -190,7 +207,7 @@ export const en = {
         'Natal & 24-month transit PDF reports',
       ],
     },
-    note: 'Pricing will be announced at launch. During the beta, every feature is open.',
+    note: 'The yearly plan starts with a 7-day free trial. Prices are shown in the app, in your currency.',
   },
   waitlist: {
     eyebrow: 'Early access',
@@ -383,7 +400,7 @@ export const en = {
         {
           h: 'Subscriptions',
           p: [
-            'During the beta Premium is free for everyone; there is nothing to buy right now.',
+            'Premium is a monthly or yearly subscription; the yearly plan starts with a 7-day free trial.',
             'Purchases are handled by the App Store or Google Play. Manage or cancel your subscription from your store account settings.',
           ],
         },

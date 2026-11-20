@@ -19,8 +19,8 @@ export function LegalPage({ locale, kind }: { locale: Locale; kind: LegalKind })
   const legal = getDict(locale).legal;
   const page = legal[kind];
   const mail = (
-    <a className="mail" href={`mailto:${site.email}`}>
-      {site.email}
+    <a className="mail" href={`mailto:${site.emails[locale]}`}>
+      {site.emails[locale]}
     </a>
   );
 
@@ -41,7 +41,7 @@ export function LegalPage({ locale, kind }: { locale: Locale; kind: LegalKind })
           <p className="intro">{page.intro}</p>
           {'emailCta' in page && (
             <p>
-              <a className="btn" href={`mailto:${site.email}`}>
+              <a className="btn" href={`mailto:${site.emails[locale]}`}>
                 {page.emailCta}
               </a>
             </p>

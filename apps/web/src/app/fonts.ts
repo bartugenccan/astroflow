@@ -1,16 +1,16 @@
-import { Cormorant_Garamond, Manrope } from 'next/font/google';
+import { DM_Sans, Nunito } from 'next/font/google';
 
-export const display = Cormorant_Garamond({
+/** Same pair as the app: Nunito for headings and buttons, DM Sans for body. */
+export const display = Nunito({
   subsets: ['latin', 'latin-ext'],
-  weight: ['500', '600'],
-  style: ['normal', 'italic'],
+  weight: ['700', '800', '900'],
   variable: '--font-display',
   display: 'swap',
 });
 
-export const ui = Manrope({
+export const ui = DM_Sans({
   subsets: ['latin', 'latin-ext'],
-  weight: ['400', '500', '600', '700', '800'],
+  weight: ['400', '500', '700'],
   variable: '--font-ui',
   display: 'swap',
 });

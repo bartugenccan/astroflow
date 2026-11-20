@@ -3,9 +3,9 @@
  "app": {
   "name": "AstroFlow",
   "bundleId": "com.astroflow.app",
-  "supportUrl": "https://astroflow-web.vercel.app/en/support",
-  "privacyUrl": "https://astroflow-web.vercel.app/en/privacy",
-  "termsUrl": "https://astroflow-web.vercel.app/en/terms"
+  "supportUrl": "https://getastroflow.com/en/support",
+  "privacyUrl": "https://getastroflow.com/en/privacy",
+  "termsUrl": "https://getastroflow.com/en/terms"
  },
  "compliance": {
   "accountDeletion": {

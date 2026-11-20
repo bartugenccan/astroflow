@@ -44,6 +44,11 @@ export const tr: Dict = {
       'Güzel olanı yüksek sesle söylemek için iyi bir gün. Konuşmalar yumuşar — birinin seninle yarı yolda buluşmasına izin ver.',
     score: 'Günün enerjisi',
     aster: 'Aster’e sor',
+    questsTitle: 'Bugünün hedefleri',
+    quests: ['Gökyüzünü oku', 'Bir tarot kartı çek', 'Manifest pratiği yap'],
+    reward: '+15 Işık',
+    rewardBody: 'Aster buna bayıldı',
+    streak: '7 günlük yörünge',
   },
   trust: [
     'Gerçek gezegen konumlarından hesaplanır',
@@ -123,6 +128,7 @@ export const tr: Dict = {
   },
   aster: {
     eyebrow: 'Aster ile tanış',
+    status: 'yanında',
     title: 'Haritanı bilen bir yol arkadaşı',
     body: 'Aster, AstroFlow’un içindeki sohbet rehberi. Yerleşimlerinden ve bugünün transitlerinden yanıt verir — ve kısa notlar tutar, böylece kendini iki kez anlatmak zorunda kalmazsın.',
     points: [
@@ -141,6 +147,17 @@ export const tr: Dict = {
         from: 'aster',
         text: 'Balık’taki Ay’ın odayı ilk sen hissedersin. Nefesini aldığından uzun ver, sonra sorulan soruyu cevapla — korktuğun soruyu değil.',
       },
+    ],
+  },
+  grow: {
+    eyebrow: 'Aster seninle büyür',
+    title: 'Kozmik yumurtadan Nova’ya',
+    body: 'Her okuma, her kart ve her pratik Aster’e Işık verir. Günlük yörüngeni sürdürdükçe uykulu bir yumurta çatlar ve her hafta biraz daha parlayan bir yıldıza dönüşür.',
+    stages: ['Kozmik Yumurta', 'Kıvılcım', 'Yıldızcık', 'Parıltı', 'Takımyıldız', 'Nova'],
+    points: [
+      { title: 'Günlük hedefler', body: 'Günde üç küçük adım yörüngeni sürdürür.' },
+      { title: 'Her adıma Işık', body: 'Okumalar, tarot, nefes ve manifestler hepsi sayılır.' },
+      { title: 'Harcayacak Yıldız Tozu', body: 'Yol boyunca kazandıklarınla Aster’i giydir.' },
     ],
   },
   privacy: {
@@ -182,7 +199,7 @@ export const tr: Dict = {
     premium: {
       name: 'Premium',
       tagline: 'Bütün gökyüzü',
-      badge: 'Haftalık · Aylık · Yıllık',
+      badge: 'Aylık · Yıllık',
       items: [
         'Sınırsız Aster',
         'Haftalık ve aylık öngörüler',
@@ -192,7 +209,7 @@ export const tr: Dict = {
         'Natal ve 24 aylık transit PDF raporları',
       ],
     },
-    note: 'Fiyatlar lansmanda açıklanacak. Beta süresince tüm özellikler açık.',
+    note: 'Yıllık plan 7 gün ücretsiz denemeyle başlar. Fiyatlar uygulamada, kendi para biriminle gösterilir.',
   },
   waitlist: {
     eyebrow: 'Erken erişim',
@@ -385,7 +402,7 @@ export const tr: Dict = {
         {
           h: 'Abonelikler',
           p: [
-            'Beta döneminde Premium herkese ücretsiz; şu an satın alınacak bir şey yok.',
+            'Premium aylık ya da yıllık bir aboneliktir; yıllık plan 7 gün ücretsiz denemeyle başlar.',
             'Satın almalar App Store ya da Google Play tarafından yürütülür. Aboneliğini mağaza hesabı ayarlarından yönetebilir ya da iptal edebilirsin.',
           ],
         },

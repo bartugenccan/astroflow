@@ -18,7 +18,7 @@ export default function RootRedirect() {
         <meta httpEquiv="refresh" content="0; url=/en/" />
       </noscript>
       <div>
-        <p className="display" style={{ fontSize: 40, color: 'var(--gold-100)', margin: 0 }}>
+        <p className="display" style={{ fontSize: 40, color: 'var(--star-face)', margin: 0 }}>
           AstroFlow
         </p>
         <p>

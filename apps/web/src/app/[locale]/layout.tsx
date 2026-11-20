@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import { Analytics } from '@vercel/analytics/next';
 import { getDict, isLocale, locales } from '@/i18n';
 import { site } from '@/lib/site';
+import { cssVariables, surface } from '@/lib/tokens';
+import { Motion } from '@/components/Motion';
 import { display, ui } from '../fonts';
 import '../globals.css';
 
@@ -14,7 +16,7 @@ export function generateStaticParams() {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#060810',
+  themeColor: surface.base,
   colorScheme: 'dark',
 };
 
@@ -61,10 +63,14 @@ export default async function LocaleLayout({
   if (!isLocale(locale)) notFound();
   return (
     <html lang={locale} className={`${display.variable} ${ui.variable}`}>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: cssVariables() }} />
+      </head>
       <body>
         <a href="#main" className="skip-link">
           {locale === 'tr' ? 'İçeriğe geç' : 'Skip to content'}
         </a>
+        <Motion />
         {children}
         <Analytics />
       </body>

@@ -64,7 +64,7 @@ Dogrulama: scratch API + PGlite + sahte Anthropic ile 17/17 e2e + 4 OTP kontrolu
 1. Railway: proje + Postgres + yukaridaki env, repo baglaninca `railway.json` kullanilir; `/api/v1/health/ready` yesil.
 2. `cd apps/mobile && eas init` (projectId), `eas env:create --environment production --name EXPO_PUBLIC_API_URL --value https://<railway-domain>` (`/api/v1` EKLEME - istemci ekliyor).
 3. Apple Developer: App ID `com.astroflow.app` + App Store Connect kaydi, `eas.json` submit alanlari (`appleId`, `ascAppId`, `appleTeamId`).
-4. Site yayinda: https://astroflow-web.vercel.app (apps/web statik cikti, Vercel CLI ile `vercel deploy --prod`); getastroflow.com alininca EXPO_PUBLIC_SITE_URL ve ship.config.json URL'leri ona cevrilir. Gizlilik URL'si harici TestFlight icin zorunlu.
+4. Site yayinda: https://getastroflow.com (2026-11-20; Vercel projesi `astroflow-web`, domain Cloudflare DNS'te, `www` → apex 308). Yayin: `apps/web` icinde `NEXT_PUBLIC_SITE_URL=https://getastroflow.com npm run build`, `out/` icerigini `astroflow-web` adli bir klasore kopyala, orada `npx vercel@65.16.0 deploy --prod --yes --scope bk-dad0`. Eski https://astroflow-web.vercel.app adresi eski build'ler icin calismaya devam ediyor. Iletisim: destek@getastroflow.com (tr) / support@getastroflow.com (en), Cloudflare Email Routing ile ekip kutusuna. Gizlilik URL'si harici TestFlight icin zorunlu.
 5. App Store Connect: App Privacy beyani (bkz. ship.config.json), TestFlight Test Information.
 6. Commit, `eas build -p ios --profile production`, `eas submit -p ios`.
 
@@ -112,8 +112,8 @@ ASC App Privacy beyani yapilmadi. Magaza islemleri `release` branch'inden yurur.
 | Asama | Durum |
 |---|---|
 | Apple Developer / Google Play hesaplari | ◐ Apple aktif (bireysel, team 3XR3YYGBUB); Google Play yok |
-| Gizlilik + destek URL yayinda | ✅ (2026-11-17, astroflowhq@gmail.com) |
-| `ship.config.json` URL alanlari dolduruldu | ✅ (astroflow-web.vercel.app, yayinda) |
+| Gizlilik + destek URL yayinda | ✅ (2026-11-20, getastroflow.com, destek@ / support@getastroflow.com) |
+| `ship.config.json` URL alanlari dolduruldu | ✅ (getastroflow.com, yayinda) |
 | Mock katmani release build disinda, gercek API bagli | ✅ (API URL EAS env ile verilecek) |
 | Odeme SDK entegre, sandbox'ta satin alma calisti | ◐ RevenueCat kodu hazir (2026-11-19, `services/purchases.ts`, `PremiumPlans`, geri yukleme); anahtarlar + urunler + sandbox testi bekleniyor. Sunucu tarafi dogrulama yok (bkz. docs/premium-flow.md) |
 | Sentry kuruldu | ◐ 2026-11-19: projeler `astroflow-mobile` / `astroflow-api` (org bartus-organization), API test hatasi lokalde dogrulandi, EAS env'de DSN var. EAS `SENTRY_AUTH_TOKEN` eklendi, source map yuklemesi acik. Bekleyen: Railway `SENTRY_DSN` |

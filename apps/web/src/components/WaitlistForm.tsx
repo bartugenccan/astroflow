@@ -27,7 +27,7 @@ export function WaitlistForm({ t, locale }: { t: Dict['waitlist']; locale: Local
     if (!site.apiUrl) {
       const subject = encodeURIComponent(t.mailtoSubject);
       const body = encodeURIComponent(`${value} (${locale})`);
-      window.location.href = `mailto:${site.email}?subject=${subject}&body=${body}`;
+      window.location.href = `mailto:${site.emails[locale]}?subject=${subject}&body=${body}`;
       return;
     }
     setStatus('sending');

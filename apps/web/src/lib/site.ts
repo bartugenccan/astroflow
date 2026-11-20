@@ -2,7 +2,14 @@
 export const site = {
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://getastroflow.com').replace(/\/$/, ''),
   apiUrl: (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, ''),
-  email: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? 'astroflowhq@gmail.com',
+  /**
+   * Contact address per language. Both forward to the team inbox through
+   * Cloudflare Email Routing; NEXT_PUBLIC_CONTACT_EMAIL overrides both.
+   */
+  emails: {
+    tr: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'destek@getastroflow.com',
+    en: process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'support@getastroflow.com',
+  },
   name: 'AstroFlow',
   /**
    * App Store product page, e.g. https://apps.apple.com/app/id6835863763.

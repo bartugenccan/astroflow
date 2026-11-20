@@ -18,7 +18,7 @@ export function Footer({ locale }: { locale: Locale }) {
             </Link>
             <p>{t.tagline}</p>
             <p>
-              {t.contact}: <a href={`mailto:${site.email}`}>{site.email}</a>
+              {t.contact}: <a href={`mailto:${site.emails[locale]}`}>{site.emails[locale]}</a>
             </p>
           </div>
           <div>

@@ -3,8 +3,8 @@ export function ZodiacWheel({ className }: { className?: string }) {
   const spokes = Array.from({ length: 12 }, (_, i) => (i * Math.PI) / 6);
   const ticks = Array.from({ length: 72 }, (_, i) => (i * Math.PI) / 36);
   return (
-    <svg viewBox="-100 -100 200 200" className={className} aria-hidden="true">
-      <g fill="none" stroke="#E7CD8F" strokeWidth="0.35">
+    <svg viewBox="-100 -100 200 200" className={className} aria-hidden="true" data-loop>
+      <g className="wheel-lines" fill="none" strokeWidth="0.35">
         <circle r="96" />
         <circle r="84" />
         <circle r="56" />
