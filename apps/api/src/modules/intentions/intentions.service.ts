@@ -472,6 +472,7 @@ function mergeDeltas(deltas: (MascotDelta | null)[]): MascotDelta | null {
     ...last,
     xpGained: real.reduce((n, d) => n + d.xpGained, 0),
     stardustGained: real.reduce((n, d) => n + d.stardustGained, 0),
+    energyGained: real.reduce((n, d) => n + (d.energyGained ?? 0), 0),
     previousStage: real[0].previousStage,
     leveledUp: last.stage > real[0].previousStage,
     hatched: real.some((d) => d.hatched),

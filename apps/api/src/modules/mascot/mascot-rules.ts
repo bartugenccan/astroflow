@@ -258,6 +258,19 @@ export function energyFor(kinds: MascotEventKind[]): number {
   return Math.max(0, Math.min(100, total));
 }
 
+/**
+ * Energy one award actually added: today's energy with it (`kindsAfter`
+ * already includes `kind`) minus today's energy without it. 0 once the day
+ * is full at 100, or when nothing was awarded.
+ */
+export function energyGainedFor(kindsAfter: MascotEventKind[], kind: MascotEventKind, awarded: boolean): number {
+  if (!awarded) return 0;
+  const at = kindsAfter.lastIndexOf(kind);
+  if (at < 0) return 0;
+  const without = [...kindsAfter.slice(0, at), ...kindsAfter.slice(at + 1)];
+  return energyFor(kindsAfter) - energyFor(without);
+}
+
 export function moodFor(energy: number): MascotMood {
   if (energy < 25) return 'sleepy';
   if (energy < 70) return 'happy';

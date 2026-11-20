@@ -6,6 +6,7 @@ import {
   stageFor,
   stageBounds,
   energyFor,
+  energyGainedFor,
   moodFor,
   planStreak,
   isoWeek,
@@ -60,6 +61,18 @@ test('energy sums event weights and is capped at 100', () => {
   assert.equal(energyFor([]), 0);
   assert.equal(energyFor(['CHECKIN']), EVENT_RULES.CHECKIN.energy);
   assert.equal(energyFor(['MOON_RITUAL', 'MOON_RITUAL', 'MOON_RITUAL', 'MOON_RITUAL']), 100);
+});
+
+test('energy gained is what the award added, capped by the full day', () => {
+  assert.equal(energyGainedFor(['TAROT'], 'TAROT', true), EVENT_RULES.TAROT.energy);
+  assert.equal(energyGainedFor(['TAROT'], 'TAROT', false), 0);
+  assert.equal(energyGainedFor([], 'TAROT', true), 0);
+  // 3 moon rituals = 90; a fourth only has 10 left before 100.
+  assert.equal(energyGainedFor(['MOON_RITUAL', 'MOON_RITUAL', 'MOON_RITUAL', 'MOON_RITUAL'], 'MOON_RITUAL', true), 10);
+  assert.equal(
+    energyGainedFor(['MOON_RITUAL', 'MOON_RITUAL', 'MOON_RITUAL', 'MOON_RITUAL', 'TAROT'], 'TAROT', true),
+    0,
+  );
 });
 
 test('mood follows energy', () => {

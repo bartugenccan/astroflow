@@ -37,6 +37,7 @@ import {
   eclipseActive,
   eclipseDays,
   energyFor,
+  energyGainedFor,
   isoWeek,
   journeyStatus,
   moodFor,
@@ -61,7 +62,10 @@ export interface MascotDelta {
   leveledUp: boolean;
   /** The egg cracked open on this award. */
   hatched: boolean;
+  /** Today's energy after this award (0–100). */
   energy: number;
+  /** Energy this award added (0 once the day is full or nothing was awarded). */
+  energyGained: number;
   /** First award after time away: Aster's welcome and its small stardust gift (already in `stardust`). */
   welcomeBack: WelcomeBack | null;
 }
@@ -271,7 +275,8 @@ export class MascotService {
       }
     }
 
-    const energy = await this.todayEnergy(deviceId, today);
+    const kindsToday = await this.todayKinds(deviceId, today);
+    const energy = energyFor(kindsToday);
     return {
       kind,
       xpGained,
@@ -283,6 +288,7 @@ export class MascotService {
       leveledUp: after.stage > previousStage,
       hatched: hatchNow,
       energy,
+      energyGained: energyGainedFor(kindsToday, kind, awarded),
       welcomeBack,
     };
   }
@@ -724,10 +730,16 @@ export class MascotService {
   }
 
   private async todayEnergy(deviceId: string, today: string): Promise<number> {
+    return energyFor(await this.todayKinds(deviceId, today));
+  }
+
+  /** Every award kind counted today, oldest first. */
+  private async todayKinds(deviceId: string, today: string): Promise<MascotEventKind[]> {
     const events = await this.prisma.mascotEvent.findMany({
       where: { deviceId, localDate: today },
       select: { kind: true },
+      orderBy: { createdAt: 'asc' },
     });
-    return energyFor(events.map((e) => e.kind as MascotEventKind));
+    return events.map((e) => e.kind as MascotEventKind);
   }
 }

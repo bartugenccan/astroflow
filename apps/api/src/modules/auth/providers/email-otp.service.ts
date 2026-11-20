@@ -66,7 +66,7 @@ export class EmailOtpService {
     const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
     // Count and create under a per-address lock, so parallel requests for one
     // address cannot all pass the same count.
-    const verdict = await this.prisma.$transaction(async (tx) => {
+    const { verdict, codeId } = await this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`otp:${email}`}))`;
       const [inWindow, inDay, last, globalLastHour] = await Promise.all([
         tx.emailOtp.count({ where: { email, createdAt: { gt: new Date(now - OTP_LIMITS.windowMs) } } }),
@@ -79,12 +79,12 @@ export class EmailOtpService {
         now,
         this.hourlyGlobalCap,
       );
-      if (result === 'ok') {
-        await tx.emailOtp.create({
-          data: { email, codeHash: this.hash(email, code), expiresAt: new Date(now + CODE_TTL_MS) },
-        });
-      }
-      return result;
+      if (result !== 'ok') return { verdict: result, codeId: null };
+      const row = await tx.emailOtp.create({
+        data: { email, codeHash: this.hash(email, code), expiresAt: new Date(now + CODE_TTL_MS) },
+        select: { id: true },
+      });
+      return { verdict: result, codeId: row.id };
     });
     if (verdict === 'global_limit') {
       // Never log the address; the count alone says what happened.
@@ -97,7 +97,12 @@ export class EmailOtpService {
 
     if (this.mailer.configured) {
       const sent = await this.mailer.sendSignInCode(email, code, locale);
-      if (!sent && !this.devLog) throw new ServiceUnavailableException('Could not send the code');
+      if (!sent && !this.devLog) {
+        // A code that never left must not cost the person their cooldown or
+        // their daily quota: forget it, so a retry can go out straight away.
+        if (codeId) await this.prisma.emailOtp.delete({ where: { id: codeId } }).catch(() => undefined);
+        throw new ServiceUnavailableException('Could not send the code');
+      }
     }
     if (this.devLog) this.logger.log(`[dev] sign-in code for ${email}: ${code}`);
   }
