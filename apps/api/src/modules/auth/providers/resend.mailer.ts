@@ -19,6 +19,24 @@ const COPY: Record<Locale, { subject: string; intro: string; expiry: string; ign
 };
 
 /**
+ * Why Resend said no (`validation_error: The x.com domain is not verified…`),
+ * so a misconfigured sender is visible in the logs. Addresses are masked: the
+ * reason can quote the recipient or the account owner.
+ */
+async function resendReason(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as { name?: unknown; message?: unknown };
+    const name = typeof body.name === 'string' ? body.name : '';
+    const message = typeof body.message === 'string' ? body.message : '';
+    return `${name}: ${message}`
+      .replace(/[^\s@<>"']+@([^\s@<>"']+)/g, '***@$1')
+      .slice(0, 300);
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Transactional email through Resend's REST API (no SDK). Only the sign-in
  * code goes out; the address is used for nothing else.
  */
@@ -53,7 +71,7 @@ export class ResendMailer {
         body: JSON.stringify({ from: this.from, to: [to], subject: c.subject, text, html }),
         signal: AbortSignal.timeout(10_000),
       });
-      if (!res.ok) this.logger.warn(`Resend rejected sign-in email: HTTP ${res.status}`);
+      if (!res.ok) this.logger.warn(`Resend rejected sign-in email: HTTP ${res.status} ${await resendReason(res)}`);
       return res.ok;
     } catch {
       this.logger.warn('Resend unreachable — sign-in email not sent');
