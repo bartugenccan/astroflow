@@ -1,5 +1,5 @@
 import React from "react";
-import { Linking, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
@@ -7,7 +7,7 @@ import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { useTranslation, type TranslationKey } from "../../i18n";
 import { colors, palette, radii, spacing } from "../../lib/design-system";
 import { formatInstant } from "../../lib/dates";
-import { MANAGE_SUBSCRIPTIONS_URL, useBillingStore } from "../../services/purchases";
+import { openManageSubscriptions, useBillingStore } from "../../services/purchases";
 
 interface PremiumPerksSheetProps {
   visible: boolean;
@@ -85,7 +85,7 @@ export function PremiumPerksSheet({ visible, onClose, mode }: PremiumPerksSheetP
               <ChunkyButton label={t("profileUi.profile.premiumBetaOk")} onPress={onClose} variant="star" />
               <ChunkyButton
                 label={t("profileUi.paywall.manage")}
-                onPress={() => Linking.openURL(billing.managementURL ?? MANAGE_SUBSCRIPTIONS_URL).catch(() => undefined)}
+                onPress={() => void openManageSubscriptions()}
                 variant="ghost"
                 uppercase={false}
               />

@@ -36,7 +36,7 @@ import { GoldToggle } from "../../components/ui/GoldToggle";
 import { ReminderTimeSheet } from "./ReminderTimeSheet";
 import { PREMIUM_BETA, legalUrl, type LegalPage } from "../../services/config";
 import { PremiumPerksSheet } from "./PremiumPerksSheet";
-import { MANAGE_SUBSCRIPTIONS_URL, PURCHASES_ENABLED, restorePurchases, useBillingStore } from "../../services/purchases";
+import { openManageSubscriptions, PURCHASES_ENABLED, restorePurchases, useBillingStore } from "../../services/purchases";
 import { asterA11y, stageName } from "../aster/asterCopy";
 import type { TranslationKey } from "../../i18n";
 import type { AccountInfo, AuthProviderId } from "../../services/types";
@@ -150,7 +150,7 @@ export function ProfileScreen() {
             {
               text: t("profileUi.paywall.manage"),
               onPress: () => {
-                Linking.openURL(billing.managementURL ?? MANAGE_SUBSCRIPTIONS_URL).catch(() => undefined);
+                void openManageSubscriptions();
               },
             },
           ]
@@ -462,7 +462,7 @@ export function ProfileScreen() {
                 </PressableScale>
                 <View style={styles.sep} />
                 <PressableScale
-                  onPress={() => Linking.openURL(billing.managementURL ?? MANAGE_SUBSCRIPTIONS_URL).catch(() => undefined)}
+                  onPress={() => void openManageSubscriptions()}
                   scaleTo={0.98}
                   accessibilityRole="link"
                   accessibilityLabel={t("profileUi.paywall.manage")}

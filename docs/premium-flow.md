@@ -33,6 +33,8 @@ Günler kullanıcının yerel günü (`localToday()` / `x-tz`). Sınırlar `apps
 2. Kilitli içerik: `PremiumGate` / ödeme duvarı (tahmin, uyum, kişi, rapor, seçim).
 3. Profil: Premium kartı; abonede "Premium aktif · yenilenir/biter" (dokununca `PremiumPerksSheet`: açılan özellikler, yenileme tarihi, adil kullanım, "Aboneliği yönet"), "Aboneliği yönet", değilse "Satın alımı geri yükle".
 
+"Aboneliği yönet" (Profil satırı, `PremiumPerksSheet`, veri silme onayı) iOS'ta `openManageSubscriptions()` ile Apple'ın uygulama içi abonelik penceresini açar (`Purchases.showManageSubscriptions`; TestFlight/sandbox aboneliklerini de gösterir), kapanınca entitlement yeniden okunur; açılamazsa mağazanın web sayfası.
+
 Ölçüm (PostHog): `paywall_viewed{source}`, `purchase_started/completed/failed`, `purchases_restored`.
 
 ## 4. Akış

@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { Linking, Platform } from "react-native";
 import { create } from "zustand";
 import Purchases, {
   INTRO_ELIGIBILITY_STATUS,
@@ -146,6 +146,34 @@ async function start(): Promise<void> {
     // Keep the app usable; Premium falls back to the server's answer.
   }
   await syncServerBilling();
+}
+
+/**
+ * "Manage subscription": on iOS, Apple's in-app sheet (StoreKit, through
+ * RevenueCat), which also lists TestFlight/sandbox subscriptions and keeps
+ * the person in the app. When the sheet closes the entitlement is re-read, so
+ * a cancellation or plan change shows at once. Elsewhere, or if the sheet
+ * can't open, the store's web page.
+ */
+export async function openManageSubscriptions(): Promise<void> {
+  const openWeb = () =>
+    Linking.openURL(useBillingStore.getState().managementURL ?? MANAGE_SUBSCRIPTIONS_URL).catch(() => undefined);
+  if (Platform.OS !== "ios" || !configured) {
+    await openWeb();
+    return;
+  }
+  try {
+    await Purchases.showManageSubscriptions();
+  } catch {
+    await openWeb();
+    return;
+  }
+  try {
+    applyCustomerInfo(await Purchases.getCustomerInfo());
+  } catch {
+    // Offline: the listener catches up later.
+  }
+  void syncServerBilling();
 }
 
 export interface PremiumPlan {
