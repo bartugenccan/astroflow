@@ -8,6 +8,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
 import { ChunkyCard } from "../../components/ui/ChunkyCard";
+import { RunningLightBorder } from "../../components/ui/RunningLightBorder";
+import { TwinkleSky } from "../../components/ui/TwinkleSky";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
 import { Chip } from "../../components/ui/Chip";
 import { StatPill, StatRow } from "../../components/ui/StatPill";
@@ -25,7 +27,7 @@ import { Segmented } from "../../components/ui/Segmented";
 import { useMascotStore } from "../../store/useMascotStore";
 import { useTranslation } from "../../i18n";
 import { EnterView } from "../../lib/motion";
-import { formatCalendarDate } from "../../lib/dates";
+import { formatCalendarDate, formatInstant } from "../../lib/dates";
 import { deleteMyData, wipeAllLocalData } from "../../services/dataWipe";
 import { useReminderToggle } from "../reminders/useReminderToggle";
 import { colors, palette, radii, spacing, type Tone } from "../../lib/design-system";
@@ -33,7 +35,7 @@ import { Disclosure } from "../../components/ui/Disclosure";
 import { GoldToggle } from "../../components/ui/GoldToggle";
 import { ReminderTimeSheet } from "./ReminderTimeSheet";
 import { PREMIUM_BETA, legalUrl, type LegalPage } from "../../services/config";
-import { PremiumBetaSheet } from "./PremiumBetaSheet";
+import { PremiumPerksSheet } from "./PremiumPerksSheet";
 import { MANAGE_SUBSCRIPTIONS_URL, PURCHASES_ENABLED, restorePurchases, useBillingStore } from "../../services/purchases";
 import { asterA11y, stageName } from "../aster/asterCopy";
 import type { TranslationKey } from "../../i18n";
@@ -434,21 +436,30 @@ export function ProfileScreen() {
             ) : isPremium ? (
               <>
                 <View style={styles.sep} />
-                <View style={styles.settingRow}>
-                  <View style={styles.settingLabel}>
-                    <AppText variant="body" color={colors.text.primary}>
-                      {t("profileUi.paywall.activeTitle")}
-                    </AppText>
-                    {billing.expiresAt ? (
-                      <AppText variant="bodySmall" color={colors.text.tertiary}>
-                        {t(billing.willRenew ? "profileUi.paywall.renewsOn" : "profileUi.paywall.endsOn", {
-                          date: formatInstant(billing.expiresAt, locale),
-                        })}
+                {/* Tapping "Premium is active" shows what the subscription opens. */}
+                <PressableScale
+                  onPress={() => setPremiumOpen(true)}
+                  scaleTo={0.98}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("profileUi.profile.premiumActiveA11y")}
+                >
+                  <View style={styles.settingRow}>
+                    <View style={styles.settingLabel}>
+                      <AppText variant="body" color={colors.text.primary}>
+                        {t("profileUi.paywall.activeTitle")}
                       </AppText>
-                    ) : null}
+                      {billing.expiresAt ? (
+                        <AppText variant="bodySmall" color={colors.text.tertiary}>
+                          {t(billing.willRenew ? "profileUi.paywall.renewsOn" : "profileUi.paywall.endsOn", {
+                            date: formatInstant(billing.expiresAt, locale),
+                          })}
+                        </AppText>
+                      ) : null}
+                    </View>
+                    <Chip label={t("paywall.premiumBadge")} tone="star" icon="sparkles" selected />
+                    <Ionicons name="chevron-forward" size={16} color={colors.text.tertiary} />
                   </View>
-                  <Chip label={t("paywall.premiumBadge")} tone="star" icon="sparkles" selected />
-                </View>
+                </PressableScale>
                 <View style={styles.sep} />
                 <PressableScale
                   onPress={() => Linking.openURL(billing.managementURL ?? MANAGE_SUBSCRIPTIONS_URL).catch(() => undefined)}
@@ -558,7 +569,11 @@ export function ProfileScreen() {
       </ScrollView>
 
       <AccountSheet visible={accountOpen} onClose={() => setAccountOpen(false)} intent="secure" />
-      <PremiumBetaSheet visible={premiumOpen} onClose={() => setPremiumOpen(false)} />
+      <PremiumPerksSheet
+        visible={premiumOpen}
+        onClose={() => setPremiumOpen(false)}
+        mode={PREMIUM_BETA ? "beta" : "active"}
+      />
 
       {timeOpen ? (
         <ReminderTimeSheet
@@ -628,56 +643,61 @@ function AsterSummaryCard({ onPress }: { onPress: () => void }) {
   ].join(", ");
 
   return (
-    <ChunkyCard
-      tone="primary"
-      tinted
-      depth="lg"
-      onPress={onPress}
-      accessibilityLabel={label}
-      accessibilityHint={t("profileUi.profile.asterOpen")}
-    >
-      <View style={styles.asterRow}>
-        <View style={styles.asterArt}>
-          <AsterMascot
-            stage={state.stage}
-            mood={state.mood}
-            accessories={state.equipped}
-            size={76}
-            action={state.eclipse.active ? "sleep" : "idle"}
-          />
+    // Aster's own card glows in Aster's violet, with a small sky behind it.
+    <RunningLightBorder tone="primary" radius={radii.xl} cardStyle={styles.asterFrame}>
+      <ChunkyCard
+        tone="primary"
+        tinted
+        depth="lg"
+        onPress={onPress}
+        accessibilityLabel={label}
+        accessibilityHint={t("profileUi.profile.asterOpen")}
+        style={styles.asterCard}
+      >
+        <TwinkleSky color={palette.primary.face} seed="aster-summary" intensity="bright" stars={8} />
+        <View style={styles.asterRow}>
+          <View style={styles.asterArt}>
+            <AsterMascot
+              stage={state.stage}
+              mood={state.mood}
+              accessories={state.equipped}
+              size={76}
+              action={state.eclipse.active ? "sleep" : "idle"}
+            />
+          </View>
+          <View style={styles.asterText}>
+            <AppText variant="label" color={colors.text.violet}>
+              {t("profileUi.profile.asterEyebrow")}
+            </AppText>
+            <AppText variant="title" numberOfLines={1}>
+              {stage}
+            </AppText>
+            <StatRow style={styles.asterStats}>
+              <StatPill
+                icon="planet"
+                tone="sky"
+                value={orbit}
+                muted={orbit === 0}
+                accessibilityLabel={t("profileUi.profile.asterOrbitA11y", { n: orbit })}
+              />
+              <StatPill
+                icon="star"
+                tone="star"
+                value={t("profileUi.profile.asterConstellations", { found, total })}
+                accessibilityLabel={t("profileUi.profile.asterConstellationsA11y", { found, total })}
+              />
+              <StatPill
+                icon="sparkles"
+                tone="candy"
+                value={state.stardust}
+                accessibilityLabel={t("profileUi.profile.asterStardustA11y", { n: state.stardust })}
+              />
+            </StatRow>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.text.violet} />
         </View>
-        <View style={styles.asterText}>
-          <AppText variant="label" color={colors.text.violet}>
-            {t("profileUi.profile.asterEyebrow")}
-          </AppText>
-          <AppText variant="title" numberOfLines={1}>
-            {stage}
-          </AppText>
-          <StatRow style={styles.asterStats}>
-            <StatPill
-              icon="planet"
-              tone="sky"
-              value={orbit}
-              muted={orbit === 0}
-              accessibilityLabel={t("profileUi.profile.asterOrbitA11y", { n: orbit })}
-            />
-            <StatPill
-              icon="star"
-              tone="star"
-              value={t("profileUi.profile.asterConstellations", { found, total })}
-              accessibilityLabel={t("profileUi.profile.asterConstellationsA11y", { found, total })}
-            />
-            <StatPill
-              icon="sparkles"
-              tone="candy"
-              value={state.stardust}
-              accessibilityLabel={t("profileUi.profile.asterStardustA11y", { n: state.stardust })}
-            />
-          </StatRow>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.text.violet} />
-      </View>
-    </ChunkyCard>
+      </ChunkyCard>
+    </RunningLightBorder>
   );
 }
 
@@ -800,13 +820,6 @@ function NavCard({
   );
 }
 
-/** A subscription renewal/expiry instant as a local calendar date. */
-function formatInstant(iso: string, locale: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { day: "numeric", month: "long", year: "numeric" });
-}
-
 function formatDate(iso: string, locale: string): string {
   return formatCalendarDate(iso, locale, { day: "numeric", month: "short", year: "numeric" }) ?? iso;
 }
@@ -829,6 +842,9 @@ const styles = StyleSheet.create({
     minWidth: 0,
     gap: 2,
   },
+  asterFrame: { margin: 3, backgroundColor: "transparent" },
+  // overflow hidden clips the TwinkleSky backdrop to the rounded card.
+  asterCard: { overflow: "hidden" },
   asterRow: {
     flexDirection: "row",
     alignItems: "center",

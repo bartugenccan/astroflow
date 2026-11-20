@@ -10,7 +10,7 @@ import {
   withTiming,
 } from "react-native-reanimated";
 import { Canvas, RoundedRect, SweepGradient, vec } from "@shopify/react-native-skia";
-import { colors, radii, surface } from "../../lib/design-system";
+import { art, colors, palette, radii, surface, type Tone } from "../../lib/design-system";
 import { useScreenActive } from "../ScreenActive";
 
 /** How far the glow may spill past the card edge. */
@@ -24,11 +24,20 @@ const RING_COLORS = [
   colors.glow.ringDim,
 ];
 
+/** A tone's light: its own colour running, with a white-hot head. */
+function ringColors(tone?: Tone): string[] {
+  if (!tone) return RING_COLORS;
+  const p = palette[tone];
+  return [p.soft, p.face, art.sparkle, p.face, p.soft, p.soft];
+}
+
 interface Props {
   children: React.ReactNode;
   /** Faster lap and a stronger glow — for "this needs you now". */
   intense?: boolean;
   radius?: number;
+  /** The light's colour, from the palette. Without one it runs gold. */
+  tone?: Tone;
   /** Style of the inner card (background, padding…). It sits 1.5pt inside the light. */
   cardStyle?: StyleProp<ViewStyle>;
 }
@@ -42,7 +51,8 @@ interface Props {
  * The glow is two wide, faint strokes rather than a `BlurMask`: a blur under a
  * rotating shader had to be re-rasterised on every frame of the lap.
  */
-export function RunningLightBorder({ children, intense = false, radius = radii.lg, cardStyle }: Props) {
+export function RunningLightBorder({ children, intense = false, radius = radii.lg, tone, cardStyle }: Props) {
+  const ring = ringColors(tone);
   const reduced = useReducedMotion();
   const active = useScreenActive();
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -95,7 +105,7 @@ export function RunningLightBorder({ children, intense = false, radius = radii.l
             strokeWidth={intense ? 14 : 10}
             opacity={intense ? 0.22 : 0.14}
           >
-            <SweepGradient c={center} colors={RING_COLORS} origin={center} transform={shaderTransform} />
+            <SweepGradient c={center} colors={ring} origin={center} transform={shaderTransform} />
           </RoundedRect>
           <RoundedRect
             x={BLEED}
@@ -107,7 +117,7 @@ export function RunningLightBorder({ children, intense = false, radius = radii.l
             strokeWidth={intense ? 6 : 4}
             opacity={intense ? 0.5 : 0.32}
           >
-            <SweepGradient c={center} colors={RING_COLORS} origin={center} transform={shaderTransform} />
+            <SweepGradient c={center} colors={ring} origin={center} transform={shaderTransform} />
           </RoundedRect>
           {/* Crisp border */}
           <RoundedRect
@@ -119,7 +129,7 @@ export function RunningLightBorder({ children, intense = false, radius = radii.l
             style="stroke"
             strokeWidth={1.5}
           >
-            <SweepGradient c={center} colors={RING_COLORS} origin={center} transform={shaderTransform} />
+            <SweepGradient c={center} colors={ring} origin={center} transform={shaderTransform} />
           </RoundedRect>
         </Canvas>
       ) : null}

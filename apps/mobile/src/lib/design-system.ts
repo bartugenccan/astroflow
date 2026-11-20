@@ -407,6 +407,8 @@ export const motion = {
     toast: 1600,
     /** A milestone / shield pill stays a little longer. */
     toastLong: 2200,
+    /** A reward pill that also says what it changed (energy, goal, growth). */
+    toastRich: 3200,
   },
   stagger: 40,
   /** Only the first few blocks of a screen stagger; the rest just fade in. */

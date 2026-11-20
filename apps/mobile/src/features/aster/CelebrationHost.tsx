@@ -15,10 +15,14 @@ import { AsterMascot } from "../../components/aster/AsterMascot";
 import { AppText } from "../../components/ui/AppText";
 import { Chip } from "../../components/ui/Chip";
 import { ChunkyButton } from "../../components/ui/ChunkyButton";
+import { ChunkyProgress } from "../../components/ui/ChunkyProgress";
 import { SpotlightModal } from "../../components/ui/SpotlightModal";
 import { StarBurst } from "../intentions/StarBurst";
 import { Celebration, tierOf, useMascotStore, NO_EQUIPPED } from "../../store/useMascotStore";
 import { useAccountPromptStore } from "../../store/useAccountPromptStore";
+import { usePlanStore } from "../../store/usePlanStore";
+import { stageBounds } from "../../lib/mascotRules";
+import type { MascotEventKind } from "../../services/types";
 import { useTranslation, TranslationKey } from "../../i18n";
 import { haptics } from "../../lib/haptics";
 import { useMotion } from "../../lib/motion";
@@ -161,15 +165,67 @@ function pillCopy(item: Celebration, t: ReturnType<typeof useTranslation>["t"]):
         body: t("aster.celebrate.stardust", { n: item.delta?.stardustGained || 50 }),
         long: true,
       };
-    default:
+    case "capped":
+      return {
+        tone: "cloud",
+        icon: "heart",
+        title: t("aster.celebrate.cappedTitle"),
+        body: t("aster.celebrate.cappedBody"),
+        long: true,
+      };
+    default: {
+      const kinds = item.kinds ?? (item.delta ? [item.delta.kind] : []);
       return {
         tone: "star",
         icon: "sparkles",
         title: t("aster.celebrate.rewardTitle", { n: item.amount ?? item.delta?.xpGained ?? 0 }),
-        body: t("aster.celebrate.rewardBody"),
-        long: false,
+        body: becauseLine(t, kinds),
+        long: true,
       };
+    }
   }
+}
+
+/** What the reward was for, in Aster's words ("Your tarot reading fed Aster"). */
+function becauseLine(t: ReturnType<typeof useTranslation>["t"], kinds: MascotEventKind[]): string {
+  const distinct = [...new Set(kinds)];
+  if (distinct.length > 1 && kinds.length > 1) return t("aster.celebrate.many", { n: kinds.length });
+  const kind = distinct[0];
+  return kind ? t(`aster.celebrate.because.${kind}` as TranslationKey) : t("aster.celebrate.rewardBody");
+}
+
+/**
+ * What a reward changed, beyond the Işık: the energy it added, a goal of
+ * today's plan it ticked, and how far Aster now is from the next stage.
+ */
+function useRewardEffects(item: Celebration) {
+  const { t } = useTranslation();
+  const xp = useMascotStore((s) => s.state?.xp ?? item.delta?.xp ?? 0);
+  const stage = useMascotStore((s) => s.state?.stage ?? item.delta?.stage ?? 1);
+  const today = useMascotStore((s) => s.state?.today);
+  const plan = usePlanStore((s) => s.plan);
+  if (item.type !== "reward" && item.type !== "manifested") return null;
+
+  const energy = item.type === "reward" ? (item.energy ?? 0) : (item.delta?.energyGained ?? 0);
+  const kinds = item.kinds ?? (item.delta ? [item.delta.kind] : []);
+  const planKinds = new Set<MascotEventKind>(plan ? [...plan.anchors, ...plan.steps].map((s) => s.kind) : []);
+  // A goal of today's plan, ticked for the first time today by this action.
+  const goalDone = kinds.some((k) => planKinds.has(k) && (today?.[k] ?? 0) === 1);
+
+  const gained = item.type === "reward" ? (item.amount ?? item.delta?.xpGained ?? 0) : (item.delta?.xpGained ?? 0);
+  const { floor, next } = stageBounds(stage);
+  const progress = (n: number) => (next === null ? 1 : Math.max(0, Math.min(1, (n - floor) / (next - floor))));
+  const growth =
+    stage === 0
+      ? null
+      : next === null
+        ? { from: 1, to: 1, label: t("aster.celebrate.maxStage") }
+        : {
+            from: progress(xp - gained),
+            to: progress(xp),
+            label: t("aster.celebrate.toStage", { n: Math.max(0, next - xp), stage: stageName(t, stage + 1) }),
+          };
+  return { energy, goalDone, growth, gained };
 }
 
 /** Flick the pill up past this many px to send it off. */
@@ -183,6 +239,15 @@ function RewardPill({ item, onDone }: { item: Celebration; onDone: () => void })
   const accessories = useMascotStore((s) => s.state?.equipped ?? NO_EQUIPPED);
   const copy = pillCopy(item, t);
   const tone = palette[copy.tone];
+  const effects = useRewardEffects(item);
+  const rich = !!effects && (effects.energy > 0 || effects.goalDone || !!effects.growth);
+  // The bar starts where Aster was and fills to where it is now.
+  const [grown, setGrown] = useState(m.reduced);
+  useEffect(() => {
+    if (m.reduced) return;
+    const timer = setTimeout(() => setGrown(true), motion.duration.base);
+    return () => clearTimeout(timer);
+  }, [m.reduced]);
 
   // One buzz per pill, not per merged reward.
   useEffect(() => {
@@ -191,9 +256,10 @@ function RewardPill({ item, onDone }: { item: Celebration; onDone: () => void })
 
   // Leaves on its own; a merged reward restarts the clock.
   useEffect(() => {
-    const timer = setTimeout(onDone, copy.long ? motion.duration.toastLong : motion.duration.toast);
+    const ms = rich ? motion.duration.toastRich : copy.long ? motion.duration.toastLong : motion.duration.toast;
+    const timer = setTimeout(onDone, ms);
     return () => clearTimeout(timer);
-  }, [onDone, copy.long, item.bump]);
+  }, [onDone, copy.long, rich, item.bump]);
 
   // A merged reward gives the pill a small nudge so the new total registers.
   const nudge = useSharedValue(1);
@@ -231,9 +297,17 @@ function RewardPill({ item, onDone }: { item: Celebration; onDone: () => void })
               onPress={onDone}
               accessibilityRole="button"
               accessibilityLiveRegion="polite"
-              accessibilityLabel={copy.body ? `${copy.title}. ${copy.body}` : copy.title}
+              accessibilityLabel={[
+                copy.title,
+                effects?.energy ? t("aster.celebrate.energy", { n: effects.energy }) : null,
+                copy.body,
+                effects?.goalDone ? t("aster.celebrate.goalDone") : null,
+                effects?.growth?.label,
+              ]
+                .filter(Boolean)
+                .join(". ")}
               accessibilityHint={t("aster.celebrate.dismissHint")}
-              style={[styles.pill, { borderColor: tone.face, borderBottomColor: tone.slab }]}
+              style={[styles.pill, rich && styles.pillRich, { borderColor: tone.face, borderBottomColor: tone.slab }]}
             >
               <View style={styles.pillAster}>
                 <AsterMascot stage={stage} mood="happy" action="idle" size={34} accessories={accessories} />
@@ -244,11 +318,38 @@ function RewardPill({ item, onDone }: { item: Celebration; onDone: () => void })
                   <AppText variant="heading" color={tone.face} numberOfLines={1} style={styles.flex}>
                     {copy.title}
                   </AppText>
+                  {item.type === "manifested" && effects?.gained ? (
+                    <Chip label={t("aster.celebrate.rewardTitle", { n: effects.gained })} icon="sparkles" tone="star" />
+                  ) : null}
+                  {effects?.energy ? (
+                    <Chip label={t("aster.celebrate.energy", { n: effects.energy })} icon="flash" tone="mint" />
+                  ) : null}
                 </View>
                 {copy.body ? (
-                  <AppText variant="bodySmall" color={colors.text.secondary} numberOfLines={1}>
+                  <AppText variant="bodySmall" color={colors.text.secondary} numberOfLines={rich ? 2 : 1}>
                     {copy.body}
                   </AppText>
+                ) : null}
+                {effects?.goalDone ? (
+                  <View style={styles.row}>
+                    <Ionicons name="checkmark-circle" size={14} color={palette.mint.face} />
+                    <AppText variant="labelLong" color={palette.mint.face} numberOfLines={1} style={styles.flex}>
+                      {t("aster.celebrate.goalDone")}
+                    </AppText>
+                  </View>
+                ) : null}
+                {effects?.growth ? (
+                  <View style={styles.growth}>
+                    <ChunkyProgress
+                      value={grown ? effects.growth.to : effects.growth.from}
+                      tone="star"
+                      height={8}
+                      style={styles.flex}
+                    />
+                    <AppText variant="labelLong" color={colors.text.tertiary} numberOfLines={1}>
+                      {effects.growth.label}
+                    </AppText>
+                  </View>
                 ) : null}
               </View>
             </Pressable>
@@ -465,7 +566,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     overflow: "hidden",
   },
-  pillText: { flex: 1, gap: 1 },
+  pillText: { flex: 1, gap: 2 },
+  pillRich: {
+    alignItems: "flex-start",
+    borderRadius: radii.xl,
+    paddingVertical: spacing.sm,
+    paddingLeft: spacing.sm,
+  },
+  growth: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginTop: 2 },
   row: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   flex: { flex: 1 },
 

@@ -23,6 +23,8 @@ export async function sendPage(
   useMascotStore.getState().applyDelta(r.mascot, {
     milestoneName: r.milestoneName,
     shieldsUsed: r.streak.shieldsUsed,
+    // One practice, even when it also closed the day: it reads as a check-in.
+    kinds: ["CHECKIN"],
   });
   return r;
 }

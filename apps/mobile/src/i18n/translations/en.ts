@@ -94,6 +94,7 @@ export const en = {
     readMore: "Read more",
     skyLink: "The sky today",
     skyLinkHint: "The transit wheel, what it means and the planets",
+    openSky: "Open the sky",
     skyCheckInTitle: "How's your sky today?",
   },
   chart: {

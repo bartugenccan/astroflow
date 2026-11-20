@@ -47,6 +47,7 @@ import {
   eclipseActive,
   eclipseDays,
   energyFor,
+  energyGainedFor,
   isoWeek,
   journeyEarnsShield,
   journeyStatus,
@@ -321,7 +322,8 @@ export function mockAward(kind: MascotEventKind, refKey = "", opts: { hatch?: bo
   mock.stardust += stardustGained;
   if (hatchNow) mock.hatched = true;
   mock.stage = stageFor(mock.xp, mock.hatched);
-  const energy = energyFor(mock.events.filter((e) => e.day === today).map((e) => e.kind));
+  const kindsToday = mock.events.filter((e) => e.day === today).map((e) => e.kind);
+  const energy = energyFor(kindsToday);
   return {
     kind,
     xpGained,
@@ -333,6 +335,7 @@ export function mockAward(kind: MascotEventKind, refKey = "", opts: { hatch?: bo
     leveledUp: mock.stage > previousStage,
     hatched: hatchNow,
     energy,
+    energyGained: energyGainedFor(kindsToday, kind, awarded),
     welcomeBack,
   };
 }

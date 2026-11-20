@@ -65,6 +65,8 @@ export function CheckInSheet({ visible, onClose, intentionId, affirmation, onRes
       useMascotStore.getState().applyDelta(r.mascot, {
         milestoneName: r.milestoneName,
         shieldsUsed: r.streak.shieldsUsed,
+        // One practice, even when it also closed the day: it reads as a check-in.
+        kinds: ["CHECKIN"],
       });
     } catch {
       // Stay on the input step so the user can retry.

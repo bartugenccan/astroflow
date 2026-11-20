@@ -21,6 +21,12 @@ interface Props {
   stars?: number;
   /** Seed for the star layout, so one card keeps the same sky between renders. */
   seed?: string;
+  /**
+   * "bright": a stronger wash from the corner plus a second, fainter one rising
+   * from the bottom-left, and more stars spread wider, so a headline card
+   * never reads as one flat colour.
+   */
+  intensity?: "soft" | "bright";
 }
 
 interface Star {
@@ -57,7 +63,9 @@ function sparklePath(cx: number, cy: number, r: number): string {
  * `overflow: "hidden"`), ignores touches, holds still under Reduce Motion and
  * rests while its screen is not on view.
  */
-export function TwinkleSky({ color, stars = 7, seed = "sky" }: Props) {
+export function TwinkleSky({ color, stars, seed = "sky", intensity = "soft" }: Props) {
+  const bright = intensity === "bright";
+  const count = stars ?? (bright ? 11 : 7);
   const reduced = useReducedMotion();
   const active = useScreenActive();
   const [size, setSize] = useState({ w: 0, h: 0 });
@@ -77,14 +85,15 @@ export function TwinkleSky({ color, stars = 7, seed = "sky" }: Props) {
   const field = useMemo<Star[]>(() => {
     if (!size.w || !size.h) return [];
     const rand = rng(seed);
-    return Array.from({ length: stars }, (_, i) => {
-      // Keep stars off the left column, where the text sits; they live in the right ~45%.
-      const x = size.w * (0.55 + rand() * 0.42);
+    return Array.from({ length: count }, (_, i) => {
+      // Keep stars off the left column, where the text sits; they live in the right ~45%
+      // (bright: the right ~60%, the far ones small).
+      const x = size.w * (bright ? 0.38 + rand() * 0.59 : 0.55 + rand() * 0.42);
       const y = size.h * (0.08 + rand() * 0.84);
       const sparkle = i % 3 === 0;
       return { x, y, r: sparkle ? 4 + rand() * 3 : 1 + rand() * 1.4, phase: rand(), sparkle };
     });
-  }, [size.w, size.h, stars, seed]);
+  }, [size.w, size.h, count, seed, bright]);
 
   const onLayout = (e: LayoutChangeEvent) => {
     const { width, height } = e.nativeEvent.layout;
@@ -99,9 +108,18 @@ export function TwinkleSky({ color, stars = 7, seed = "sky" }: Props) {
             <LinearGradient
               start={vec(size.w, 0)}
               end={vec(size.w * 0.25, size.h)}
-              colors={[`${color}59`, `${color}14`, `${color}00`]}
+              colors={bright ? [`${color}8C`, `${color}2E`, `${color}00`] : [`${color}59`, `${color}14`, `${color}00`]}
             />
           </Rect>
+          {bright ? (
+            <Rect x={0} y={0} width={size.w} height={size.h}>
+              <LinearGradient
+                start={vec(0, size.h)}
+                end={vec(size.w * 0.6, size.h * 0.2)}
+                colors={[`${color}33`, `${color}00`]}
+              />
+            </Rect>
+          ) : null}
           {field.map((s, i) => (
             <TwinkleStar key={i} star={s} clock={clock} still={reduced} />
           ))}

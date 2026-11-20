@@ -968,7 +968,10 @@ export interface MascotDelta {
   previousStage: number;
   leveledUp: boolean;
   hatched: boolean;
+  /** Today's energy after this award (0–100). */
   energy: number;
+  /** Energy this award added (0 once the day is full). Missing from older servers. */
+  energyGained?: number;
   /** First award after time away: Aster's welcome and its stardust gift (already in `stardust`). */
   welcomeBack?: WelcomeBack | null;
 }

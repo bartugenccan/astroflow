@@ -31,7 +31,7 @@ Günler kullanıcının yerel günü (`localToday()` / `x-tz`). Sınırlar `apps
 
 1. Sınıra çarpınca: limit kartı (`SpotlightCard`, "Premium'u aç" + Yıldız Tozu geçişi). Sunucu 402 dönerse de aynı kart/duvar açılır.
 2. Kilitli içerik: `PremiumGate` / ödeme duvarı (tahmin, uyum, kişi, rapor, seçim).
-3. Profil: Premium kartı; abonede "Premium aktif · yenilenir/biter", "Aboneliği yönet", değilse "Satın alımı geri yükle".
+3. Profil: Premium kartı; abonede "Premium aktif · yenilenir/biter" (dokununca `PremiumPerksSheet`: açılan özellikler, yenileme tarihi, adil kullanım, "Aboneliği yönet"), "Aboneliği yönet", değilse "Satın alımı geri yükle".
 
 Ölçüm (PostHog): `paywall_viewed{source}`, `purchase_started/completed/failed`, `purchases_restored`.
 

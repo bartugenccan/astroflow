@@ -97,6 +97,7 @@ export const tr: TranslationShape = {
     readMore: "Devamını oku",
     skyLink: "Gökyüzünde bugün",
     skyLinkHint: "Transit çarkı, açıklama ve gezegenler",
+    openSky: "Gökyüzünü aç",
     skyCheckInTitle: "Gökyüzün bugün nasıl?",
   },
   chart: {

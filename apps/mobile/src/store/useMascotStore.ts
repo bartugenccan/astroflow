@@ -24,7 +24,8 @@ export type CelebrationType =
   | "journeyReturn"
   | "manifested"
   | "accountLinked"
-  | "welcomeBack";
+  | "welcomeBack"
+  | "capped";
 
 /**
  * How loud a celebration is (Duolingo-style tiers):
@@ -51,6 +52,10 @@ export interface Celebration {
    * three pills in a row).
    */
   amount?: number;
+  /** reward: energy those actions added (summed like `amount`). */
+  energy?: number;
+  /** reward / capped: the actions behind it, oldest first (one per merged reward). */
+  kinds?: MascotEventKind[];
   /** Bumped when a reward is merged into this one, so the pill restarts its timer. */
   bump?: number;
   milestoneName?: string | null;
@@ -88,10 +93,17 @@ interface MascotStore {
    */
   applyDelta: (
     delta: MascotDelta | null | undefined,
-    extra?: { milestoneName?: string | null; shieldsUsed?: number },
+    extra?: {
+      milestoneName?: string | null;
+      shieldsUsed?: number;
+      /** The screen already shows the Işık it earned: skip the reward pill (big moments still play). */
+      quiet?: boolean;
+      /** What the person did, when the server merged several awards into one delta (a check-in). */
+      kinds?: MascotEventKind[];
+    },
   ) => void;
   /** Report a device-side action; resolves the delta (null on failure / outside a moon window). */
-  report: (kind: MascotEventKind) => Promise<MascotDelta | null>;
+  report: (kind: MascotEventKind, opts?: { replay?: boolean }) => Promise<MascotDelta | null>;
   purchase: (itemId: string) => Promise<boolean>;
   equip: (itemIds: string[]) => Promise<boolean>;
   /** Send Aster on today's journey. */
@@ -130,6 +142,8 @@ function enqueue(queue: Celebration[], items: Celebration[]): Celebration[] {
           ...prev,
           delta: item.delta ?? prev.delta,
           amount: (prev.amount ?? 0) + (item.amount ?? 0),
+          energy: (prev.energy ?? 0) + (item.energy ?? 0),
+          kinds: [...(prev.kinds ?? []), ...(item.kinds ?? [])],
           bump: (prev.bump ?? 0) + 1,
         };
         out = [...out.slice(0, at), merged, ...out.slice(at + 1)];
@@ -167,6 +181,22 @@ const RETRYABLE: readonly MascotEventKind[] = [
   "SKY_MOMENT",
 ];
 
+/**
+ * Actions the person repeats on purpose, where a silent "nothing happened"
+ * would read as broken. Passive awards (reading the sky, opening a moment)
+ * stay silent once counted.
+ */
+const CAPPED_NOTE: readonly MascotEventKind[] = [
+  "AFFIRMATION",
+  "TAROT",
+  "EVENING_REFLECTION",
+  "BREATH",
+  "VOICE_RECORD",
+];
+
+/** "Already counted today" notes shown this session (local day | kind). */
+const cappedShown = new Set<string>();
+
 export const useMascotStore = create<MascotStore>()(
   persist(
     (set, get) => ({
@@ -200,7 +230,7 @@ export const useMascotStore = create<MascotStore>()(
         const pending = get().pending;
         if (pending.length) {
           set({ pending: [] });
-          for (const kind of pending) await get().report(kind);
+          for (const kind of pending) await get().report(kind, { replay: true });
         }
       },
 
@@ -221,8 +251,22 @@ export const useMascotStore = create<MascotStore>()(
         if (extra?.shieldsUsed) {
           items.push({ id: nextId++, type: "shield", delta, shieldsUsed: extra.shieldsUsed });
         }
-        if (delta && delta.xpGained > 0 && !delta.hatched && !delta.leveledUp && !extra?.milestoneName) {
-          items.push({ id: nextId++, type: "reward", delta, amount: delta.xpGained });
+        if (
+          delta &&
+          delta.xpGained > 0 &&
+          !delta.hatched &&
+          !delta.leveledUp &&
+          !extra?.milestoneName &&
+          !extra?.quiet
+        ) {
+          items.push({
+            id: nextId++,
+            type: "reward",
+            delta,
+            amount: delta.xpGained,
+            energy: delta.energyGained ?? 0,
+            kinds: extra?.kinds ?? [delta.kind],
+          });
         }
         if (items.length) set((s) => ({ queue: enqueue(s.queue, items) }));
         if (delta) {
@@ -244,11 +288,31 @@ export const useMascotStore = create<MascotStore>()(
         get().refresh();
       },
 
-      report: async (kind) => {
+      report: async (kind, opts) => {
         try {
           const { delta, state } = await mascotApi.reportEvent(kind);
           set({ state });
           get().applyDelta(delta);
+          // Done again after today's Işık for it ran out: say so quietly, so
+          // the action never looks like it did nothing. (Big moments and a
+          // reward already on screen speak for themselves.)
+          // Once per kind a day, and never for an offline action replayed later.
+          const cappedKey = `${new Date().toDateString()}|${kind}`;
+          if (
+            !opts?.replay &&
+            delta &&
+            delta.xpGained === 0 &&
+            !delta.hatched &&
+            !delta.leveledUp &&
+            CAPPED_NOTE.includes(kind) &&
+            !cappedShown.has(cappedKey)
+          ) {
+            const queued = get().queue;
+            if (!queued.some((c) => c.type === "reward" || c.type === "capped")) {
+              cappedShown.add(cappedKey);
+              set({ queue: [...queued, { id: nextId++, type: "capped", delta, kinds: [kind] }] });
+            }
+          }
           return delta;
         } catch (err) {
           // Offline: keep it for later. A server "no" (e.g. no moon window) is final.
@@ -348,7 +412,8 @@ export const useMascotStore = create<MascotStore>()(
         try {
           const res = await mascotApi.completeLesson(key);
           set({ state: res.state });
-          get().applyDelta(res.delta);
+          // The lesson's last page shows the Işık it earned: no second pill on top.
+          get().applyDelta(res.delta, { quiet: true });
           return res;
         } catch {
           get().refresh();

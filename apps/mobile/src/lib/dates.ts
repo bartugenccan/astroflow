@@ -112,3 +112,10 @@ export function formatLongDay(iso: string | undefined, locale: Locale, withWeekd
     }) ?? iso
   );
 }
+
+/** A real instant (a subscription's renewal or expiry) as a local calendar date. */
+export function formatInstant(iso: string, locale: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString(locale === "tr" ? "tr-TR" : "en-US", { day: "numeric", month: "long", year: "numeric" });
+}

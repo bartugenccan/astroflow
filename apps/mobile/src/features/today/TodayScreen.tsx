@@ -5,11 +5,7 @@ import { AppState, StyleSheet, View, ScrollView, type ScrollViewInstance } from 
 import { useTourTarget } from "../tour/tourTargets";
 import { ScreenWrapper } from "../../components/ScreenWrapper";
 import { AppText } from "../../components/ui/AppText";
-import { ChunkyCard } from "../../components/ui/ChunkyCard";
-import { CelestialLoader } from "../../components/ui/CelestialLoader";
-import { StateView } from "../../components/ui/StateView";
-import { SectionLink } from "../../components/ui/SectionLink";
-import { SpringBottomSheet, type SheetOrigin } from "../../components/ui/SpringBottomSheet";
+import { SpringBottomSheet } from "../../components/ui/SpringBottomSheet";
 import { EnterView } from "../../lib/motion";
 import { astrologyApi } from "../../services/astrologyApi";
 import { DailyInsight } from "../../services/types";
@@ -19,7 +15,6 @@ import { useBirthDto } from "../../hooks/useBirthDto";
 import { useAppStore } from "../../store/useAppStore";
 import { usePlanStore } from "../../store/usePlanStore";
 import { useAccountPromptStore } from "../../store/useAccountPromptStore";
-import { energyLabel } from "../../lib/astroLanguage";
 import { useTranslation } from "../../i18n";
 import { colors, spacing, radii, palette } from "../../lib/design-system";
 import { StatPill, StatRow } from "../../components/ui/StatPill";
@@ -33,6 +28,7 @@ import { AsterPointsSheet } from "../aster/AsterPointsSheet";
 import { PressableScale } from "../../components/ui/PressableScale";
 import { Ionicons } from "@expo/vector-icons";
 import { MomentSheet, SkyMomentCard } from "./SkyMomentCard";
+import { SkyTodayCard } from "./SkyTodayCard";
 import { visibleMoments } from "./momentCopy";
 import { useSkyMomentsStore } from "../../store/useSkyMomentsStore";
 import { safeInAppLink } from "../../lib/safeLink";
@@ -71,7 +67,6 @@ export function TodayScreen() {
   // so reopening the app the same day shows it at once while it refreshes.
   const {
     data: insight,
-    loading,
     error: insightError,
     reload: reloadInsight,
   } = useCachedAsync<DailyInsight>(dto ? dailyInsightKey(dto, locale) : null, () =>
@@ -130,11 +125,10 @@ export function TodayScreen() {
   const [sheet, setSheet] = useState<null | "checkin">(null);
   const [pointsOpen, setPointsOpen] = useState(false);
   const closeSheet = useCallback(() => setSheet(null), []);
-  /** The key-moment sheet: which moment, and the card's rect it grows out of. */
-  const [moment, setMoment] = useState<{ id: string; origin: SheetOrigin | null } | null>(null);
-  const openMoment = useCallback((id: string, origin: SheetOrigin | null) => setMoment({ id, origin }), []);
-  const selectMoment = useCallback((id: string) => setMoment((m) => (m ? { ...m, id } : m)), []);
-  const closeMoment = useCallback(() => setMoment(null), []);
+  /** The key-moment sheet: which moment is open (null = closed). */
+  const [momentId, setMomentId] = useState<string | null>(null);
+  const openMoment = useCallback((id: string) => setMomentId(id), []);
+  const closeMoment = useCallback(() => setMomentId(null), []);
 
   // Three days in orbit: a good moment to offer protecting Aster with an account.
   const orbitStreak = mascot?.orbit?.streak ?? 0;
@@ -246,57 +240,17 @@ export function TodayScreen() {
         {/* 3 — A key moment in the user's own sky (returns, stations, eclipses…), when there is one. */}
         {moments && visibleMoments(moments.moments).length ? (
           <EnterView index={3}>
-            <SkyMomentCard moments={moments.moments} open={moment !== null} onOpen={openMoment} />
+            <SkyMomentCard moments={moments.moments} onOpen={openMoment} />
           </EnterView>
         ) : null}
 
-        {/* 4 — The day's reading, short; the whole of it and the sky are a tap away. */}
-        <EnterView index={4} style={styles.readingWrap}>
-          {failed && !insight ? (
-            <ChunkyCard style={styles.reading}>
-              <StateView
-                kind="error"
-                compact
-                message={t("today.insightError")}
-                onAction={reloadInsight}
-              />
-            </ChunkyCard>
-          ) : loading || !insight ? (
-            <ChunkyCard style={[styles.reading, styles.readingLoading]}>
-              <CelestialLoader label={t("common.loading")} />
-            </ChunkyCard>
-          ) : (
-            <ChunkyCard
-              style={styles.reading}
-              onPress={() => router.push("/sky-today" as Href)}
-              accessibilityLabel={`${t("today.readingTitle")}. ${insight.title}`}
-              accessibilityHint={t("today.readMore")}
-            >
-              <View style={styles.readingTop}>
-                <AppText variant="label" color={colors.text.accent} style={styles.flex} numberOfLines={1}>
-                  {t("today.readingTitle")}
-                </AppText>
-                <View style={styles.chip}>
-                  <AppText variant="label" color={colors.star[300]} numberOfLines={1}>
-                    {energyLabel(t, insight.energyState)}
-                  </AppText>
-                </View>
-              </View>
-              <AppText variant="heading">{insight.title}</AppText>
-              <AppText variant="body" numberOfLines={3}>
-                {insight.summary}
-              </AppText>
-              <AppText variant="labelLong" color={colors.text.accent}>
-                {`${t("today.readMore")} ›`}
-              </AppText>
-            </ChunkyCard>
-          )}
-          <SectionLink
-            label={t("today.skyLink")}
-            icon="planet"
-            tone="sky"
-            accessibilityHint={t("today.skyLinkHint")}
-            onPress={() => router.push("/sky-today" as Href)}
+        {/* 4 — The sky today: the day's reading and the way into the whole sky, in one glowing card. */}
+        <EnterView index={4}>
+          <SkyTodayCard
+            insight={insight ?? null}
+            failed={failed}
+            onRetry={reloadInsight}
+            onOpen={() => router.push("/sky-today" as Href)}
           />
         </EnterView>
       </ScrollView>
@@ -312,9 +266,8 @@ export function TodayScreen() {
       {moments ? (
         <MomentSheet
           moments={moments.moments}
-          openId={moment?.id ?? null}
-          origin={moment?.origin}
-          onSelect={selectMoment}
+          openId={momentId}
+          onSelect={openMoment}
           onClose={closeMoment}
         />
       ) : null}
@@ -361,15 +314,5 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: "dashed",
     borderColor: palette.candy.face,
-  },
-  readingWrap: { gap: spacing.md },
-  reading: { gap: spacing.sm },
-  readingLoading: { minHeight: 160, alignItems: "center", justifyContent: "center" },
-  readingTop: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  chip: {
-    backgroundColor: palette.star.soft,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
   },
 });
